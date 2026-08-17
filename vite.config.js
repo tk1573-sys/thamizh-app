@@ -7,47 +7,48 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+
       manifest: {
         name: "Thamizh's Life Command Centre",
         short_name: 'LifeCMD',
         description: 'PhD · TCS · CCDV-F · UGC NET · Govt Jobs · Health · Career Command Centre',
+
         theme_color: '#0D1117',
         background_color: '#0D1117',
+
         display: 'standalone',
         orientation: 'portrait',
+
         scope: '/',
         start_url: '/',
+
         icons: [
-          {
-            src: 'icons/icon-72x72.png',
-            sizes: '72x72',
-            type: 'image/png'
-          },
-          {
-            src: 'icons/icon-96x96.png',
-            sizes: '96x96',
-            type: 'image/png'
-          },
-          {
-            src: 'icons/icon-128x128.png',
-            sizes: '128x128',
-            type: 'image/png'
-          },
           {
             src: 'icons/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'maskable'
+            purpose: 'any'
           },
           {
             src: 'icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: 'icons/icon-512x512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ],
-        categories: ['productivity', 'education', 'lifestyle'],
+
+        categories: [
+          'productivity',
+          'education',
+          'lifestyle'
+        ],
+
         shortcuts: [
           {
             name: 'PhD Planner',
@@ -66,8 +67,12 @@ export default defineConfig({
           }
         ]
       },
+
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: [
+          '**/*.{js,css,html,ico,png,svg}'
+        ],
+
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.anthropic\.com\/.*/i,

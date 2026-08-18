@@ -31,20 +31,30 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "system must be a string" });
     }
 
+    const upstreamBody = {
+      model: model.trim(),
+      messages,
+      max_tokens,
+      system
+    };
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
+    let response;
+    try {
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify(upstreamBody),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const raw = await response.text();
     let data;
@@ -82,12 +92,32 @@ export default async function handler(req, res) {
     }
 
     console.error("Anthropic proxy error:", error);
+    const cause = error && typeof error === "object" ? error.cause : null;
+    const upstreamStatus =
+      cause && typeof cause === "object" && Number.isInteger(cause.status)
+        ? cause.status
+        : cause && typeof cause === "object" && Number.isInteger(cause.statusCode)
+          ? cause.statusCode
+          : null;
+    const networkCode =
+      cause && typeof cause === "object" && typeof cause.code === "string"
+        ? cause.code
+        : null;
+    const upstreamType =
+      cause && typeof cause === "object" && typeof cause.type === "string"
+        ? cause.type
+        : null;
+    const upstreamMessage =
+      cause && typeof cause === "object" && typeof cause.message === "string"
+        ? cause.message
+        : null;
 
-    return res.status(500).json({
+    return res.status(upstreamStatus || 500).json({
       error: "Failed to contact Anthropic API",
-      status: 500,
-      type: "network_error",
-      message: error instanceof Error ? error.message : "Unknown error"
+      status: upstreamStatus || 500,
+      type: upstreamType || networkCode || "network_error",
+      message: upstreamMessage || (error instanceof Error ? error.message : "Unknown error"),
+      network_code: networkCode || undefined
     });
   }
 }

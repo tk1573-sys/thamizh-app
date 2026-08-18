@@ -449,6 +449,39 @@ function storeGet(key) {
 function storeSet(key, val) {
   try { localStorage.setItem(key, val); } catch(_) {}
 }
+function storeJsonGet(key, fallback) {
+  const raw = storeGet(key);
+  if (!raw) return fallback;
+  try { return JSON.parse(raw); } catch(_) { return fallback; }
+}
+function readClaudeText(data) {
+  if (!data || typeof data !== "object") return "";
+  if (Array.isArray(data.content)) {
+    return data.content.map(block => block?.text || "").join("").trim();
+  }
+  return "";
+}
+async function callClaude(payload) {
+  const r = await fetch("/api/claude",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = d?.message || d?.error || `Request failed (${r.status})`;
+    throw new Error(msg);
+  }
+  return d;
+}
+function escHtml(str="") {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
@@ -586,17 +619,28 @@ export default function App() {
 
   // Load persisted data
   useEffect(()=>{
-    try {
-      const j = storeGet("j-entries"); if(j) setEntries(JSON.parse(j));
-      const o = storeGet("o-data");
-      if(o){const p=JSON.parse(o);setOffData(p);const t=todayKey();if(p[t]){setTickets(p[t].tickets||[]);setPending(p[t].pending||[]);setIdeas(p[t].ideas||[]);setOffNote(p[t].note||"");}}
-      const h = storeGet("h-log"); if(h){const p=JSON.parse(h);setHLog(p);const t=todayKey();if(p[t])setHForm(f=>({...f,...p[t]}));}
-      const lp = storeGet("learn-progress"); if(lp) setLearnProgress(JSON.parse(lp));
-      const pm = storeGet("phd-meetings"); if(pm) setPhdMeetings(JSON.parse(pm));
-      const pt = storeGet("phd-tasks");    if(pt) setPhdTasks(JSON.parse(pt));
-      const ap = storeGet("all-pending");  if(ap) setAllPending(JSON.parse(ap));
-      const as_ = storeGet("app-status");  if(as_) setAppStatus(JSON.parse(as_));
-    } catch(_){}
+    const journalEntries = storeJsonGet("j-entries", {});
+    setEntries(journalEntries);
+
+    const officeData = storeJsonGet("o-data", {});
+    setOffData(officeData);
+    const t = todayKey();
+    if (officeData[t]) {
+      setTickets(officeData[t].tickets || []);
+      setPending(officeData[t].pending || []);
+      setIdeas(officeData[t].ideas || []);
+      setOffNote(officeData[t].note || "");
+    }
+
+    const healthData = storeJsonGet("h-log", {});
+    setHLog(healthData);
+    if (healthData[t]) setHForm(f=>({...f,...healthData[t]}));
+
+    setLearnProgress(storeJsonGet("learn-progress", {}));
+    setPhdMeetings(storeJsonGet("phd-meetings", []));
+    setPhdTasks(storeJsonGet("phd-tasks", []));
+    setAllPending(storeJsonGet("all-pending", []));
+    setAppStatus(storeJsonGet("app-status", {}));
   },[]);
 
   useEffect(()=>{const e=entries[selDay]||{};setDNote(e.note||"");setDRem(e.reminder||"");setDMood(e.mood||"3");setJSaved(false);},[selDay,entries]);
@@ -684,9 +728,9 @@ export default function App() {
     const meetings = phdMeetings.slice(-3).map(m=>`Meeting ${m.date}: ${m.instructions}`).join(". ");
     const tasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>`${t.title} (${t.status}, due ${t.due||"TBD"})`).join(", ");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]})});
-      const d=await r.json(); setPhdAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    } catch(_){ setPhdAiA("Connection error. Please try again."); }
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]});
+      setPhdAiA(readClaudeText(d) || "No response.");
+    } catch(err){ setPhdAiA(err.message || "Connection error. Please try again."); }
     setPhdAiLoad(false);
   };
 
@@ -738,16 +782,12 @@ export default function App() {
         `Cert urgent: Claude CCDV-F (Aug 31), Databricks DEA (Sep-Oct 2026), GCP DE (Nov 2026).`,
       ].join(" ");
 
-      const r = await fetch("/api/claude",{
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          model:"claude-sonnet-4-6", max_tokens:700,
-          system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. URGENT: Claude CCDV-F cert deadline Aug 31 2026. Also: Databricks DEA, GCP DE, health management (Bipolar I, T2 Diabetes). Analyse the context and return EXACTLY 5 specific, actionable recommendations ranked by urgency. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
-          messages:[{role:"user",content:`Analyse my situation and give 5 smart recommendations: ${context}`}]
-        })
+      const d = await callClaude({
+        model:"claude-sonnet-4-6", max_tokens:700,
+        system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. URGENT: Claude CCDV-F cert deadline Aug 31 2026. Also: Databricks DEA, GCP DE, health management (Bipolar I, T2 Diabetes). Analyse the context and return EXACTLY 5 specific, actionable recommendations ranked by urgency. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
+        messages:[{role:"user",content:`Analyse my situation and give 5 smart recommendations: ${context}`}]
       });
-      const d = await r.json();
-      const raw = d.content?.map(b=>b.text||"").join("")||"[]";
+      const raw = readClaudeText(d) || "[]";
       const si=raw.indexOf("["); const ei=raw.lastIndexOf("]");
       const sugs = JSON.parse(si>=0&&ei>=0?raw.slice(si,ei+1):"[]");
       setAgentSugs(sugs);
@@ -768,9 +808,9 @@ export default function App() {
   const askCertStudy = async () => {
     if(!certStudyQ.trim()) return; setCertStudyLoad(true); setCertStudyA("");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]})});
-      const d=await r.json(); setCertStudyA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    } catch(_){setCertStudyA("Connection error. Please try again.");}
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]});
+      setCertStudyA(readClaudeText(d) || "No response.");
+    } catch(err){setCertStudyA(err.message || "Connection error. Please try again.");}
     setCertStudyLoad(false);
   };
 
@@ -779,7 +819,7 @@ export default function App() {
     const meetings = phdMeetings.slice(-2).map(m=>`${m.date}: ${m.instructions?.substring(0,100)}`).join(". ");
     const openTasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>t.title).join(", ");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
 
 RESEARCH: Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children (Autism, ADHD, Cerebral Palsy, non-verbal children).
 
@@ -800,8 +840,8 @@ SUPERVISOR INSTRUCTIONS: Ideology of many, 15-20 keywords, 7-10 PS, minimal data
 RECENT MEETINGS: ${meetings}
 OPEN TASKS: ${openTasks}
 
-Give expert, specific, actionable research advice. Reference actual papers, methods, and datasets where relevant.`,messages:[{role:"user",content:snuAiQ}]})});
-      const d=await r.json(); setSnuAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
+Give expert, specific, actionable research advice. Reference actual papers, methods, and datasets where relevant.`,messages:[{role:"user",content:snuAiQ}]});
+      setSnuAiA(readClaudeText(d) || "No response.");
     } catch(err){setSnuAiA("Connection error: "+err.message);}
     setSnuAiLoad(false);
   };
@@ -812,7 +852,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
     const odPhd = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
     const daysCCDVF = Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
 
 LIFE CONTEXT (August 2026):
 - Works full-time at TCS as Data Engineer (4.3 years): SQL/Teradata/DataStage/Unix/ServiceNow
@@ -835,9 +875,9 @@ RESEARCH DETAILS:
 
 PERSONALITY: Tends to take on too much. Needs reminders to pace himself. Health must come first. Responds well to structured practical advice. Bipolar — never push on bad days. Tamil background.
 
-Give warm, honest, practical advice. Acknowledge the challenges of managing everything. Suggest specific actions. Be a friend who happens to be an expert.`,messages:[{role:"user",content:adviceQ}]})});
-      const d=await r.json(); setAdviceA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    } catch(_){setAdviceA("Connection error. Please try again.");}
+Give warm, honest, practical advice. Acknowledge the challenges of managing everything. Suggest specific actions. Be a friend who happens to be an expert.`,messages:[{role:"user",content:adviceQ}]});
+      setAdviceA(readClaudeText(d) || "No response.");
+    } catch(err){setAdviceA(err.message || "Connection error. Please try again.");}
     setAdviceLoad(false);
   };
 
@@ -848,18 +888,18 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askRadarAI = async () => {
     if(!radarAiQ.trim()) return; setRadarAiLoad(true); setRadarAiA("");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]})});
-      const d=await r.json(); setRadarAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    } catch(_){setRadarAiA("Connection error.");}
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]});
+      setRadarAiA(readClaudeText(d) || "No response.");
+    } catch(err){setRadarAiA(err.message || "Connection error.");}
     setRadarAiLoad(false);
   };
 
   const askJobAI = async () => {
     if(!jobAiQ.trim()) return; setJobAiLoad(true); setJobAiA("");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is August 14 2026. SC quota gives 5-year age relaxation. GATE score needed for ISRO/NIC. Give specific, actionable, honest advice about jobs matching this profile. Name specific organizations, portals, and deadlines.`,messages:[{role:"user",content:jobAiQ}]})});
-      const d=await r.json(); setJobAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    } catch(_){setJobAiA("Connection error. Please try again.");}
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is August 14 2026. SC quota gives 5-year age relaxation. GATE score needed for ISRO/NIC. Give specific, actionable, honest advice about jobs matching this profile. Name specific organizations, portals, and deadlines.`,messages:[{role:"user",content:jobAiQ}]});
+      setJobAiA(readClaudeText(d) || "No response.");
+    } catch(err){setJobAiA(err.message || "Connection error. Please try again.");}
     setJobAiLoad(false);
   };
 
@@ -890,17 +930,17 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askH = async()=>{
     if(!hAiQ.trim())return; setHAiLoad(true); setHAiA("");
     try{
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]})});
-      const d=await r.json(); setHAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    }catch(_){setHAiA("Error connecting. Please try again.");}
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]});
+      setHAiA(readClaudeText(d) || "No response.");
+    }catch(err){setHAiA(err.message || "Error connecting. Please try again.");}
     setHAiLoad(false);
   };
   const askC = async()=>{
     if(!cQ.trim())return; setCLoad(true); setCA("");
     try{
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]})});
-      const d=await r.json(); setCA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    }catch(_){setCA("Error connecting. Please try again.");}
+      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
+      setCA(readClaudeText(d) || "No response.");
+    }catch(err){setCA(err.message || "Error connecting. Please try again.");}
     setCLoad(false);
   };
 
@@ -974,7 +1014,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
           {/* NOW */}
           {tab==="now"&&<div>
-            <div style={S.h2}>🔥 Today — August 14, 2026 (Friday) IST</div>
+            <div style={S.h2}>🔥 Today — {new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} IST</div>
 
             {/* Live countdown for CCDV-F */}
             {(()=>{
@@ -1846,9 +1886,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                           '{"question":"<question text>","options":{"A":"<option>","B":"<option>","C":"<option>","D":"<option>"},"correct":"<A|B|C|D>","explanation":"<3-4 sentence explanation>","tip":"<1 practical tip>"}'
                         ].join("\n");
                         try{
-                          const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:prompt}]})});
-                          const d=await r.json();
-                          const raw=d.content?.map(b=>b.text||"").join("")||"{}";
+                          const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:prompt}]});
+                          const raw = readClaudeText(d) || "{}";
                           const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
                           if(si>=0&&ei>=0){setQuizQ(JSON.parse(raw.slice(si,ei+1)));}
                           else{setQuizQ({question:"Error parsing response. Please try again.",options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"",tip:""});}
@@ -1928,9 +1967,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       '{"front":"<term or short question>","back":"<full explanation with example>","category":"<subcategory>","difficulty":"<Easy|Medium|Hard>"}'
                     ].join("\n");
                     try{
-                      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:prompt}]})});
-                      const d=await r.json();
-                      const raw=d.content?.map(b=>b.text||"").join("")||"{}";
+                      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:prompt}]});
+                      const raw = readClaudeText(d) || "{}";
                       const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
                       if(si>=0&&ei>=0){setFlashcard(JSON.parse(raw.slice(si,ei+1)));}
                       else setFlashcard({front:"Parse error",back:"Please try again.",category:"—",difficulty:"—"});
@@ -2028,9 +2066,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     setSwitchGuideLoad(true);setSwitchGuideA("");
                     const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude CCDV-F (Aug 31), Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
                     try{
-                      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]})});
-                      const d=await r.json();
-                      setSwitchGuideA(d.content?.map(b=>b.text||"").join("")||"No response.");
+                      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
+                      setSwitchGuideA(readClaudeText(d) || "No response.");
                     }catch(err){setSwitchGuideA("Connection error: "+err.message);}
                     setSwitchGuideLoad(false);
                   }}
@@ -3674,10 +3711,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       "10. Generate the complete premium resume now:"
                     ].filter(Boolean).join("\n");
                     try {
-                      const res = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,messages:[{role:"user",content:prompt}]})});
-                      const data = await res.json();
-                      setRResult(data.content?.map(b=>b.text||"").join("")||"Error generating. Please try again.");
-                    } catch(_){ setRResult("Connection error. Please try again."); }
+                      const data = await callClaude({model:"claude-sonnet-4-6",max_tokens:2500,messages:[{role:"user",content:prompt}]});
+                      setRResult(readClaudeText(data) || "Error generating. Please try again.");
+                    } catch(err){ setRResult(err.message || "Connection error. Please try again."); }
                     setRLoad(false);
                   }}
                   disabled={rLoad}>
@@ -3696,7 +3732,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       }} style={{...S.btn(P.a2),padding:"7px 16px",fontSize:11}}>📋 Copy All</button>
                       <button onClick={()=>{
                         const w=window.open("","_blank");
-                        if(w){w.document.write('<html><head><title>Resume - Thamizamudhan K</title><style>body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;padding:20px 40px;line-height:1.7;color:#1a1a1a;font-size:14px}pre{white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px}@media print{body{margin:0;padding:20px}}</style></head><body><pre>'+rResult+'</pre></body></html>');w.document.close();setTimeout(()=>w.print(),600);}
+                        if(w){w.document.write('<html><head><title>Resume - Thamizamudhan K</title><style>body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;padding:20px 40px;line-height:1.7;color:#1a1a1a;font-size:14px}pre{white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px}@media print{body{margin:0;padding:20px}}</style></head><body><pre>'+escHtml(rResult)+'</pre></body></html>');w.document.close();setTimeout(()=>w.print(),600);}
                       }} style={{...S.btn(P.a3),padding:"7px 16px",fontSize:11}}>🖨️ Print / PDF</button>
                     </div>
                   </div>
@@ -3751,9 +3787,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     ];
                     const prompt = lines.join("\n");
                     try {
-                      const res = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt}]})});
-                      const data = await res.json();
-                      const raw = data.content?.map(b=>b.text||"").join("")||"{}";
+                      const data = await callClaude({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt}]});
+                      const raw = readClaudeText(data) || "{}";
                       const s = raw.indexOf("{"); const e2 = raw.lastIndexOf("}");
                       const clean = s>=0&&e2>=0 ? raw.slice(s,e2+1) : "{}";
                       try{ setAtsResult(JSON.parse(clean)); }
@@ -3945,4 +3980,3 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
     </div>
   );
 }
-

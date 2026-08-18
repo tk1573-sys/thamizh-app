@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 const P = {
@@ -546,12 +546,6 @@ export default function App() {
   const [jobAiA, setJobAiA]             = useState("");
   const [jobAiLoad, setJobAiLoad]       = useState(false);
 
-  // SNU Research
-  const [snuTab, setSnuTab]             = useState("overview");
-  const [snuAiQ, setSnuAiQ]             = useState("");
-  const [snuAiA, setSnuAiA]             = useState("");
-  const [snuAiLoad, setSnuAiLoad]       = useState(false);
-
   // Advice Buddy
   const [adviceQ, setAdviceQ]           = useState("");
   const [adviceA, setAdviceA]           = useState("");
@@ -684,7 +678,7 @@ export default function App() {
     const meetings = phdMeetings.slice(-3).map(m=>`Meeting ${m.date}: ${m.instructions}`).join(". ");
     const tasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>`${t.title} (${t.status}, due ${t.due||"TBD"})`).join(", ");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]})});
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]})});
       const d=await r.json(); setPhdAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
     } catch(_){ setPhdAiA("Connection error. Please try again."); }
     setPhdAiLoad(false);
@@ -693,10 +687,10 @@ export default function App() {
   // ── AI Life Agent ─────────────────────────────────────────────────────────────
   const runLifeAgent = async () => {
     setAgentRunning(true); setAgentLog([]); setAgentSugs([]);
-    const log = []; // mutable local array, state updated via setAgentLog
+    const log = [];
     const addLog = (icon, msg, color="muted") => {
       log.push({icon,msg,color,ts:new Date().toLocaleTimeString()});
-      setAgentLog(prev=>[...log]);
+      setAgentLog([...log]);
     };
 
     addLog("🤖","Life Agent starting analysis...","a1");
@@ -738,7 +732,7 @@ export default function App() {
         `Cert urgent: Claude CCDV-F (Aug 31), Databricks DEA (Sep-Oct 2026), GCP DE (Nov 2026).`,
       ].join(" ");
 
-      const r = await fetch("/api/claude",{
+      const r = await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-6", max_tokens:700,
@@ -768,42 +762,10 @@ export default function App() {
   const askCertStudy = async () => {
     if(!certStudyQ.trim()) return; setCertStudyLoad(true); setCertStudyA("");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]})});
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]})});
       const d=await r.json(); setCertStudyA(d.content?.map(b=>b.text||"").join("")||"No response.");
     } catch(_){setCertStudyA("Connection error. Please try again.");}
     setCertStudyLoad(false);
-  };
-
-  const askSnuAI = async () => {
-    if(!snuAiQ.trim()) return; setSnuAiLoad(true); setSnuAiA("");
-    const meetings = phdMeetings.slice(-2).map(m=>`${m.date}: ${m.instructions?.substring(0,100)}`).join(". ");
-    const openTasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>t.title).join(", ");
-    try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
-
-RESEARCH: Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children (Autism, ADHD, Cerebral Palsy, non-verbal children).
-
-MODALITIES: Wearables (HRV, accelerometer, temperature, gyroscope) + Computer Vision (facial emotion, body gesture) + Speech (cry detection, emotion) + Context (location, routine, environment).
-
-CORE PROBLEMS:
-PS-1: Personalized multimodal distress PREDICTION (not detection) per individual child using physiological precursor signals
-PS-2: Explainable AI (XAI) for caregiver decision support - WHY alert triggered + WHAT intervention recommended (SHAP, attention maps, natural language)
-PS-3: Dynamic multimodal fusion handling missing modalities gracefully
-PS-5: Privacy-preserving federated learning for multi-hospital deployment
-
-KEY NOVELTY: Individual behavioral baseline per child (not population average) + Predictive (5-15 min before distress onset) + Explainable recommendations + Privacy-preserving
-
-DATASETS: DREAMER (wearable EEG+ECG, 23 participants), AffectNet (450K facial images), MAHNOB-HCI (multimodal affect), IEMOCAP (speech emotion), custom caregiver logs (minimal)
-
-SUPERVISOR INSTRUCTIONS: Ideology of many, 15-20 keywords, 7-10 PS, minimal dataset approach, 4-year timeline with no backlog.
-
-RECENT MEETINGS: ${meetings}
-OPEN TASKS: ${openTasks}
-
-Give expert, specific, actionable research advice. Reference actual papers, methods, and datasets where relevant.`,messages:[{role:"user",content:snuAiQ}]})});
-      const d=await r.json(); setSnuAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
-    } catch(err){setSnuAiA("Connection error: "+err.message);}
-    setSnuAiLoad(false);
   };
 
   const askAdviceBuddy = async () => {
@@ -812,7 +774,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
     const odPhd = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
     const daysCCDVF = Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
 
 LIFE CONTEXT (August 2026):
 - Works full-time at TCS as Data Engineer (4.3 years): SQL/Teradata/DataStage/Unix/ServiceNow
@@ -848,7 +810,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askRadarAI = async () => {
     if(!radarAiQ.trim()) return; setRadarAiLoad(true); setRadarAiA("");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]})});
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]})});
       const d=await r.json(); setRadarAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
     } catch(_){setRadarAiA("Connection error.");}
     setRadarAiLoad(false);
@@ -857,7 +819,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askJobAI = async () => {
     if(!jobAiQ.trim()) return; setJobAiLoad(true); setJobAiA("");
     try {
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is August 14 2026. SC quota gives 5-year age relaxation. GATE score needed for ISRO/NIC. Give specific, actionable, honest advice about jobs matching this profile. Name specific organizations, portals, and deadlines.`,messages:[{role:"user",content:jobAiQ}]})});
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is August 14 2026. SC quota gives 5-year age relaxation. GATE score needed for ISRO/NIC. Give specific, actionable, honest advice about jobs matching this profile. Name specific organizations, portals, and deadlines.`,messages:[{role:"user",content:jobAiQ}]})});
       const d=await r.json(); setJobAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
     } catch(_){setJobAiA("Connection error. Please try again.");}
     setJobAiLoad(false);
@@ -890,7 +852,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askH = async()=>{
     if(!hAiQ.trim())return; setHAiLoad(true); setHAiA("");
     try{
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]})});
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]})});
       const d=await r.json(); setHAiA(d.content?.map(b=>b.text||"").join("")||"No response.");
     }catch(_){setHAiA("Error connecting. Please try again.");}
     setHAiLoad(false);
@@ -898,7 +860,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askC = async()=>{
     if(!cQ.trim())return; setCLoad(true); setCA("");
     try{
-      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]})});
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]})});
       const d=await r.json(); setCA(d.content?.map(b=>b.text||"").join("")||"No response.");
     }catch(_){setCA("Error connecting. Please try again.");}
     setCLoad(false);
@@ -945,7 +907,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const navItems=[
     ["now","🔥","Now"],["jobs","💡","Jobs"],["radar","🎯","GovtRadar"],["monthly","📅","Plan"],["career","💼","Careers"],
     ["skills","🧠","Skills"],["learn","🎓","Learn"],["ugc","📋","UGC NET"],
-    ["phd","🎓","PhD"],["snu","🔬","SNU Research"],["office","🖥️","Office"],["health","❤️","Health"],["journal","📓","Journal"],
+    ["office","🖥️","Office"],["health","❤️","Health"],["journal","📓","Journal"],
     ["resume","📄","Resume"],["certs","🏅","Certs"],["govt","🏛️","Govt"],["buddy","🫂","Buddy"],["coach","🤖","Coach"],
   ];
 
@@ -1748,45 +1710,47 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             <div style={S.h2}>🎓 Learn & Practice Hub</div>
             <div style={{display:"flex",gap:6,marginBottom:16,overflowX:"auto",flexWrap:"wrap"}}>
               {[["dashboard","📊 Dashboard"],["ugc","📋 UGC NET"],["python","🐍 Python"],["sql","🗄️ SQL"],["genai","🤖 GenAI"],["flashcards","🃏 Flashcards"],["switch","💼 Job Switch"]].map(([id,lb])=>(
-                <button key={id} style={S.pill(learnTab===id,P.a2)} onClick={()=>{ setLearnTab(id); setQuizQ(null); setQuizAns(""); setQuizFeedback(null); setFlashcard(null); setFlashFlipped(false); }}>{lb}</button>
+                <button key={id} style={S.pill(learnTab===id,P.a2)} onClick={()=>setLearnTab(id)}>{lb}</button>
               ))}
             </div>
 
-            {/* DASHBOARD */}
             {learnTab==="dashboard"&&<div>
               <div style={{...S.ib(P.a2),marginBottom:14}}>
                 <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:3}}>Your Learning Dashboard — July to December 2026</div>
-                <div style={{fontSize:12,color:P.muted}}>Tap any chip to mark done/undone. Progress saves automatically.</div>
+                <div style={{fontSize:12,color:P.muted}}>Tap any topic chip to mark done. Progress saves automatically. Green = done.</div>
               </div>
               {[
-                {track:"ugc-dbms",label:"UGC NET — DBMS",color:P.a2,items:["ER model EER diagrams","Normalisation 1NF-BCNF","SQL JOINs subqueries triggers","Transactions ACID 2PL","Indexing B+ tree hashing","Concurrency control","Query optimisation","Relational algebra"]},
+                {track:"ugc-dbms",label:"UGC NET — DBMS",color:P.a2,items:["ER model & EER","Normalisation 1NF-BCNF","SQL JOINs subqueries triggers","Transactions ACID 2PL","Indexing B+ tree hashing","Concurrency control","Query optimisation","Relational algebra"]},
                 {track:"ugc-os",label:"UGC NET — OS",color:P.a2,items:["Process scheduling FCFS SJF RR","Deadlock Banker algorithm","Paging segmentation","Virtual memory TLB","File systems disk scheduling","Semaphores mutex","IPC mechanisms"]},
-                {track:"ugc-dsa",label:"UGC NET — DSA",color:P.a2,items:["Trees BST AVL B-tree Heap","Graphs BFS DFS Dijkstra","Sorting all complexities","Dynamic Programming","Greedy algorithms","Hashing techniques","P vs NP complexity"]},
+                {track:"ugc-dsa",label:"UGC NET — DSA",color:P.a2,items:["Trees BST AVL B-tree Heap","Graphs BFS DFS Dijkstra","Sorting complexity all","Dynamic Programming","Greedy algorithms","Hashing techniques","P vs NP complexity"]},
                 {track:"ugc-cn",label:"UGC NET — Networks",color:P.a2,items:["OSI 7 layers protocols","TCP handshake flow control","IP subnetting CIDR VLSM","DNS HTTP SMTP DHCP","Routing RIP OSPF BGP","Network security basics"]},
+                {track:"ugc-toc",label:"UGC NET — TOC",color:P.a3,items:["DFA NFA epsilon-NFA","Regular expressions grammars","CFG PDA CFL","Turing Machines","Decidability halting problem"]},
+                {track:"ugc-prog",label:"UGC NET — Programming",color:P.a3,items:["C pointers memory arrays","OOP inheritance polymorphism","Java exceptions generics","Python iterators generators","Software testing types","SDLC models Agile Scrum"]},
                 {track:"python",label:"Python Learning",color:P.a1,items:["Variables loops functions","Lists dicts tuples sets","File IO CSV JSON Excel","Pandas read filter groupby merge","NumPy arrays operations","Error handling try except","REST APIs with requests","PySpark basics Databricks"]},
-                {track:"sql",label:"SQL Mastery",color:P.a3,items:["Advanced JOINs subqueries","CTEs WITH clause","Window functions RANK LEAD LAG","Recursive CTEs","Query execution plans","dbt models and tests","BigQuery partitioning clustering"]},
+                {track:"sql",label:"SQL Mastery",color:P.a2,items:["Advanced JOINs subqueries","CTEs WITH clause","Window functions RANK LEAD LAG","Recursive CTEs","Query execution plans","dbt models and tests","BigQuery partitioning clustering"]},
                 {track:"genai",label:"GenAI & LangChain",color:P.a4,items:["LLM fundamentals tokens","Prompt engineering techniques","LangChain chains memory","RAG pipeline architecture","ChromaDB FAISS vector stores","FastAPI for LLM apps","LangChain Agents and tools"]},
               ].map(track=>{
                 const done=Object.keys(learnProgress[track.track]||{}).length;
                 const pct=Math.round((done/track.items.length)*100);
-                return(
+                return (
                   <div key={track.track} style={{...S.C(),marginBottom:10}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                       <div style={{fontSize:13,fontWeight:700,color:track.color}}>{track.label}</div>
                       <span style={S.chip(pct===100?P.a2:track.color)}>{done}/{track.items.length} · {pct}%</span>
                     </div>
                     <div style={{background:`${P.bg}88`,borderRadius:6,height:6,marginBottom:10,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${pct}%`,background:track.color,borderRadius:6,transition:"width 0.3s"}}/>
+                      <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${track.color},${track.color}aa)`,borderRadius:6}}/>
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {track.items.map((item,i)=>{
                         const isDone=!!(learnProgress[track.track]||{})[i];
-                        return(
+                        return (
                           <div key={i} onClick={()=>isDone?unmarkDone(track.track,i):markDone(track.track,i)}
-                            style={{fontSize:11,padding:"4px 9px",borderRadius:6,cursor:"pointer",
-                              background:isDone?`${P.a2}22`:`${P.bg}88`,
+                            style={{fontSize:11,padding:"3px 9px",borderRadius:6,cursor:"pointer",
+                              background:isDone?`${P.a2}20`:`${P.bg}88`,
                               border:`1px solid ${isDone?P.a2:P.border}`,
-                              color:isDone?P.a2:P.muted,transition:"all 0.15s"}}>
+                              color:isDone?P.a2:P.muted,
+                              textDecoration:isDone?"line-through":"none"}}>
                             {isDone?"✓ ":""}{item}
                           </div>
                         );
@@ -1797,116 +1761,112 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               })}
             </div>}
 
-            {/* UNIFIED QUIZ ENGINE — UGC/Python/SQL/GenAI */}
-            {(learnTab==="ugc"||learnTab==="python"||learnTab==="sql"||learnTab==="genai")&&(()=>{
-              const configs={
-                ugc:{color:P.a2,label:"UGC NET CS Trainer — December 2026",desc:"AI-generated MCQs at UGC NET difficulty. Pick topic, think, reveal answer + explanation.",
-                  topics:["DBMS","Operating Systems","DSA & Algorithms","Computer Networks","Theory of Computation","Programming C Java Python","Software Engineering","Paper 1 Teaching & Research"]},
-                python:{color:P.a1,label:"Python Trainer — Data Engineering focus",desc:"Practice questions from basics to PySpark. Tailored to your DE background.",
-                  topics:["Week 1-2 Absolute Basics","Intermediate Python","Data Python Pandas NumPy","PySpark and DE Python","AI Python LangChain RAG"]},
-                sql:{color:P.a3,label:"SQL Trainer — Senior DE interview level",desc:"Advanced SQL. You know Teradata — this trains modern patterns and interview problems.",
-                  topics:["Window Functions RANK LEAD LAG","CTEs and Recursive SQL","Performance and Indexes","Data Modeling and dbt","BigQuery SQL","Senior DE Interview Problems"]},
-                genai:{color:P.a4,label:"GenAI Trainer — AI-DE interview level",desc:"LLM, LangChain, RAG, Agents. For your PhD and AI-DE job target.",
-                  topics:["LLM Fundamentals and Tokenization","Prompt Engineering","LangChain Concepts and Code","RAG Architecture","Vector Databases","LangChain Agents and Tools"]},
-              };
-              const cfg=configs[learnTab];
-              const px={ugc:"ugc-",python:"py-",sql:"sql-",genai:"ai-"}[learnTab];
-              const ctxMap={
-                ugc:"UGC NET CS exam difficulty. Candidate is a TCS Data Engineer preparing for December 2026 exam.",
-                python:"Practical Python for Data Engineering. Candidate knows SQL and ETL well but learning Python. Real DE use cases.",
-                sql:"Senior Data Engineer interview. Candidate is expert in Teradata SQL. Challenge with modern patterns: window functions, dbt, BigQuery.",
-                genai:"AI Data Engineer interview India 2026. Candidate pursues PhD in GenAI. Include LangChain and RAG code snippets."
-              };
-              return(
-                <div>
-                  <div style={{...S.ib(cfg.color),marginBottom:14}}>
-                    <div style={{fontSize:13,color:cfg.color,fontWeight:700,marginBottom:3}}>{cfg.label}</div>
-                    <div style={{fontSize:12,color:P.muted}}>{cfg.desc}</div>
-                  </div>
-                  <div style={S.C()}>
-                    <div style={S.L}>Select Topic</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
-                      {cfg.topics.map(t=>(
-                        <button key={t} style={S.pill(quizTopic===px+t,cfg.color)} onClick={()=>{setQuizTopic(px+t);setQuizQ(null);setQuizAns("");setQuizFeedback(null);}}>
-                          {t}
-                        </button>
-                      ))}
+            {(learnTab==="ugc"||learnTab==="python"||learnTab==="sql"||learnTab==="genai")&&<div>
+              {(()=>{
+                const configs={
+                  ugc:{color:P.a2,label:"UGC NET CS Trainer — December 2026",desc:"AI-generated MCQs at UGC NET difficulty. Pick topic, get question, think, reveal answer.",topics:["DBMS","Operating Systems","DSA & Algorithms","Computer Networks","Theory of Computation","Programming C Java Python","Software Engineering","Paper 1 Teaching & Research Aptitude"]},
+                  python:{color:P.a1,label:"Python Trainer — Data Engineering focus",desc:"Practice questions from basics to PySpark. Tailored to your DE background.",topics:["Week 1-2 Absolute Basics","Intermediate Python","Data Python Pandas NumPy","PySpark and DE Python","AI Python LangChain RAG"]},
+                  sql:{color:P.a2,label:"SQL Trainer — Senior DE interview level",desc:"Advanced SQL patterns. You know Teradata SQL — this trains modern DE interview skills.",topics:["Window Functions RANK LEAD LAG","CTEs and Recursive SQL","Performance and Indexes","Data Modeling and dbt","BigQuery SQL","Senior DE Interview Problems"]},
+                  genai:{color:P.a4,label:"GenAI Trainer — AI-DE interview level",desc:"LLM, LangChain, RAG, Agents. Relevant for your PhD and AI-DE job target.",topics:["LLM Fundamentals and Tokenization","Prompt Engineering","LangChain Concepts and Code","RAG Architecture","Vector Databases","LangChain Agents and Tools","MLOps and Deployment"]},
+                };
+                const cfg=configs[learnTab];
+                const prefixMap={ugc:"ugc",python:"py",sql:"sql",genai:"ai"};
+                const px=prefixMap[learnTab];
+                return (
+                  <div>
+                    <div style={{...S.ib(cfg.color),marginBottom:14}}>
+                      <div style={{fontSize:13,color:cfg.color,fontWeight:700,marginBottom:3}}>{cfg.label}</div>
+                      <div style={{fontSize:12,color:P.muted}}>{cfg.desc}</div>
                     </div>
-                    <button style={{...S.btn(quizLoad?P.muted:cfg.color),width:"100%",opacity:quizLoad?0.7:1,marginBottom:12}}
-                      onClick={async()=>{
-                        if(!quizTopic.startsWith(px)){alert("Please select a topic first.");return;}
-                        setQuizLoad(true);setQuizQ(null);setQuizAns("");setQuizFeedback(null);
-                        const topic=quizTopic.slice(px.length);
-                        const prompt=[
-                          "Generate ONE high-quality MCQ for topic: "+topic,
-                          "Context: "+ctxMap[learnTab],
-                          "Make it educational, practical, and at the right difficulty.",
-                          "Include code snippets where relevant using plain text.",
-                          "Return ONLY valid JSON, no markdown backticks:",
-                          '{"question":"<question text>","options":{"A":"<option>","B":"<option>","C":"<option>","D":"<option>"},"correct":"<A|B|C|D>","explanation":"<3-4 sentence explanation>","tip":"<1 practical tip>"}'
-                        ].join("\n");
-                        try{
-                          const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:prompt}]})});
-                          const d=await r.json();
-                          const raw=d.content?.map(b=>b.text||"").join("")||"{}";
-                          const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
-                          if(si>=0&&ei>=0){setQuizQ(JSON.parse(raw.slice(si,ei+1)));}
-                          else{setQuizQ({question:"Error parsing response. Please try again.",options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"",tip:""});}
-                        }catch(err){setQuizQ({question:"Connection error: "+err.message,options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"Check your internet connection.",tip:""});}
-                        setQuizLoad(false);
-                      }}
-                      disabled={quizLoad}>
-                      {quizLoad?"⏳ Generating question...":"📝 Get New Question"}
-                    </button>
-
-                    {quizQ&&quizQ.question&&<div style={{...S.CA(cfg.color)}}>
-                      <pre style={{fontSize:13,fontWeight:600,color:P.text,marginBottom:16,lineHeight:1.65,whiteSpace:"pre-wrap",fontFamily:"inherit"}}>{quizQ.question}</pre>
-                      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
-                        {Object.entries(quizQ.options||{}).map(([k,v])=>{
-                          const isSel=quizAns===k;
-                          const isOK=quizFeedback&&k===quizQ.correct;
-                          const isBad=quizFeedback&&isSel&&k!==quizQ.correct;
-                          return(
-                            <div key={k} onClick={()=>{if(!quizFeedback)setQuizAns(k);}}
-                              style={{padding:"11px 14px",borderRadius:10,cursor:quizFeedback?"default":"pointer",
-                                background:isOK?`${P.a2}25`:isBad?`${P.a5}25`:isSel?`${cfg.color}20`:`${P.bg}88`,
-                                border:`1px solid ${isOK?P.a2:isBad?P.a5:isSel?cfg.color:P.border}`,
-                                fontSize:13,color:isOK?P.a2:isBad?P.a5:P.sub,
-                                fontWeight:isOK||isSel?700:400,transition:"all 0.15s",lineHeight:1.5}}>
-                              <span style={{fontWeight:800,marginRight:8}}>{k}.</span>{v}
-                              {isOK&&" ✅"}{isBad&&" ❌"}
-                            </div>
-                          );
-                        })}
+                    <div style={S.C()}>
+                      <div style={S.L}>Select Topic</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+                        {cfg.topics.map(t=>(
+                          <button key={t} style={S.pill(quizTopic===px+t,cfg.color)} onClick={()=>{setQuizTopic(px+t);setQuizQ(null);setQuizAns("");setQuizFeedback(null);}}>{t}</button>
+                        ))}
                       </div>
-                      {quizAns&&!quizFeedback&&(
-                        <button style={{...S.btn(P.a3),width:"100%",marginBottom:10}} onClick={()=>setQuizFeedback(true)}>
-                          Submit Answer
-                        </button>
-                      )}
-                      {quizFeedback&&<div>
-                        <div style={{...S.ib(quizAns===quizQ.correct?P.a2:P.a5),marginBottom:10}}>
-                          <div style={{fontSize:14,fontWeight:700,color:quizAns===quizQ.correct?P.a2:P.a5,marginBottom:8}}>
-                            {quizAns===quizQ.correct?"✅ Correct! Well done.":"❌ Incorrect — Correct answer: "+quizQ.correct}
-                          </div>
-                          {quizQ.explanation&&<div style={{fontSize:12,color:P.sub,lineHeight:1.7,marginBottom:8}}>{quizQ.explanation}</div>}
-                          {quizQ.tip&&<div style={{fontSize:12,color:P.a3,fontWeight:600}}>💡 Tip: {quizQ.tip}</div>}
-                        </div>
-                        <button style={{...S.btn(cfg.color),width:"100%"}} onClick={()=>{setQuizQ(null);setQuizAns("");setQuizFeedback(null);}}>
-                          Next Question →
-                        </button>
-                      </div>}
-                    </div>}
-                  </div>
-                </div>
-              );
-            })()}
+                      <button style={{...S.btn(quizLoad?P.muted:cfg.color),width:"100%",opacity:quizLoad?0.7:1,marginBottom:12}}
+                        onClick={async()=>{
+                          if(!quizTopic.startsWith(px)){alert("Please select a topic first.");return;}
+                          setQuizLoad(true);setQuizQ(null);setQuizAns("");setQuizFeedback(null);
+                          const topic=quizTopic.slice(px.length);
+                          const contextMap={
+                            ugc:"UGC NET CS exam difficulty. Candidate is a TCS Data Engineer preparing for December 2026 UGC NET.",
+                            python:"Practical Python for Data Engineering. Candidate knows SQL and ETL but is new to Python. Focus on real DE use cases.",
+                            sql:"Senior Data Engineer interview. Candidate is expert in Teradata SQL. Challenge them with modern patterns: window functions, dbt, BigQuery.",
+                            genai:"AI Data Engineer interview 2026 India. Candidate is pursuing PhD in GenAI at SSN. Include LangChain and RAG code snippets."
+                          };
+                          const prompt=[
+                            "Generate ONE high-quality MCQ for topic: "+topic,
+                            "Context: "+contextMap[learnTab],
+                            "Make it educational, practical, and at the right difficulty.",
+                            "Include code snippets where relevant (use plain text, no markdown inside JSON strings).",
+                            "Return ONLY valid JSON, no markdown backticks, no text outside JSON:",
+                            '{"question":"<question text, use \\n for line breaks in code>","options":{"A":"<option A>","B":"<option B>","C":"<option C>","D":"<option D>"},"correct":"<A or B or C or D>","explanation":"<thorough 3-4 sentence explanation of why correct and why others wrong>","tip":"<1 practical memory tip or interview shortcut>"}'
+                          ].join("\n");
+                          try{
+                            const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:prompt}]})});
+                            const d=await r.json();
+                            const raw=d.content?.map(b=>b.text||"").join("")||"{}";
+                            const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
+                            setQuizQ(JSON.parse(si>=0&&ei>=0?raw.slice(si,ei+1):"{}"));
+                          }catch(_){setQuizQ({question:"Connection error. Please check internet and try again.",options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"",tip:""});}
+                          setQuizLoad(false);
+                        }}
+                        disabled={quizLoad}>
+                        {quizLoad?"⏳ Generating question...":"📝 Get New Question"}
+                      </button>
 
-            {/* FLASHCARDS */}
+                      {quizQ&&quizQ.question&&<div style={{...S.CA(cfg.color)}}>
+                        <pre style={{fontSize:13,fontWeight:600,color:P.text,marginBottom:16,lineHeight:1.65,whiteSpace:"pre-wrap",fontFamily:"inherit"}}>{quizQ.question}</pre>
+                        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
+                          {Object.entries(quizQ.options||{}).map(([k,v])=>{
+                            const isSel=quizAns===k;
+                            const isOK=quizFeedback&&k===quizQ.correct;
+                            const isBad=quizFeedback&&isSel&&k!==quizQ.correct;
+                            return (
+                              <div key={k} onClick={()=>{if(!quizFeedback)setQuizAns(k);}}
+                                style={{padding:"11px 14px",borderRadius:10,cursor:quizFeedback?"default":"pointer",
+                                  background:isOK?`${P.a2}25`:isBad?`${P.a5}25`:isSel?`${cfg.color}20`:`${P.bg}88`,
+                                  border:`1px solid ${isOK?P.a2:isBad?P.a5:isSel?cfg.color:P.border}`,
+                                  fontSize:13,color:isOK?P.a2:isBad?P.a5:P.sub,
+                                  fontWeight:isOK||isSel?600:400,transition:"all 0.15s",lineHeight:1.5}}>
+                                <span style={{fontWeight:800,marginRight:8}}>{k}.</span>{v}
+                                {isOK&&<span style={{marginLeft:8}}>✅</span>}
+                                {isBad&&<span style={{marginLeft:8}}>❌</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {quizAns&&!quizFeedback&&(
+                          <button style={{...S.btn(P.a3),width:"100%",marginBottom:10}} onClick={()=>setQuizFeedback(true)}>
+                            Submit Answer
+                          </button>
+                        )}
+                        {quizFeedback&&<div>
+                          <div style={{...S.ib(quizAns===quizQ.correct?P.a2:P.a5),marginBottom:10}}>
+                            <div style={{fontSize:14,fontWeight:700,color:quizAns===quizQ.correct?P.a2:P.a5,marginBottom:8}}>
+                              {quizAns===quizQ.correct?"✅ Correct! Well done.":"❌ Incorrect — Correct answer: "+quizQ.correct}
+                            </div>
+                            {quizQ.explanation&&<div style={{fontSize:12,color:P.sub,lineHeight:1.7,marginBottom:8}}>{quizQ.explanation}</div>}
+                            {quizQ.tip&&<div style={{fontSize:12,color:P.a3,fontWeight:600}}>💡 Tip: {quizQ.tip}</div>}
+                          </div>
+                          <button style={{...S.btn(cfg.color),width:"100%"}}
+                            onClick={()=>{setQuizQ(null);setQuizAns("");setQuizFeedback(null);}}>
+                            Next Question →
+                          </button>
+                        </div>}
+                      </div>}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>}
+
             {learnTab==="flashcards"&&<div>
               <div style={{...S.ib(P.a3),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a3,fontWeight:700,marginBottom:3}}>🃏 AI Flashcards — quick concept revision</div>
-                <div style={{fontSize:12,color:P.muted}}>Pick a topic → get a card → think → tap to flip and see the answer.</div>
+                <div style={{fontSize:13,color:P.a3,fontWeight:700,marginBottom:3}}>AI Flashcards — quick concept revision</div>
+                <div style={{fontSize:12,color:P.muted}}>Tap a topic, get a card, think, then tap to flip and see the full answer.</div>
               </div>
               <div style={S.C()}>
                 <div style={S.L}>Topic</div>
@@ -1921,20 +1881,19 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     const topic=quizTopic.replace("fc-","");
                     const prompt=[
                       "Generate ONE flashcard for topic: "+topic,
-                      "Front: a key concept or question. Short — 1-2 lines.",
-                      "Back: thorough explanation with example — 3-5 sentences.",
-                      "Target: Data Engineer or UGC NET CS level.",
+                      "Front: a key concept, term, algorithm, or question. Short — 1-2 lines max.",
+                      "Back: thorough explanation with formula, example, or step-by-step — 3-5 sentences.",
+                      "Target: Data Engineer or UGC NET CS exam level.",
                       "Return ONLY valid JSON, no markdown:",
-                      '{"front":"<term or short question>","back":"<full explanation with example>","category":"<subcategory>","difficulty":"<Easy|Medium|Hard>"}'
+                      '{"front":"<term or short question>","back":"<full explanation with example>","category":"<subcategory of topic>","difficulty":"<Easy|Medium|Hard>"}'
                     ].join("\n");
                     try{
-                      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:prompt}]})});
+                      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:prompt}]})});
                       const d=await r.json();
                       const raw=d.content?.map(b=>b.text||"").join("")||"{}";
                       const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
-                      if(si>=0&&ei>=0){setFlashcard(JSON.parse(raw.slice(si,ei+1)));}
-                      else setFlashcard({front:"Parse error",back:"Please try again.",category:"—",difficulty:"—"});
-                    }catch(err){setFlashcard({front:"Connection error",back:err.message,category:"—",difficulty:"—"});}
+                      setFlashcard(JSON.parse(si>=0&&ei>=0?raw.slice(si,ei+1):"{}"));
+                    }catch(_){setFlashcard({front:"Connection error",back:"Please check internet and try again.",category:"—",difficulty:"—"});}
                     setFlashLoad(false);
                   }}
                   disabled={flashLoad}>
@@ -1942,7 +1901,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 </button>
                 {flashcard&&<div>
                   <div onClick={()=>setFlashFlipped(f=>!f)}
-                    style={{...gl(flashFlipped?P.a2:P.a3),padding:28,textAlign:"center",cursor:"pointer",minHeight:170,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:10,borderRadius:14,transition:"all 0.2s"}}>
+                    style={{...gl(flashFlipped?P.a2:P.a3),padding:28,textAlign:"center",cursor:"pointer",minHeight:170,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:10,transition:"all 0.2s"}}>
                     <div style={{display:"flex",justifyContent:"space-between",width:"100%",marginBottom:14}}>
                       <span style={S.chip(P.a3)}>{flashcard.category||"—"}</span>
                       <span style={S.chip(flashcard.difficulty==="Hard"?P.a5:flashcard.difficulty==="Medium"?P.a3:P.a2)}>{flashcard.difficulty||"—"}</span>
@@ -1953,53 +1912,51 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     }
                     <div style={{fontSize:10,color:P.muted,marginTop:16}}>Tap to {flashFlipped?"hide":"show"} answer</div>
                   </div>
-                  <button style={{...S.btn(P.a3),width:"100%"}} onClick={()=>{setFlashcard(null);setFlashFlipped(false);setQuizTopic("");}}>Next Flashcard →</button>
+                  <button style={{...S.btn(P.a3),width:"100%"}} onClick={()=>{setFlashcard(null);setFlashFlipped(false);}}>Next Flashcard →</button>
                 </div>}
               </div>
             </div>}
 
-            {/* JOB SWITCH GUIDE */}
             {learnTab==="switch"&&<div>
               <div style={{...S.ib(P.a1),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a1,fontWeight:700,marginBottom:3}}>💼 Job Switch Guide — your personalised 2026 transition roadmap</div>
-                <div style={{fontSize:12,color:P.muted}}>Real advice for switching from TCS to Senior DE, AI-DE, or Analytics Engineer.</div>
+                <div style={{fontSize:13,color:P.a1,fontWeight:700,marginBottom:3}}>Job Switch Guide — your personalised 2026 transition roadmap</div>
+                <div style={{fontSize:12,color:P.muted}}>Real advice for switching from TCS to Senior DE, AI-DE, or Analytics Engineer. No generic tips.</div>
               </div>
               {[
-                {title:"📍 Where you are now (August 2026)",color:P.a1,items:[
-                  "4.3 years TCS Data Engineer — solid enterprise foundation, not a fresher",
-                  "Expert in SQL (Teradata), IBM DataStage ETL, Unix/Shell, ServiceNow ITSM",
-                  "PhD started at Shiv Nadar University in GenAI — extremely rare differentiator",
-                  "Learning Python, PySpark, LangChain, GCP — right track",
-                  "Databricks DEA exam target Sep-Oct 2026 — cert adds immediate resume credibility",
-                  "Claude CCDV-F deadline Aug 31 — 2 weeks away, study 30 min/day NOW",
+                {title:"📍 Where you are now (July 2026)",color:P.a1,items:[
+                  "4.3 years TCS Data Engineer — solid enterprise foundation, not a fresher by any measure",
+                  "Expert in SQL (Teradata), IBM DataStage ETL, Unix shell scripting, ServiceNow ITSM",
+                  "PhD started at SSN in GenAI — extremely rare differentiator. Very few DE candidates have this.",
+                  "Learning Python, PySpark, LangChain, GCP in parallel — you are on the right path",
+                  "Databricks DEA exam in Sep–Oct 2026 — this will add immediate resume credibility",
                 ]},
-                {title:"🎯 Fastest path to 40-60% salary hike",color:P.a2,items:[
-                  "TODAY: Apply to 3+ Senior ETL/DE roles on Naukri — Cognizant, DXC, HCL, Capgemini. Zero reskilling.",
-                  "Month 1: Claude cert + apply Senior DE roles. Target 2-3 interview calls.",
-                  "Month 2 (Sep): Databricks exam + Python project built. Apply Zoho, Freshworks, Razorpay.",
-                  "Month 3 (Oct): LangChain RAG project + GCP cert prep. Target AI-DE roles.",
-                  "Month 4-6: PhD + certs + portfolio = Senior DE Rs 25+ LPA or AI-DE Rs 30+ LPA realistic.",
+                {title:"🎯 The fastest path to a 40-60% salary hike",color:P.a2,items:[
+                  "TODAY: Update resume for Senior ETL Developer / Senior DE roles. Apply to 5+ on Naukri this week. Zero reskilling needed for this path. Cognizant, Capgemini, DXC, HCL are actively hiring.",
+                  "Month 1 (July): Apply Senior DE roles daily. Get Python basics done (Automate the Boring Stuff, free). Target: 2-3 interview calls by end of July.",
+                  "Month 2 (August): Databricks course 80% done + 1 Python project built. Apply Zoho, Freshworks, Razorpay. Target: at least 1 offer received.",
+                  "Month 3 (September): GIVE DATABRICKS EXAM. Build 1 RAG project. Now target AI-DE roles on top of Senior DE. Target salary: Rs 15-30 LPA.",
+                  "Month 4-6 (Oct-Dec): GCP cert + UGC NET exam. At this point you have certs, PhD, projects — Senior DE at Rs 25+ LPA or AI-DE at Rs 30+ LPA is realistic.",
                 ]},
-                {title:"💡 Your real skill gaps and how to close each",color:P.a3,items:[
-                  "Gap 1 — Python: 8 weeks to job-ready. Automate the Boring Stuff (free) + Kaggle free course + 1 project.",
-                  "Gap 2 — Cloud (GCP): 2-3 weeks hands-on. Google Cloud Skills Boost free tier + Rs 22,000 free credits.",
-                  "Gap 3 — Modern DE stack (Airflow, dbt): NOT needed before switching. Learn on the job.",
-                  "Gap 4 — GenAI/RAG: Your PhD gives the theory. Just need 1 working RAG project by October.",
-                  "NOT a gap — SQL, ETL, enterprise delivery, data pipelines: your biggest assets. Emphasise them.",
+                {title:"💡 Your actual skill gaps and how to close each one",color:P.a3,items:[
+                  "Gap 1 — Python: You are at zero. Close it in 8 weeks: Week 1-2 = Automate the Boring Stuff (free). Week 3-4 = Kaggle Python free course. Month 2 = Pandas + build 1 real project. 1 hour/day.",
+                  "Gap 2 — Cloud (GCP/AWS): GCP free tier gives Rs 22,000 free credits. Cloud Skills Boost has free hands-on labs. 2-3 weeks of daily practice closes this gap to job-ready level.",
+                  "Gap 3 — Modern DE stack (Airflow, Kafka, dbt): NOT needed before switching. Get the job first. Learn on the job. Do not delay your switch waiting for these.",
+                  "Gap 4 — AI/GenAI: Your PhD gives you the theory base. You just need 1 working RAG project (ChatPDF, NL-to-SQL, or ETL monitor). Build one in October using LangChain + ChromaDB.",
+                  "NOT a gap — SQL, ETL, data pipelines, enterprise delivery: these are your strongest assets. More experience than 80% of DE candidates. Emphasise them loudly.",
                 ]},
                 {title:"🏢 Where to apply and in what order",color:P.a4,items:[
-                  "Tier 1 (apply NOW): Cognizant, Capgemini, DXC, HCL, Mphasis for Senior ETL/DataStage. 40-60% hike.",
-                  "Tier 2 (Sep 2026, after Databricks): Zoho, Freshworks, TCS Digital, Accenture Analytics. Rs 15-30 LPA.",
-                  "Tier 3 (Oct-Nov 2026, after RAG project): Razorpay, Flipkart, Swiggy, Zerodha. Rs 20-35 LPA.",
-                  "Tier 4 (Nov+ 2026, after GCP cert): Sarvam AI, Google, Microsoft, CRED. Rs 25-50 LPA AI-DE roles.",
-                  "How: LinkedIn Easy Apply + Naukri for speed. Company career pages for higher shortlist rate.",
+                  "Tier 1 — Apply immediately (no extra skills needed): Cognizant, Capgemini, DXC Technology, Mphasis, HCL, Infosys BPM. Roles: Senior ETL Developer, Senior DataStage Developer. Hike: 40-60%.",
+                  "Tier 2 — Apply after Python basics + Databricks (Month 2): Zoho, Freshworks, TCS Digital (internal transfer), Accenture Analytics, PayPay, Meesho, Amazon India. Roles: Data Engineer, Senior DE.",
+                  "Tier 3 — Apply after Databricks cert + 1 project (Month 3-4): Razorpay, Flipkart, Swiggy, Zerodha, Groww. Roles: Senior DE, Analytics Engineer. Salary: Rs 20-30 LPA.",
+                  "Tier 4 — Apply after LangChain project + GCP cert (Month 4-6): Google India, Microsoft India, Sarvam AI, Krutrim, CRED, PhonePe. Roles: AI Data Engineer, GenAI Engineer. Salary: Rs 30-50 LPA.",
+                  "How to apply: LinkedIn Easy Apply for speed. Naukri for Indian companies. Company career pages for better shortlist rate. Send 1-2 personalized InMails to DE team leads per week.",
                 ]},
-                {title:"📞 What to say in interviews",color:P.a5,items:[
-                  "Opening pitch: 4.3 years TCS Data Engineer, expert SQL and DataStage ETL. PhD in GenAI at Shiv Nadar University. Upskilling in Python, PySpark, LangChain for modern AI-powered data engineering roles.",
-                  "Why leaving TCS: Want to work with cloud-native and AI-powered data systems that align with my PhD research.",
-                  "On Python skills: Learning systematically with real DE use cases. Completed Pandas and built ETL automation. My SQL and DataStage background means I understand data deeply.",
-                  "Your biggest differentiator: PhD in GenAI + 4+ years enterprise ETL = extremely rare combination. Nobody in the room has both.",
-                  "Salary: Research on LinkedIn Salary Insights. Know your number. Never give it first. Never accept first offer.",
+                {title:"📞 Interview answers — what to say",color:P.a5,items:[
+                  "Opening pitch (30 seconds): I am a Data Engineer with 4.3 years at TCS, expert in SQL, DataStage ETL, and Teradata. I recently started my PhD in Generative AI at SSN College of Engineering while upskilling in Python, PySpark, and LangChain. I am targeting modern cloud-native DE and AI-DE roles.",
+                  "Why leaving TCS: I want to work with cloud-native and AI-powered data systems that align with my PhD research in GenAI. TCS has given me excellent enterprise foundations and I want to apply them in a more modern tech stack.",
+                  "On Python skills (honest answer when fresh): I started learning Python systematically 2 months ago with a focus on data engineering use cases. I have completed Pandas and NumPy and built an ETL automation script. I am actively building more projects. My SQL and DataStage background means I understand data deeply — Python is just a new tool.",
+                  "Your biggest selling point to emphasise: PhD in GenAI at SSN plus 4+ years enterprise ETL experience is a rare combination. Nobody else in the room has both. Mention this in every interview.",
+                  "Salary negotiation: Research current market on LinkedIn Salary Insights and Glassdoor for your target role in Chennai and Bangalore. Know your number before the call. Say: Based on my research and experience level I am targeting X to Y LPA. Never give a number first. Never accept the first offer.",
                 ]},
               ].map((s,i)=>(
                 <div key={i} style={{...S.CA(s.color),marginBottom:12}}>
@@ -2015,23 +1972,34 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={S.C()}>
                 <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:10}}>🤖 Ask the Job Switch Advisor</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                  {["How do I negotiate salary when switching from TCS?","What to say when asked why I am leaving TCS?","How to explain Python skills when I just started?","Which projects to build for an AI-DE job?","Should I wait for Databricks cert before applying?","How to write a cold LinkedIn message to a recruiter?","What is a realistic salary target for my profile in 2026?"].map(q=>(
+                  {["How do I negotiate salary when switching from TCS?","What to say when asked why I am leaving TCS?","How do I explain Python skills when I just started learning?","What projects should I build to get an AI-DE job?","Should I wait for Databricks cert before applying?","How to write a cold message to a recruiter on LinkedIn?","How to handle a counter-offer from TCS?","What is a realistic salary target for my profile in 2026?"].map(q=>(
                     <button key={q} onClick={()=>setSwitchGuideQ(q)} style={{background:P.card3,border:`1px solid ${P.border}`,borderRadius:7,padding:"6px 11px",color:P.sub,fontSize:11,cursor:"pointer",textAlign:"left"}}>{q}</button>
                   ))}
                 </div>
                 <textarea style={{...S.ta,minHeight:65,marginBottom:10}}
-                  placeholder="Ask anything about switching jobs — salary, interviews, which companies, how to position your skills..."
+                  placeholder="Ask anything about switching jobs — salary negotiation, interview answers, which companies to target, how to position your skills, handling offers..."
                   value={switchGuideQ} onChange={e=>setSwitchGuideQ(e.target.value)}/>
                 <button style={{...S.btn(switchGuideLoad?P.muted:P.a1),opacity:switchGuideLoad?0.7:1,width:"100%"}}
                   onClick={async()=>{
                     if(!switchGuideQ.trim())return;
                     setSwitchGuideLoad(true);setSwitchGuideA("");
-                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude CCDV-F (Aug 31), Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
+                    const sys=[
+                      "You are an expert career counsellor specialising in tech career transitions in India 2026.",
+                      "Client: Thamizamudhan K, 27, Chennai. Data Engineer at TCS 4.3 years.",
+                      "Expert skills: SQL Teradata advanced, IBM DataStage ETL enterprise-scale, Unix Shell scripting, ServiceNow ITSM.",
+                      "Learning in 2026: Python (beginner-intermediate), PySpark, LangChain, GCP BigQuery Dataflow.",
+                      "Education: B.E ECE, M.Tech Data Science, PhD CSE GenAI at SSN College of Engineering (started July 2026 part-time).",
+                      "Certs in progress: Databricks DEA (Sep 2026), GCP Professional DE (Nov 2026), Google Gemini Enterprise Dev (2026).",
+                      "Goal: Switch to Senior DE or AI-DE with 40-60% salary hike by end of 2026.",
+                      "Also: UGC NET CS December 2026, DRDO/ISRO/NIC govt roles consideration.",
+                      "SC category. Chennai based. Open to Bangalore remote hybrid.",
+                      "Give specific, practical, actionable advice. Be direct and honest. Name actual companies and numbers. No generic motivational content."
+                    ].join(" ");
                     try{
-                      const r=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]})});
+                      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]})});
                       const d=await r.json();
                       setSwitchGuideA(d.content?.map(b=>b.text||"").join("")||"No response.");
-                    }catch(err){setSwitchGuideA("Connection error: "+err.message);}
+                    }catch(_){setSwitchGuideA("Connection error. Please try again.");}
                     setSwitchGuideLoad(false);
                   }}
                   disabled={switchGuideLoad}>
@@ -2047,7 +2015,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
 
 
-                    {tab==="phd"&&<div>
+          {/* ══ PhD PLANNER ══ */}
+          {tab==="phd"&&<div>
             <div style={S.h2}>🎓 PhD Research Planner</div>
 
             {/* Info bar */}
@@ -2470,386 +2439,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             </div>}
           </div>}
 
-          {tab==="snu"&&<div>
-            <div style={S.h2}>🔬 SNU Research — Human-Centered Multimodal XAI</div>
-
-            {/* Research identity card */}
-            <div style={{...gl(P.a4),padding:16,marginBottom:14,borderRadius:14,border:`1px solid ${P.a4}44`}}>
-              <div style={{fontSize:11,color:P.muted,fontWeight:700,letterSpacing:"0.5px",marginBottom:6}}>ACTIVE RESEARCH — SHIV NADAR UNIVERSITY (SNU)</div>
-              <div style={{fontSize:15,fontWeight:800,color:P.text,marginBottom:4,lineHeight:1.4}}>Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children</div>
-              <div style={{fontSize:12,color:P.a4,fontWeight:600,marginBottom:10}}>Supervisor: Dr. K.D. Badri Narayanan · Part-time PhD · Started July 2026</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11}}>
-                {[["Mode","Part-time (alongside TCS)"],["Duration","4 years (Jul 2026 – Dec 2029)"],["Type","Computer Science & Engineering"],["Focus","Multimodal AI + XAI + Healthcare"]].map(([k,v])=>(
-                  <div key={k} style={{background:`${P.bg}88`,borderRadius:7,padding:"6px 9px"}}>
-                    <div style={{color:P.muted}}>{k}</div>
-                    <div style={{color:P.sub,fontWeight:600,marginTop:2}}>{v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Sub tabs */}
-            <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",flexWrap:"wrap"}}>
-              {[["overview","🧠 Research"],["framework","🏗️ Framework"],["ideas","💡 10 Ideas"],["gaps","🔍 Gaps"],["datasets","📊 Datasets"],["timeline","📅 Timeline"],["ai","🤖 Research AI"]].map(([id,lb])=>(
-                <button key={id} style={S.pill(snuTab===id,P.a4)} onClick={()=>setSnuTab(id)}>{lb}</button>
-              ))}
-            </div>
-
-            {/* RESEARCH OVERVIEW */}
-            {snuTab==="overview"&&<div>
-              <div style={{...S.CA(P.a4),marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:700,color:P.a4,marginBottom:10}}>🎯 Core Research Problem</div>
-                {[
-                  ["Theme","Human-Centered Multimodal Artificial Intelligence for Intelligent Monitoring, Personalized Distress Prediction, and Explainable Caregiver Decision Support for Children with Special Care Needs"],
-                  ["Target Population","Children with Autism Spectrum Disorder (ASD), ADHD, Cerebral Palsy, non-verbal conditions, developmental delays, rare neurological disorders"],
-                  ["Core Innovation","Predict distress 5-15 minutes BEFORE it occurs (predictive, not reactive) + Explain WHY to caregivers in natural language"],
-                  ["Key Novelty","Personalized per-child behavioral baseline (not population average) + Multimodal fusion + XAI caregiver recommendations + Privacy-preserving"],
-                  ["PhD Contribution","First unified framework combining wearable sensing + computer vision + speech + context + XAI for special needs children care"],
-                ].map(([k,v],i,arr)=>(
-                  <div key={i} style={{...S.li(i===arr.length-1),flexDirection:"column",gap:3}}>
-                    <span style={{color:P.a4,fontWeight:700,fontSize:11}}>{k}</span>
-                    <span style={{fontSize:12,color:P.sub,lineHeight:1.55}}>{v}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{...S.CA(P.a1),marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:10}}>📡 Sensor Modalities</div>
-                {[
-                  {mod:"🤲 Wearable Sensors",items:["Heart Rate (HR) and Heart Rate Variability (HRV) — stress/anxiety biomarker","Skin Temperature — physiological arousal indicator","Accelerometer + Gyroscope — movement, stimming, agitation patterns","EDA/GSR — electrodermal activity for emotional arousal","Sleep quality monitoring"]},
-                  {mod:"👁️ Computer Vision",items:["Facial emotion recognition (micro-expressions)","Body gesture and movement analysis","Action recognition (stimming, aggression patterns)","Gaze tracking where applicable"]},
-                  {mod:"🎤 Speech & Audio",items:["Cry detection and distress vocalisation","Speech emotion recognition","Non-verbal sound classification","Environmental audio context"]},
-                  {mod:"📍 Context Signals",items:["Location and environment type","Daily routine and schedule","Time of day patterns","Caregiver-logged behavioral notes"]},
-                ].map((m,i)=>(
-                  <div key={i} style={{marginBottom:i===3?0:10}}>
-                    <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:5}}>{m.mod}</div>
-                    {m.items.map((item,j)=>(
-                      <div key={j} style={{fontSize:11,color:P.muted,marginBottom:2,paddingLeft:8,display:"flex",gap:5}}><span style={{color:P.a1}}>›</span>{item}</div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{...S.CA(P.a2),marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:700,color:P.a2,marginBottom:10}}>🔑 15-20 Core Keywords (for Supervisor Meeting)</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                  {["Multimodal AI","Human-Centered AI","Special Care Children","Autism Spectrum Disorder","ADHD","Cerebral Palsy","Wearable Sensors","Heart Rate Variability","Computer Vision","Facial Emotion Recognition","Speech Emotion Recognition","Sensor Fusion","Distress Prediction","Explainable AI (XAI)","SHAP","Caregiver Decision Support","Personalized AI","Individual Baseline Learning","Federated Learning","Edge AI","Continual Learning","Healthcare Digital Twin","Behaviour Analysis","Longitudinal Monitoring","Privacy-Preserving AI"].map((kw,i)=>(
-                    <span key={i} style={{...S.chip(P.a2),fontSize:11,padding:"4px 9px"}}>{kw}</span>
-                  ))}
-                </div>
-              </div>
-
-              <div style={S.C()}>
-                <div style={S.L}>📚 Research Evolution Journey</div>
-                {["M.Tech Project: AI Emotional Wellness Buddy → starting point",
-                  "Extended to: Longitudinal emotional monitoring over time",
-                  "Added: Crisis detection and alert systems",
-                  "Added: Explainable AI for clinical trust",
-                  "Expanded: Personalized monitoring per individual child",
-                  "Added: Multimodal sensing (wearables + vision + speech)",
-                  "Focused on: Caregiver assistance and decision support",
-                  "Target population: Special needs children (Autism, ADHD, CP)",
-                  "Key innovation: Predictive (before distress) not reactive (after)",
-                  "Current vision: Human-Centered Multimodal XAI Framework (PhD)"
-                ].map((step,i,arr)=>(
-                  <div key={i} style={{...S.li(i===arr.length-1)}}>
-                    <div style={{background:P.a4,color:"#000",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0}}>{i+1}</div>
-                    <span style={{fontSize:12,color:P.sub}}>{step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>}
-
-            {/* FRAMEWORK */}
-            {snuTab==="framework"&&<div>
-              <div style={{...S.ib(P.a4),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>The 10-Module Research Framework</div>
-                <div style={{fontSize:11,color:P.muted}}>Each module = one research idea = one potential publication. Together they form the unified PhD framework.</div>
-              </div>
-              {[
-                {n:"Module 1",title:"Multimodal Behaviour Understanding Framework",color:P.a1,
-                  problem:"Existing systems analyse only ONE modality. No unified system fuses wearable + vision + speech + context.",
-                  novelty:"Dynamic multimodal fusion with cross-modal attention — handles missing modalities gracefully",
-                  ps:"PS-3",pub:"IEEE TPAMI or Information Fusion (Q1)"},
-                {n:"Module 2",title:"Personalised AI per Child",color:P.a2,
-                  problem:"All AI trained on population averages. Fails for individual children with unique behavioural patterns.",
-                  novelty:"Individual behavioural baseline learning — adapts to each child's unique physiological signature",
-                  ps:"PS-1 (core)",pub:"IEEE TNSRE (Q1) — your primary target journal"},
-                {n:"Module 3",title:"Early Distress Prediction",color:P.a3,
-                  problem:"Current systems detect distress AFTER it occurs. No predictive system for 5-15 min early warning.",
-                  novelty:"Precursor signal modelling — learns physiological patterns that precede meltdown/anxiety onset",
-                  ps:"PS-1 (core)",pub:"IEEE JBHI or Computers in Human Behavior (Q1)"},
-                {n:"Module 4",title:"Explainable Caregiver Recommendation System",color:P.a4,
-                  problem:"AI generates binary alerts. No explanation of WHY alert triggered or WHAT caregiver should do.",
-                  novelty:"SHAP + attention maps + natural language explanation generation for caregivers",
-                  ps:"PS-2 (core)",pub:"AI in Medicine or Expert Systems with Applications (Q1)"},
-                {n:"Module 5",title:"Longitudinal Behaviour Intelligence",color:P.a5,
-                  problem:"Systems analyse snapshots. No system tracks behavioural evolution over months/years.",
-                  novelty:"Behaviour trajectory modelling — tracks how distress patterns change with therapy and growth",
-                  ps:"PS-6",pub:"Nature Digital Medicine or npj Digital Medicine"},
-                {n:"Module 6",title:"Privacy-Preserving Federated Healthcare AI",color:P.a1,
-                  problem:"Child healthcare data cannot be shared across hospitals. No federated multimodal system exists.",
-                  novelty:"Federated learning + Edge AI for multi-hospital deployment without raw data sharing",
-                  ps:"PS-5",pub:"IEEE TIFS or Journal of Biomedical Informatics (Q1)"},
-                {n:"Module 7",title:"LLM-Based Caregiver Knowledge Assistant",color:P.a2,
-                  problem:"Caregivers don't know optimal interventions. No personalised, context-aware AI assistant exists.",
-                  novelty:"RAG + LLM for evidence-based, personalised caregiving recommendations using child history",
-                  ps:"PS-7",pub:"ACL Findings or Artificial Intelligence in Medicine (Q1)"},
-                {n:"Module 8",title:"Personalised Therapy Recommendation",color:P.a3,
-                  problem:"Children receive identical therapy despite vastly different individual profiles.",
-                  novelty:"AI-driven personalised therapy planning based on behavioural response history",
-                  ps:"PS-8",pub:"IEEE TNSRE or Journal of Autism and Developmental Disorders"},
-                {n:"Module 9",title:"Behaviour Pattern Discovery",color:P.a4,
-                  problem:"Hidden daily/weekly/seasonal patterns remain undetected in raw data.",
-                  novelty:"Unsupervised temporal behaviour mining across multiple time scales",
-                  ps:"PS-9",pub:"Pattern Recognition or IEEE TKDE (Q1)"},
-                {n:"Module 10",title:"Healthcare Digital Twin",color:P.a5,
-                  problem:"No continuous virtual model of a child's health state for simulation and planning.",
-                  novelty:"Digital Twin that predicts future states, simulates interventions, tracks progress",
-                  ps:"PS-10",pub:"IEEE Transactions on Biomedical Engineering or Nature Digital Medicine"},
-              ].map((m,i)=>(
-                <div key={i} style={{...S.CA(m.color),marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:5,marginBottom:6}}>
-                    <div><span style={{fontSize:10,color:m.color,fontWeight:700}}>{m.n}</span><span style={{fontSize:13,fontWeight:700,color:P.text,marginLeft:8}}>{m.title}</span></div>
-                    <span style={S.chip(m.color)}>{m.ps}</span>
-                  </div>
-                  <div style={{fontSize:11,color:P.muted,marginBottom:4}}>❌ Problem: {m.problem}</div>
-                  <div style={{fontSize:11,color:m.color,marginBottom:4}}>✨ Novelty: {m.novelty}</div>
-                  <div style={{fontSize:10,color:P.muted}}>🎯 Target: {m.pub}</div>
-                </div>
-              ))}
-            </div>}
-
-            {/* 10 IDEAS */}
-            {snuTab==="ideas"&&<div>
-              <div style={{...S.ib(P.a3),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a3,fontWeight:700,marginBottom:3}}>7-10 Problem Statements (as instructed by Dr. K.D. Badri Narayanan)</div>
-                <div style={{fontSize:11,color:P.muted}}>Each has: Problem + Research Gap + Minimal Dataset + Why this problem. Present all 10 at next meeting.</div>
-              </div>
-              {[
-                {ps:"PS-1 ★ PRIMARY",title:"Personalized Multimodal Distress Prediction for Special Needs Children",
-                 fill:"E3F2FD",color:P.a5,
-                 problem:"Existing distress detection uses single modality and generic population models. Detects only AFTER distress occurs.",
-                 gap:"No system combines wearable + vision + context for PREDICTIVE, PERSONALISED distress modelling per individual child.",
-                 data:"DREAMER (23 participants, wearable) + AffectNet subset (10K images) + 20-30 caregiver logs",
-                 why:"★ FIRST publication target. Addresses core innovation directly."},
-                {ps:"PS-2 ★ SECONDARY",title:"Explainable AI for Caregiver Decision Support",
-                 fill:"E8F5E9",color:P.a4,
-                 problem:"Healthcare AI generates binary alerts with no explanation of WHY triggered or WHAT intervention to take.",
-                 gap:"No XAI framework produces actionable caregiver recommendations with visual explanation of AI reasoning.",
-                 data:"Same as PS-1 data + caregiver survey (50 responses) + IEMOCAP (speech)",
-                 why:"★ SECOND publication. Builds directly on PS-1 — same dataset, add XAI layer."},
-                {ps:"PS-3",title:"Dynamic Multimodal Fusion for Child Behaviour Understanding",
-                 fill:"FFF3E0",color:P.a3,
-                 problem:"Static fusion fails when sensor is noisy/unavailable — common in real child monitoring.",
-                 gap:"No robust dynamic fusion handles missing modalities gracefully for child behaviour analysis.",
-                 data:"MAHNOB-HCI + AffectNet + OpenPose — all free academic",
-                 why:"Strong methodology paper. Publishable standalone."},
-                {ps:"PS-4",title:"Early Intervention Prediction Using Wearable and Vision Precursors",
-                 fill:"FCE4EC",color:P.a1,
-                 problem:"Systems identify intervention need only AFTER full distress episode begins.",
-                 gap:"No model predicts intervention need 5-15 min before using wearable + vision precursor signals.",
-                 data:"DREAMER + MAHNOB-HCI + custom caregiver episode timestamps",
-                 why:"High clinical impact. Strong novelty for IEEE/Elsevier."},
-                {ps:"PS-5",title:"Privacy-Preserving Federated Multimodal Healthcare AI",
-                 fill:"EDE7F6",color:P.a2,
-                 problem:"Training multimodal AI needs data from multiple hospitals. Privacy regulations prevent centralised storage.",
-                 gap:"No federated framework for multimodal child behaviour AI enables cross-hospital training without data sharing.",
-                 data:"Simulated federated split of MODMA + DREAMER — no additional data needed",
-                 why:"Strong privacy-aware AI contribution. DPDP Act 2023 India relevance."},
-                {ps:"PS-6",title:"Longitudinal Behaviour Trajectory Modelling",
-                 fill:"E0F7FA",color:P.a3,
-                 problem:"AI analyses each observation independently. Cannot track how behaviour evolves over months/years.",
-                 gap:"No temporal AI model captures long-term behavioural trajectory for adaptive intervention.",
-                 data:"Self-collected longitudinal caregiver logs over 3-6 months (20 children — minimal)",
-                 why:"Unique long-term contribution. Supports Digital Twin."},
-                {ps:"PS-7",title:"LLM-Powered Caregiver Knowledge Assistant with RAG",
-                 fill:"F3E5F5",color:P.a4,
-                 problem:"Caregivers don't know correct intervention for specific episodes. Resources are generic.",
-                 gap:"No LLM provides real-time, context-aware, personalised intervention recommendations using child's own history.",
-                 data:"Custom caregiver Q&A (100-200 pairs) + PubMed Open Access + custom RAG knowledge base",
-                 why:"High caregiver impact. LLM+RAG+healthcare = strong ACL/EMNLP publication."},
-                {ps:"PS-8",title:"Personalised Adaptive Intervention Recommendation",
-                 fill:"FFF9C4",color:P.a1,
-                 problem:"Children with similar diagnoses receive identical interventions despite individual differences.",
-                 gap:"No adaptive AI recommends personalised interventions based on individual response history.",
-                 data:"Therapist-logged intervention response dataset (20-30 children, 3 months — minimal)",
-                 why:"Strong clinical translation. Co-publication with SNU healthcare collaborators."},
-                {ps:"PS-9",title:"Behaviour Pattern Discovery Using Temporal Mining",
-                 fill:"E8F5E9",color:P.a2,
-                 problem:"Daily/weekly/seasonal behaviour patterns remain undetected in raw data.",
-                 gap:"No unsupervised framework discovers behaviour patterns across temporal scales in child healthcare data.",
-                 data:"Longitudinal wearable + caregiver log data (self-collected or MODMA subset)",
-                 why:"Novel contribution in unsupervised healthcare AI. Complements PS-6."},
-                {ps:"PS-10",title:"Healthcare Digital Twin for Continuous Child Monitoring",
-                 fill:"FCE4EC",color:P.a5,
-                 problem:"No continuous virtual model of child's health state for simulation and planning.",
-                 gap:"No Digital Twin integrates multimodal real-time data for continuously updated child behavioural model.",
-                 data:"Combines PS-1 + PS-6 data — no separate dataset needed",
-                 why:"Highly innovative. IEEE Trans. Biomedical Engineering or Nature Digital Medicine target."},
-              ].map((ps,i)=>(
-                <div key={i} style={{background:ps.fill||"transparent",borderRadius:12,padding:"12px 14px",marginBottom:8,border:`1px solid ${ps.color}33`,borderLeft:`4px solid ${ps.color}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:5,marginBottom:6}}>
-                    <span style={{fontSize:12,fontWeight:800,color:ps.color}}>{ps.ps}</span>
-                  </div>
-                  <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>{ps.title}</div>
-                  <div style={{fontSize:11,color:"#444",marginBottom:3}}>❌ Problem: {ps.problem}</div>
-                  <div style={{fontSize:11,color:"#444",marginBottom:3}}>🔍 Gap: {ps.gap}</div>
-                  <div style={{fontSize:11,color:"#1B5E20",marginBottom:3}}>📊 Dataset: {ps.data}</div>
-                  <div style={{fontSize:11,color:ps.color,fontWeight:600}}>⭐ {ps.why}</div>
-                </div>
-              ))}
-            </div>}
-
-            {/* RESEARCH GAPS */}
-            {snuTab==="gaps"&&<div>
-              <div style={{...S.ib(P.a5),marginBottom:12}}>
-                <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>10 Documented Research Gaps — know these for supervisor meetings</div>
-              </div>
-              {[
-                {rg:"RG-1",area:"Single modality",gap:"Most systems use ONLY ONE sensor. No unified system fuses wearable + vision + speech + context for child monitoring.",contribution:"Your multimodal fusion framework"},
-                {rg:"RG-2",area:"Generic AI",gap:"AI trained on population averages fails individual children. No personalized baseline per child exists in literature.",contribution:"Your individual behavioral baseline learning"},
-                {rg:"RG-3",area:"Reactive not predictive",gap:"Systems detect distress AFTER it occurs. No system predicts meltdown/anxiety 5-15 min BEFORE onset.",contribution:"Your predictive distress detection"},
-                {rg:"RG-4",area:"No XAI for caregivers",gap:"Systems generate binary alerts. No explanation of WHY or WHAT intervention. Caregivers cannot trust black-box AI.",contribution:"Your XAI + natural language recommendations"},
-                {rg:"RG-5",area:"No longitudinal learning",gap:"Systems analyze snapshots only. No system learns how behavior EVOLVES over months and years.",contribution:"Your behavior trajectory modeling"},
-                {rg:"RG-6",area:"Privacy vulnerabilities",gap:"Child healthcare data uploaded to cloud without federated/edge AI privacy protection.",contribution:"Your privacy-preserving federated architecture"},
-                {rg:"RG-7",area:"Small datasets",gap:"No data augmentation strategy specific to child healthcare AI for rare/small datasets.",contribution:"Your minimal dataset + synthetic augmentation approach"},
-                {rg:"RG-8",area:"No caregiver AI assistant",gap:"No LLM-powered system provides context-aware, evidence-based, personalized caregiving recommendations.",contribution:"Your RAG + LLM caregiver assistant"},
-                {rg:"RG-9",area:"No digital twin",gap:"No continuous virtual model of a child's health state for simulation and intervention planning.",contribution:"Your healthcare digital twin framework"},
-                {rg:"RG-10",area:"Fragmented systems",gap:"Each healthcare AI tool works in isolation. No unified end-to-end framework from sensing to caregiver recommendation.",contribution:"Your unified Human-Centered Multimodal XAI Framework"},
-              ].map((g,i,arr)=>(
-                <div key={i} style={{background:P.card3,borderRadius:10,padding:"11px 13px",marginBottom:7,borderLeft:`3px solid ${P.a5}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                    <span style={{fontSize:12,fontWeight:700,color:P.a5}}>{g.rg}: {g.area}</span>
-                  </div>
-                  <div style={{fontSize:12,color:P.sub,marginBottom:5,lineHeight:1.5}}>{g.gap}</div>
-                  <div style={{fontSize:11,color:P.a2,fontWeight:600}}>→ Your contribution: {g.contribution}</div>
-                </div>
-              ))}
-            </div>}
-
-            {/* DATASETS */}
-            {snuTab==="datasets"&&<div>
-              <div style={{...S.ib(P.a2),marginBottom:12}}>
-                <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:3}}>Minimal Dataset Strategy (as instructed by Dr. K.D. Badri Narayanan)</div>
-                <div style={{fontSize:11,color:P.muted}}>Start with smallest dataset that validates core hypothesis. Expand only after initial results are promising.</div>
-              </div>
-              <div style={{...S.ib(P.a5),marginBottom:12}}>
-                <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:5}}>★ Recommended Starting Point (MINIMAL)</div>
-                <div style={{fontSize:12,color:P.sub,lineHeight:1.6}}>DREAMER (23 participants, wearable EEG+ECG) + AffectNet subset (10,000 facial images) + 20-30 custom caregiver logs = sufficient to validate PS-1 core hypothesis. All free academic access.</div>
-              </div>
-              {[
-                {name:"DREAMER",type:"Wearable (EEG + ECG + emotion)",size:"23 participants",access:"Free — IEEE DataPort",use:"PS-1: wearable distress prediction baseline",why:"Smallest viable wearable dataset. Perfect for minimal approach."},
-                {name:"AffectNet",type:"Facial emotion recognition",size:"450K images (use 10K subset)",access:"Free academic licence — affectnet.org",use:"PS-1 + PS-3: facial emotion modality",why:"Use only 10K subset initially. Gradually expand."},
-                {name:"MAHNOB-HCI",type:"Multimodal affect: face + audio + EEG",size:"27 participants",access:"Queen Mary University — academic form",use:"PS-3: dynamic fusion experiments",why:"Good for testing missing modality handling."},
-                {name:"IEMOCAP",type:"Speech emotion: audio + video",size:"10 actors, 12 hours",access:"USC — academic request (free)",use:"PS-7: speech emotion for caregiver assistant",why:"Gold standard speech emotion dataset."},
-                {name:"OpenPose / CMU Pose",type:"Body keypoints / gesture",size:"Large scale",access:"GitHub — fully open source",use:"PS-1 + PS-3: body gesture modality",why:"Free, no ethics needed, high quality."},
-                {name:"Custom Caregiver Logs",type:"Self-collected caregiver behavioral data",size:"20-30 children, 1-2 months",access:"Self-collected with SNU ethics approval",use:"PS-1 primary validation + PS-6 longitudinal",why:"★ MOST IMPORTANT for novelty. Apply for SNU ethics NOW — takes 2-3 months."},
-                {name:"IndicNLP / Tamil Corpus",type:"Tamil-English parallel text",size:"Samanantar: 47M pairs",access:"Free — ai4bharat.org",use:"PS-7: Tamil language caregiver assistant",why:"Your Tamil background = unique research angle."},
-              ].map((d,i)=>(
-                <div key={i} style={{...S.C(),marginBottom:8}}>
-                  <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:5,marginBottom:5}}>
-                    <div style={{fontSize:13,fontWeight:700,color:P.text}}>{d.name}</div>
-                    <span style={S.chip(P.a2)}>{d.size}</span>
-                  </div>
-                  <div style={{fontSize:11,color:P.muted,marginBottom:3}}>Type: {d.type}</div>
-                  <div style={{fontSize:11,color:P.a1,marginBottom:3}}>Access: {d.access}</div>
-                  <div style={{fontSize:11,color:P.muted,marginBottom:3}}>Use for: {d.use}</div>
-                  <div style={{fontSize:11,color:P.a2,fontWeight:600}}>Why: {d.why}</div>
-                </div>
-              ))}
-            </div>}
-
-            {/* TIMELINE */}
-            {snuTab==="timeline"&&<div>
-              <div style={{...S.ib(P.a4),marginBottom:12}}>
-                <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>4-Year No-Backlog Timeline — as instructed by Dr. K.D. Badri Narayanan</div>
-                <div style={{fontSize:11,color:P.muted}}>Every month has a deliverable. No work accumulates as backlog. Stress-free research alongside TCS.</div>
-              </div>
-              {[
-                {phase:"Phase 1: Foundation",period:"Jul–Dec 2026",color:P.a1,items:[
-                  "Jul 2026 ✅: First supervisor meeting — ideology, 15-20 keywords, 10 PS (DONE)",
-                  "Aug 2026: CCDV-F cert (Aug 31) + start reading 15 survey papers + environment setup",
-                  "Sep 2026: Finalise 2 core PS with supervisor + 30 papers reviewed + Chapter 1 started",
-                  "Oct 2026: Chapter 1 Introduction complete + UGC NET registration + minimal dataset identified",
-                  "Nov 2026: Chapter 2 Literature Survey 50% + DREAMER dataset experiments started",
-                  "Dec 2026: UGC NET EXAM + Chapter 2 complete + Year 1 review at SNU",
-                ]},
-                {phase:"Phase 2: Methodology",period:"Jan–Jun 2027",color:P.a2,items:[
-                  "Jan 2027: Multimodal fusion architecture design document",
-                  "Feb 2027: Prototype model on DREAMER + AffectNet minimal dataset",
-                  "Mar 2027: Full PS-1 experiments — personalized baseline per child + ablation study",
-                  "Apr 2027: XAI module (SHAP + attention) for PS-2 caregiver recommendations",
-                  "May 2027: Chapter 3 Methodology complete + 1st national conference abstract",
-                  "Jun 2027: Annual PhD review at SNU + Chapters 1-3 revised",
-                ]},
-                {phase:"Phase 3: Publications",period:"Jul–Dec 2027",color:P.a3,items:[
-                  "Jul 2027: Federated learning module (PS-5) prototype",
-                  "Aug-Sep 2027: Chapter 4 Experiments + 1st Scopus journal paper submitted (IEEE TNSRE)",
-                  "Oct 2027: Mid-PhD comprehensive review at SNU",
-                  "Nov-Dec 2027: 2nd journal paper submitted + Chapters 1-4 revised",
-                ]},
-                {phase:"Phase 4: Advanced + Thesis",period:"Jan–Dec 2028",color:P.a4,items:[
-                  "Jan-Apr 2028: LLM caregiver assistant (PS-7) + Digital Twin (PS-10) prototype",
-                  "May-Aug 2028: Chapters 5-6 + 3rd journal paper + international conference",
-                  "Sep-Dec 2028: Full thesis draft Chapters 1-7 submitted to supervisor",
-                ]},
-                {phase:"Phase 5: Submission & Viva",period:"Jan–Dec 2029",color:P.a5,items:[
-                  "Jan-Apr 2029: All corrections + mock viva + thesis formatted per SNU guidelines",
-                  "May-Jun 2029: Thesis submitted to SNU + examiner review",
-                  "Jul-Dec 2029: PhD VIVA VOCE ✅ + corrections + DEGREE AWARDED 🎓",
-                ]},
-              ].map((ph,i)=>(
-                <div key={i} style={{...S.CA(ph.color),marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:5,marginBottom:10}}>
-                    <span style={{fontSize:13,fontWeight:800,color:ph.color}}>{ph.phase}</span>
-                    <span style={S.chip(ph.color)}>{ph.period}</span>
-                  </div>
-                  {ph.items.map((item,j,arr)=>(
-                    <div key={j} style={{...S.li(j===arr.length-1),fontSize:12}}>
-                      <span style={{color:ph.color,fontWeight:700,flexShrink:0}}>›</span><span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>}
-
-            {/* RESEARCH AI */}
-            {snuTab==="ai"&&<div>
-              <div style={S.h2}>🤖 SNU Research Advisor</div>
-              <div style={{...S.ib(P.a4),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>Expert in Multimodal AI, XAI, and Healthcare AI — knows your full research</div>
-                <div style={{fontSize:11,color:P.muted}}>Ask about your research problems, methodology, papers to read, supervisor meeting preparation, writing chapters.</div>
-              </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>
-                {["How do I implement SHAP for explaining multimodal distress predictions to caregivers?",
-                  "What is the best fusion architecture for wearable + vision + speech modalities?",
-                  "How do I create a personalized behavioral baseline for each child in my model?",
-                  "Write a research gap statement for my Chapter 1 introduction",
-                  "How does federated learning work for multi-hospital child healthcare AI?",
-                  "What papers should I read this week for my multimodal distress prediction research?",
-                  "How do I use the DREAMER dataset for wearable-based distress detection?",
-                  "Help me prepare the 7-10 problem statements for my next supervisor meeting",
-                  "How to balance TCS + PhD + certs + UGC NET without burnout?",
-                  "What is the difference between early fusion, late fusion, and attention-based fusion?",
-                ].map(q=>(
-                  <button key={q} onClick={()=>setSnuAiQ(q)} style={{background:P.card3,border:`1px solid ${P.border}`,borderRadius:7,padding:"6px 11px",color:P.sub,fontSize:11,cursor:"pointer",textAlign:"left"}}>{q}</button>
-                ))}
-              </div>
-              <textarea style={{...S.ta,minHeight:80,marginBottom:10}}
-                placeholder="Ask about multimodal AI, XAI methods, your research problems, paper writing, supervisor prep..."
-                value={snuAiQ} onChange={e=>setSnuAiQ(e.target.value)}/>
-              <button style={{...S.btn(snuAiLoad?P.muted:P.a4),opacity:snuAiLoad?0.7:1,width:"100%",marginBottom:14,...(snuAiLoad?{}:{boxShadow:`0 4px 20px ${P.a4}44`})}}
-                onClick={askSnuAI} disabled={snuAiLoad}>
-                {snuAiLoad?"⏳ Thinking about your research...":"🔬 Ask Research Advisor"}
-              </button>
-              {snuAiA&&<div style={{...S.CA(P.a4)}}><div style={{fontSize:11,color:P.a4,fontWeight:700,marginBottom:8}}>Research Advisor says:</div><div style={{fontSize:13,color:P.sub,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{snuAiA}</div></div>}
-            </div>}
-          </div>}
-
-
-
-                                        {tab==="office"&&<div>
+                    {tab==="office"&&<div>
             <div style={S.h2}>🖥️ Office Command Centre</div>
 
             {/* Overdue banner - shown if any persistent pending is overdue */}
@@ -3332,7 +2922,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   "When to use which model: Haiku for simple tasks, Sonnet for most use cases, Opus for complex reasoning",
                 ]},
                 {topic:"2. Anthropic API Fundamentals",color:P.a2,items:[
-                  "API endpoint: POST /api/claude",
+                  "API endpoint: POST https://api.anthropic.com/v1/messages",
                   "Required headers: x-api-key, anthropic-version, content-type",
                   "Message structure: role (user/assistant), content (string or array)",
                   "System prompts: set behaviour, persona, constraints before conversation",
@@ -3468,11 +3058,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* Situation summary */}
             {(()=>{
-              const today_=todayKey();
-              const certDeadline="2026-08-31";
-              const days=Math.max(0,Math.ceil((new Date(certDeadline)-new Date(today_))/(1000*60*60*24)));
-              const odPending=allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today_).length;
-              const odPhd=phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today_).length;
+              const days=Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
+              const odPending=allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<todayKey()).length;
+              const odPhd=phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
               return(
                 <div style={{...S.CA(P.a1),marginBottom:14}}>
                   <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:10}}>📊 Your Current Situation (August 14, 2026)</div>
@@ -3587,6 +3175,314 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           {/* ══ RESUME + ATS ══ */}
 
           {/* ══ LEARN CENTRE ══ */}
+          {tab==="learn"&&<div>
+            <div style={S.h2}>🎓 Learn Centre — Skill Trainer & Job Switch Guide</div>
+            <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+              {[["trainer","🧑‍🏫 AI Trainer"],["quiz","📝 UGC NET Quiz"],["switch","💼 Job Switch Guide"]].map(([id,lb])=>(
+                <button key={id} style={S.pill(learnTab===id,P.a4)} onClick={()=>setLearnTab(id)}>{lb}</button>
+              ))}
+            </div>
+
+            {/* ── AI TRAINER ── */}
+            {learnTab==="trainer"&&<div>
+              <div style={{...S.ib(P.a4),marginBottom:14}}>
+                <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>Personal AI tutor — explains any topic from basics, gives examples, answers follow-ups</div>
+                <div style={{fontSize:12,color:P.muted}}>Select a topic or type your own question. The AI knows your background (TCS DE, 4.3yr, learning Python/SQL/GenAI) and explains at the right level.</div>
+              </div>
+
+              <div style={S.C()}>
+                <div style={S.L}>Quick topic buttons</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+                  {[
+                    ["Python Basics",P.a1],["Pandas & NumPy",P.a1],["PySpark",P.a1],
+                    ["SQL Window Functions",P.a2],["SQL CTEs & Subqueries",P.a2],["dbt Basics",P.a2],
+                    ["LangChain from Zero",P.a4],["What is RAG?",P.a4],["Vector Databases",P.a4],
+                    ["GCP BigQuery",P.a3],["AWS Glue",P.a3],["Databricks Delta Lake",P.a3],
+                    ["DBMS Normalisation",P.a2],["OS Process Scheduling",P.a2],["Graph Algorithms",P.a2],
+                    ["What is Docker?",P.a5],["FastAPI Basics",P.a5],["MLflow Explained",P.a5],
+                  ].map(([topic,col])=>(
+                    <button key={topic} onClick={()=>{setLearnTopic(topic);setLearnQ("Teach me "+topic+" from basics. I am a Data Engineer with 4.3yr TCS experience in SQL/DataStage/Teradata. I am learning Python and GenAI. Give me a clear explanation with a simple practical example I can run.");setLearnA("");}}
+                      style={{...S.chip(col),cursor:"pointer",padding:"6px 12px",fontSize:11}}>
+                      {topic}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={S.L}>Or ask your own question</div>
+                <textarea style={{...S.ta,minHeight:80,marginBottom:12}}
+                  placeholder={"Examples:\n• Explain PySpark DataFrames with a working code example\n• What is the difference between RANK() and DENSE_RANK() in SQL?\n• How does RAG work — explain like I'm a beginner\n• What is a Medallion architecture and when do I use it?\n• Explain the difference between Airflow and Prefect"}
+                  value={learnQ} onChange={e=>setLearnQ(e.target.value)}/>
+
+                <button style={{...S.btn(learnLoad?P.muted:P.a4),opacity:learnLoad?0.7:1,width:"100%",fontSize:14}}
+                  onClick={async()=>{
+                    if(!learnQ.trim())return;
+                    setLearnLoad(true); setLearnA("");
+                    const sys = [
+                      "You are an expert tutor for Thamizamudhan K, a Data Engineer at TCS with 4.3 years experience.",
+                      "Background: Expert in SQL (Teradata), IBM DataStage ETL, Unix/Shell, ServiceNow.",
+                      "Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP, Databricks.",
+                      "PhD in Computer Science / GenAI at SSN College of Engineering (started July 2026).",
+                      "Teaching style required:",
+                      "1. Start with a simple 1-2 sentence definition",
+                      "2. Explain WHY it matters for his specific career (DE/AI-DE/GenAI)",
+                      "3. Give a clear analogy or real-world comparison",
+                      "4. Show a working code example (Python/SQL preferred) with comments",
+                      "5. End with 2-3 practice exercises he can try himself",
+                      "6. Mention how this topic connects to his UGC NET CS syllabus if relevant",
+                      "Be encouraging, practical, and concise. Use examples from data engineering context."
+                    ].join("\n");
+                    try {
+                      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,system:sys,messages:[{role:"user",content:learnQ}]})});
+                      const data = await res.json();
+                      setLearnA(data.content?.map(b=>b.text||"").join("")||"Error. Try again.");
+                    } catch(_){ setLearnA("Connection error. Please try again."); }
+                    setLearnLoad(false);
+                  }}
+                  disabled={learnLoad}>
+                  {learnLoad?"⏳ Preparing explanation...":"🎓 Teach Me This"}
+                </button>
+              </div>
+
+              {learnA&&<div style={{...S.CA(P.a4),marginTop:4}}>
+                <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:10}}>🎓 Explanation: {learnTopic||"Your question"}</div>
+                <div style={{fontSize:13,color:P.sub,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{learnA}</div>
+                <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+                  <button onClick={()=>setLearnQ("Give me 5 practice problems on this topic with solutions: "+learnTopic)} style={{...S.btn(P.a3),padding:"7px 14px",fontSize:11}}>📝 Practice Problems</button>
+                  <button onClick={()=>setLearnQ("Give me a real-world project idea using "+learnTopic+" that I can add to my GitHub portfolio as a Data Engineer")} style={{...S.btn(P.a2),padding:"7px 14px",fontSize:11}}>🏗️ Project Idea</button>
+                  <button onClick={()=>setLearnQ("What are the UGC NET CS exam questions typically asked about "+learnTopic+"? Give me 5 MCQ style questions with answers")} style={{...S.btn(P.a2),padding:"7px 14px",fontSize:11}}>📋 UGC NET MCQs</button>
+                </div>
+              </div>}
+            </div>}
+
+            {/* ── UGC NET QUIZ ── */}
+            {learnTab==="quiz"&&<div>
+              <div style={{...S.ib(P.a2),marginBottom:14}}>
+                <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:3}}>AI-generated MCQ quiz — fresh questions every session, just like the real UGC NET</div>
+                <div style={{fontSize:12,color:P.muted}}>Select a unit, generate 5 MCQs, answer them one by one, get score and explanations. Target: 4/5 or 5/5 before exam.</div>
+              </div>
+
+              {!quizLoad&&quizQs.length===0&&<div style={S.C()}>
+                <div style={S.L}>Select UGC NET CS unit</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+                  {["DBMS","Operating Systems","DSA & Algorithms","Theory of Computation","Computer Networks","Programming (C/Java/Python)","Software Engineering","Paper 1 — Teaching Aptitude","Paper 1 — Research Methodology","Paper 1 — Logical Reasoning","Paper 1 — Data Interpretation","Paper 1 — ICT"].map(t=>(
+                    <button key={t} onClick={()=>setQuizTopic(t)}
+                      style={{...S.pill(quizTopic===t,P.a2),fontSize:11}}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div style={{...S.ib(P.a3),marginBottom:14}}>
+                  <div style={{fontSize:11,color:P.a3,fontWeight:700,marginBottom:2}}>📊 Your Dec 2026 target: SC cutoff ~56% = 84/150 · Aim for 100+/150</div>
+                  <div style={{fontSize:11,color:P.muted}}>Selected unit: <b style={{color:P.a2}}>{quizTopic}</b></div>
+                </div>
+                <button style={{...S.btn(P.a2),width:"100%",fontSize:14}}
+                  onClick={async()=>{
+                    setQuizLoad(true); setQuizQs([]); setQuizIdx(0); setQuizAns(null); setQuizScore(0); setQuizDone(false);
+                    const prompt = [
+                      "Generate exactly 5 UGC NET CS exam-style MCQ questions on the topic: " + quizTopic,
+                      "Requirements:",
+                      "- Style: exactly like UGC NET December 2026 paper",
+                      "- Difficulty: mix of easy (2), medium (2), hard (1)",
+                      "- 4 options each (A, B, C, D)",
+                      "- One correct answer only",
+                      "- Include a brief explanation for the correct answer",
+                      "Return ONLY valid JSON, no markdown, no backticks:",
+                      '[{"q":"Question text","options":["A. option1","B. option2","C. option3","D. option4"],"correct":"A","explanation":"Why A is correct..."},...]'
+                    ].join("\n");
+                    try {
+                      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1200,messages:[{role:"user",content:prompt}]})});
+                      const data = await res.json();
+                      const raw = data.content?.map(b=>b.text||"").join("")||"[]";
+                      const s=raw.indexOf("["); const e=raw.lastIndexOf("]");
+                      const qs = s>=0&&e>=0 ? JSON.parse(raw.slice(s,e+1)) : [];
+                      setQuizQs(qs);
+                    } catch(_){ alert("Error generating quiz. Please try again."); }
+                    setQuizLoad(false);
+                  }}>
+                  🎲 Generate 5 MCQs — {quizTopic}
+                </button>
+              </div>}
+
+              {quizLoad&&<div style={{textAlign:"center",padding:40,color:P.a2,fontSize:13}}>⏳ Generating {quizTopic} MCQs...</div>}
+
+              {quizQs.length>0&&!quizDone&&(()=>{
+                const q = quizQs[quizIdx];
+                if(!q) return null;
+                return (
+                  <div>
+                    <div style={{...S.CA(P.a2),marginBottom:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                        <span style={{...S.chip(P.a2),fontSize:11}}>Q {quizIdx+1} of {quizQs.length}</span>
+                        <span style={{...S.chip(P.a1),fontSize:11}}>Score: {quizScore}/{quizIdx}</span>
+                      </div>
+                      {/* Progress bar */}
+                      <div style={{background:"rgba(255,255,255,0.08)",borderRadius:4,height:6,marginBottom:14,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:`${(quizIdx/quizQs.length)*100}%`,background:P.a2,borderRadius:4}}/>
+                      </div>
+                      <div style={{fontSize:14,fontWeight:600,color:P.text,lineHeight:1.6,marginBottom:16}}>{q.q}</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        {(q.options||[]).map((opt,i)=>{
+                          const letter = opt.charAt(0);
+                          const isCorrect = letter===q.correct;
+                          const isSelected = quizAns===letter;
+                          let bg = "transparent"; let border = P.border; let col = P.sub;
+                          if(quizAns){
+                            if(isCorrect){bg=`${P.a2}20`;border=P.a2;col=P.a2;}
+                            else if(isSelected){bg=`${P.a5}20`;border=P.a5;col=P.a5;}
+                          } else if(isSelected){bg=`${P.a1}20`;border=P.a1;col=P.a1;}
+                          return (
+                            <button key={i} onClick={()=>{ if(quizAns)return; setQuizAns(letter); if(letter===q.correct)setQuizScore(s=>s+1); }}
+                              style={{padding:"11px 14px",borderRadius:10,border:`1px solid ${border}`,background:bg,color:col,fontSize:13,textAlign:"left",cursor:quizAns?"default":"pointer",transition:"all 0.2s",fontWeight:isSelected||isCorrect&&quizAns?700:400}}>
+                              {opt}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {quizAns&&<div style={{marginTop:14,padding:"10px 14px",background:`${P.bg}88`,borderRadius:8,borderLeft:`3px solid ${quizAns===q.correct?P.a2:P.a5}`}}>
+                        <div style={{fontSize:12,color:quizAns===q.correct?P.a2:P.a5,fontWeight:700,marginBottom:4}}>{quizAns===q.correct?"✅ Correct!":"❌ Incorrect — correct answer is "+q.correct}</div>
+                        <div style={{fontSize:12,color:P.muted,lineHeight:1.5}}>{q.explanation}</div>
+                      </div>}
+                      {quizAns&&<button onClick={()=>{
+                        if(quizIdx+1>=quizQs.length){setQuizDone(true);}
+                        else{setQuizIdx(i=>i+1);setQuizAns(null);}
+                      }} style={{...S.btn(P.a2),width:"100%",marginTop:12,fontSize:13}}>
+                        {quizIdx+1>=quizQs.length?"🏁 See Results":"Next Question →"}
+                      </button>}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {quizDone&&<div>
+                {(()=>{
+                  const pct=Math.round((quizScore/quizQs.length)*100);
+                  const col=pct>=80?P.a2:pct>=60?P.a3:P.a5;
+                  return (
+                    <div style={{...gl(col),padding:24,borderRadius:14,textAlign:"center",marginBottom:12}}>
+                      <div style={{fontSize:56,fontWeight:900,color:col}}>{quizScore}/{quizQs.length}</div>
+                      <div style={{fontSize:18,fontWeight:700,color:P.text,marginTop:4}}>{pct}% — {pct>=80?"Excellent!":pct>=60?"Good — keep going":"Need more practice"}</div>
+                      <div style={{fontSize:12,color:P.muted,marginTop:6}}>
+                        {pct>=80?"You're on track for UGC NET Dec 2026 for this unit":pct>=60?"Review wrong answers and retry this unit":"Spend 30 min more on this unit before retrying"}
+                      </div>
+                      <div style={{marginTop:14,background:"rgba(255,255,255,0.08)",borderRadius:6,height:10,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:`${pct}%`,background:col,borderRadius:6}}/>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <button onClick={()=>{setQuizQs([]);setQuizIdx(0);setQuizAns(null);setQuizScore(0);setQuizDone(false);}} style={{...S.btn(P.a2),flex:1,fontSize:13}}>🔄 New Quiz — Same Topic</button>
+                  <button onClick={()=>{setQuizQs([]);setQuizIdx(0);setQuizAns(null);setQuizScore(0);setQuizDone(false);setQuizTopic("DBMS");}} style={{...S.btn(P.a3),flex:1,fontSize:13}}>📋 Change Topic</button>
+                </div>
+                {/* Review wrong answers */}
+                <div style={{...S.C(),marginTop:12}}>
+                  <div style={S.L}>Review all questions</div>
+                  {quizQs.map((q,i)=>(
+                    <div key={i} style={{padding:"10px 0",borderBottom:i===quizQs.length-1?"none":`1px solid ${P.border}20`}}>
+                      <div style={{fontSize:12,color:P.sub,marginBottom:6,lineHeight:1.5}}><b style={{color:P.a1}}>Q{i+1}:</b> {q.q}</div>
+                      <div style={{fontSize:11,color:P.a2,marginBottom:3}}>✅ Answer: {q.correct} — {(q.options||[]).find(o=>o.startsWith(q.correct))||""}</div>
+                      <div style={{fontSize:11,color:P.muted,lineHeight:1.4}}>{q.explanation}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>}
+            </div>}
+
+            {/* ── JOB SWITCH GUIDE ── */}
+            {learnTab==="switch"&&<div>
+              <div style={{...S.ib(P.a1),marginBottom:14}}>
+                <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>Your personal job switch coach — specific, honest advice for your situation</div>
+                <div style={{fontSize:12,color:P.muted}}>Ask anything about your career transition: salary negotiation, interview prep, LinkedIn, applications, what to learn next, which companies to target.</div>
+              </div>
+
+              {/* Pre-set scenarios */}
+              <div style={S.C()}>
+                <div style={S.L}>Common questions — tap to load</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+                  {[
+                    "How do I negotiate a 50% salary hike when moving from TCS?",
+                    "What should my LinkedIn headline and About section say for AI DE roles?",
+                    "How do I explain my DataStage experience for modern cloud DE interviews?",
+                    "What is a realistic salary for a Senior DE with 4.3yr experience in Chennai 2026?",
+                    "How do I get interview calls from Zoho, Freshworks, and product companies?",
+                    "Should I wait for Databricks cert before applying or apply now?",
+                    "How do I write a cold email to a recruiter on LinkedIn that actually works?",
+                    "What is the interview process at Google India for a Data Engineer?",
+                    "How to answer 'Why are you leaving TCS?' in an interview professionally?",
+                    "Which skills should I build first to switch to AI Data Engineer in 6 months?",
+                    "How to build a portfolio that stands out when I have no public projects?",
+                    "Is it better to target startups or MNCs at my level for a first switch?",
+                  ].map((q,i)=>(
+                    <button key={i} onClick={()=>setSwitchQ(q)}
+                      style={{background:P.card3,border:`1px solid ${P.border}`,borderRadius:7,padding:"6px 11px",color:P.sub,fontSize:11,cursor:"pointer",textAlign:"left"}}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={S.L}>Your question</div>
+                <textarea style={{...S.ta,minHeight:80,marginBottom:12}}
+                  placeholder={"Ask anything about your job switch journey:\n• Which roles should I apply for right now with my current skills?\n• How do I prepare for a system design interview for DE roles?\n• What salary should I expect and how do I negotiate?\n• How to stand out when applying to 100+ candidates per role?"}
+                  value={switchQ} onChange={e=>setSwitchQ(e.target.value)}/>
+
+                <button style={{...S.btn(switchLoad?P.muted:P.a1),opacity:switchLoad?0.7:1,width:"100%",fontSize:14}}
+                  onClick={async()=>{
+                    if(!switchQ.trim())return;
+                    setSwitchLoad(true); setSwitchA("");
+                    const sys = [
+                      "You are an expert career coach and technical recruiter specialising in the Indian tech job market (2026).",
+                      "Your client: Thamizamudhan K, 27, Chennai.",
+                      "Current: TCS Data Engineer, 4.3 years. SC category.",
+                      "Skills: SQL expert (Teradata), IBM DataStage ETL expert, Unix/Shell, ServiceNow. Learning Python, PySpark, LangChain, GCP, Databricks.",
+                      "Education: B.E ECE, M.Tech Data Science (completed), PhD CS GenAI at SSN (July 2026, ongoing, part-time).",
+                      "Certs in progress: Databricks DEA (Sep 2026), GCP Professional DE (Nov 2026), Google Gemini Enterprise Dev.",
+                      "UGC NET CS appearing December 2026. Considering academia as parallel career.",
+                      "Goals: Switch to Senior DE or AI Data Engineer role with 40-60% hike, or secure Asst Professor position post-UGC NET.",
+                      "Personality: Self-aware, realistic, working hard on multiple tracks simultaneously.",
+                      "Give SPECIFIC, HONEST, ACTIONABLE advice tailored to this exact profile.",
+                      "Include: realistic salary numbers (2026 Indian market), specific company names, specific steps, specific timelines.",
+                      "Don't be generic. Reference his actual skills and situation. Be a trusted mentor, not a cheerleader.",
+                    ].join("\n");
+                    try {
+                      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1200,system:sys,messages:[{role:"user",content:switchQ}]})});
+                      const data = await res.json();
+                      setSwitchA(data.content?.map(b=>b.text||"").join("")||"Error. Try again.");
+                    } catch(_){ setSwitchA("Connection error. Please try again."); }
+                    setSwitchLoad(false);
+                  }}
+                  disabled={switchLoad}>
+                  {switchLoad?"⏳ Getting advice...":"💼 Get Career Advice"}
+                </button>
+              </div>
+
+              {switchA&&<div style={{...S.CA(P.a1),marginTop:4}}>
+                <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:10}}>💼 Career Coach says:</div>
+                <div style={{fontSize:13,color:P.sub,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{switchA}</div>
+                <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+                  <button onClick={()=>setSwitchQ("Based on that advice, what are the 3 most important things I should do THIS WEEK specifically?")} style={{...S.btn(P.a3),padding:"7px 14px",fontSize:11}}>📅 This Week's Actions</button>
+                  <button onClick={()=>setSwitchQ("Give me a word-for-word script for the LinkedIn cold message I should send to a recruiter at that company")} style={{...S.btn(P.a4),padding:"7px 14px",fontSize:11}}>✉️ Write the Message</button>
+                </div>
+              </div>}
+
+              {/* Quick reference cards */}
+              <div style={{marginTop:14}}>
+                <div style={S.L}>Quick Reference — 2026 Market Reality</div>
+                {[
+                  {title:"💰 Salary ranges for your profile (Chennai/Bangalore 2026)",color:P.a2,items:["Senior ETL/DataStage Dev: ₹10–22 LPA (apply NOW — zero reskilling)","Senior Data Engineer (PySpark+Cloud): ₹15–35 LPA (3 months away with Databricks cert)","AI Data Engineer (LangChain+RAG): ₹20–50 LPA (5-6 months away)","Analytics Engineer (SQL+dbt): ₹12–28 LPA (2-3 months away)","Asst Professor (private college): ₹6–14 LPA (post-UGC NET Dec 2026)"]},
+                  {title:"🎯 Top companies hiring in Chennai/remote for your stack (2026)",color:P.a1,items:["Zoho — Data Engineers, strong SQL culture, Chennai HQ","Freshworks — Analytics/Data team, Chennai, good for DE transition","Razorpay — Data platform team, good pay, remote-friendly","Sarvam AI / Krutrim — GenAI startups, high growth, best for AI-DE pivot","IBM India — DataStage roles (immediate, no reskilling), multiple cities","Capgemini / Mphasis / DXC — ETL heavy, 50%+ hike from TCS easy"]},
+                  {title:"📋 Interview stages for Senior DE roles (what to prepare)",color:P.a3,items:["Round 1: Online test — SQL (LeetCode Medium), Python basics, DSA basics","Round 2: Technical interview — SQL deep dive, ETL design, system design basics","Round 3: Technical + project — explain your DataStage pipelines, performance tuning","Round 4: Manager/HR — behavioural, salary negotiation, notice period","Tip: Your DataStage experience is RARE — mention scale (50K+ transactions, 15+ pipelines)"]},
+                  {title:"⚡ What to do this week (priority order)",color:P.a5,items:["1. Update resume — Senior DE variant — apply to IBM/Capgemini/DXC THIS WEEK (zero reskilling, 40% hike)","2. Apply 5 roles/day on Naukri with keyword: DataStage, ETL, Teradata","3. Update LinkedIn headline: Data Engineer | IBM DataStage Expert | SQL | TCS 4.3yr | Databricks (in progress)","4. Set job alert on LinkedIn: 'Senior Data Engineer Chennai' and 'ETL Developer Chennai'","5. Resume Databricks DEA course — 1 hour tonight — exam in 8 weeks"]},
+                ].map((card,i)=>(
+                  <div key={i} style={{...S.CA(card.color),marginBottom:10}}>
+                    <div style={{fontSize:13,fontWeight:700,color:card.color,marginBottom:10}}>{card.title}</div>
+                    {card.items.map((item,j,arr)=><div key={j} style={S.li(j===arr.length-1)}><span style={{color:card.color,fontWeight:700,flexShrink:0}}>›</span><span style={{fontSize:12,lineHeight:1.5}}>{item}</span></div>)}
+                  </div>
+                ))}
+              </div>
+            </div>}
+          </div>}
+
+
           {tab==="resume"&&<div>
             <div style={S.h2}>📄 Premium Resume Generator & ATS Checker</div>
             <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
@@ -3674,7 +3570,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       "10. Generate the complete premium resume now:"
                     ].filter(Boolean).join("\n");
                     try {
-                      const res = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,messages:[{role:"user",content:prompt}]})});
+                      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,messages:[{role:"user",content:prompt}]})});
                       const data = await res.json();
                       setRResult(data.content?.map(b=>b.text||"").join("")||"Error generating. Please try again.");
                     } catch(_){ setRResult("Connection error. Please try again."); }
@@ -3751,7 +3647,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     ];
                     const prompt = lines.join("\n");
                     try {
-                      const res = await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt}]})});
+                      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt}]})});
                       const data = await res.json();
                       const raw = data.content?.map(b=>b.text||"").join("")||"{}";
                       const s = raw.indexOf("{"); const e2 = raw.lastIndexOf("}");
@@ -3945,4 +3841,3 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-﻿export default async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -29,7 +29,8 @@
     console.error("Anthropic proxy error:", error);
 
     return res.status(500).json({
-      error: "Failed to contact Anthropic API"
+      error: "Failed to contact Anthropic API",
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 }

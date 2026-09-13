@@ -71,21 +71,6 @@ export default defineConfig({
       workbox: {
         globPatterns: [
           '**/*.{js,css,html,ico,png,svg}'
-        ],
-
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\.anthropic\.com\/.*/i,
-            handler: 'NetworkOnly',
-            options: {
-              backgroundSync: {
-                name: 'anthropic-api-queue',
-                options: {
-                  maxRetentionTime: 24 * 60
-                }
-              }
-            }
-          }
         ]
       }
     })

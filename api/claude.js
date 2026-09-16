@@ -1,13 +1,21 @@
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Keep the provider credential server-side only. Support CLAUDE_API_KEY as
+  // a migration fallback, but prefer the existing ANTHROPIC_API_KEY name.
+  const rawApiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+  const apiKey = typeof rawApiKey === "string"
+    ? rawApiKey.trim().replace(/^([\"'])(.*)\1$/, "$2").trim()
+    : "";
 
   if (!apiKey) {
     return res.status(500).json({
-      error: "AI service is not configured on the server"
+      error: "AI service is not configured on the server",
+      code: "MISSING_ANTHROPIC_API_KEY"
     });
   }
 
@@ -34,8 +42,8 @@ export default async function handler(req, res) {
     const upstreamBody = {
       model: model.trim(),
       messages,
-      max_tokens,
-      system
+      ...(max_tokens != null ? { max_tokens } : {}),
+      ...(system != null ? { system } : {})
     };
 
     const controller = new AbortController();
@@ -65,11 +73,24 @@ export default async function handler(req, res) {
     }
 
     if (!response.ok) {
+      const upstreamMessage = data?.error?.message || "Upstream service error";
+      const upstreamType = data?.error?.type || "upstream_error";
+
+      if (response.status === 401) {
+        return res.status(502).json({
+          error: "Anthropic authentication failed",
+          code: "INVALID_ANTHROPIC_API_KEY",
+          status: 401,
+          type: upstreamType,
+          message: "The server reached Anthropic, but Anthropic rejected the configured API key. Verify the Vercel Development/Preview/Production ANTHROPIC_API_KEY value."
+        });
+      }
+
       return res.status(response.status).json({
         error: "Anthropic API request failed",
         status: response.status,
-        type: data?.error?.type || "upstream_error",
-        message: data?.error?.message || "Upstream service error"
+        type: upstreamType,
+        message: upstreamMessage
       });
     }
 

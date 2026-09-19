@@ -26,8 +26,15 @@ export default async function handler(req, res) {
     }
 
     const { model, messages, max_tokens, system } = body;
-    if (typeof model !== "string" || !model.trim()) {
-      return res.status(400).json({ error: "Missing or invalid model" });
+    const selectedModel = typeof model === "string" && model.trim()
+      ? model.trim()
+      : (process.env.CLAUDE_MODEL || "claude-sonnet-4-6").trim();
+
+    if (!selectedModel) {
+      return res.status(500).json({
+        error: "AI service is not configured with a model",
+        code: "MISSING_CLAUDE_MODEL"
+      });
     }
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "Missing or invalid messages" });
@@ -40,7 +47,7 @@ export default async function handler(req, res) {
     }
 
     const upstreamBody = {
-      model: model.trim(),
+      model: selectedModel,
       messages,
       ...(max_tokens != null ? { max_tokens } : {}),
       ...(system != null ? { system } : {})

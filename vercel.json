@@ -2,10 +2,22 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
   "functions": {
-    "api/*.js": {
+    "api/health.js": {
+      "runtime": "nodejs20.x"
+    },
+    "api/gemini.js": {
       "runtime": "nodejs20.x"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/health",
+      "destination": "/api/health.js"
+    },
+    {
+      "source": "/api/gemini",
+      "destination": "/api/gemini.js"
+    }
+  ]
 }

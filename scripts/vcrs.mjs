@@ -47,7 +47,11 @@ const checks = [
   ["C — certification command centre data exists", app.includes("const certificationTracks = [") && app.includes("const futureCertifications = ["), "certification data missing"],
   ["C — all active certification tracks have modules", ["aws-dea","snowpro-core","dbx-dea","claude-foundations","claude-professional","dbx-genai"].every(id => app.includes('id:"'+id+'"') && app.includes("modules:[")), "missing certification modules"],
   ["C — certification progress and wrong-answer persistence wired", app.includes('"cert-progress"') && app.includes('"cert-wrong"') && app.includes("saveCertProgress"), "missing certification persistence"],
-  ["C — certification system works without Gemini", app.includes("Offline Question Bank") && app.includes("Today's Study Mission"), "missing offline study path"]
+  ["C — certification system works without Gemini", app.includes("Offline Question Bank") && app.includes("Today's Study Mission"), "missing offline study path"],
+  ["C — unified long-term memory exists", app.includes('"life-memory-v2"') && app.includes("memoryHydrated"), "missing unified memory store"],
+  ["C — Office/Health/Journal mirror into unified memory", app.includes('office: {data:offData}') && app.includes('health: {log:healthLog}') && app.includes('journal: {entries, dailyPlans}'), "missing durable tab mirrors"],
+  ["C — PhD research hub is canonical and shared with SNU", app.includes("const phdResearchHub = {") && app.includes("phdResearchHub.snuScope") && app.includes("Overall PhD → SNU Research Map"), "missing PhD/SNU research linkage"],
+  ["C — SNU advisor uses canonical PhD research context", app.includes("OVERALL PHD RESEARCH: \\${phdResearchHub.workingTitle}") && app.includes("PROBLEM STATEMENTS: \\${phdResearchHub.problemStatements.join"), "SNU AI context is disconnected from canonical research hub"]
 ];
 
 let failed = 0;

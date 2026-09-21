@@ -840,31 +840,7 @@ export default function App() {
 
       const d = await callAI({
         model:"gemini-3.8-flash", max_tokens:700,
-        system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. Claude Architect Foundations + Professional are registered; exam dates are not scheduled. Also: Databricks Data Engineer Associate prerequisites are in progress; AWS Data Engineer Associate and SnowPro Core preparation are active. Analyse the context and return EXACTLY 5 specific, actionable recommendations. Do not invent deadlines; use current dates supplied in the context and advise verification of official sources. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
-        messages:[{role:"user",content:`Analyse my situation and give 5 smart recommendations: ${context}`}]
-      });
-      const raw = readAIText(d) || "[]";
-      const si=raw.indexOf("["); const ei=raw.lastIndexOf("]");
-      const sugs = JSON.parse(si>=0&&ei>=0?raw.slice(si,ei+1):"[]");
-      setAgentSugs(sugs);
-      addLog("✅","Analysis complete — "+sugs.length+" recommendations ready","a2");
-    } catch(_) {
-      addLog("✅","Analysis complete — check recommendations below","a2");
-      setAgentSugs([
-        {priority:1,icon:"🏅",title:"Claude Architect Foundations / Professional",action:`Registered but exam date not scheduled. Use Anthropic official documentation and the certification portal to prepare and schedule.`,tab:"certs",urgency:"high"},
-        {priority:2,icon:"⚠️",title:"Replan Overdue Items",action:`${overduePending.length} office follow-ups are overdue. Go to Office → Follow-Up Board and set new target dates now.`,tab:"office",urgency:"high"},
-        {priority:3,icon:"🎓",title:"PhD Task Review",action:`${overduePhdTasks.length} PhD tasks need replanning. Open PhD tab → Tasks and replan with realistic new dates.`,tab:"phd",urgency:"medium"},
-        {priority:4,icon:"💊",title:"Health Logging",action:"Log your medicines and health data daily. Consistent tracking helps manage diabetes better.",tab:"health",urgency:"medium"},
-        {priority:5,icon:"📓",title:"Daily Reflection",action:`Last journal entry was ${lastJournalDays} days ago. Write today's entry — even 2 lines counts.`,tab:"journal",urgency:"low"},
-      ]);
-    }
-    setAgentRunning(false);
-  };
-
-  const askCertStudy = async () => {
-    if(!certStudyQ.trim()) return; setCertStudyLoad(true); setCertStudyA("");
-    try {
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Architect Foundations (Claude Architect) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is exam date not scheduled.`,messages:[{role:"user",content:certStudyQ}]});
+        system:`You are a smart life planning agent. Use only non-sensitive planning context supplied in the request. Do not infer or repeat private medical details. Current planning date is September 2026. Claude Architect Foundations + Professional are registered with exam dates not scheduled. Databricks Data Engineer Associate prerequisites are in progress; AWS Data Engineer Associate and SnowPro Core preparation are active. UGC NET CS is planned for December 2026. Do not invent deadlines; use official-source dates supplied by the app. Return EXACTLY 5 specific, actionable recommendations. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,messages:[{role:"user",content:certStudyQ}]});
       setCertStudyA(readAIText(d) || "No response.");
     } catch(err){setCertStudyA(err.message || "Connection error. Please try again.");}
     setCertStudyLoad(false);
@@ -908,30 +884,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
     const odPhd = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
     const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
     try {
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
-
-LIFE CONTEXT (September 2026):
-- Works full-time at TCS as Data Engineer (4.3 years): SQL/Teradata/DataStage/Unix/ServiceNow
-- Part-time PhD at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan
-- Research: Human-Centered Multimodal Explainable AI with Wearables for Special Kids
-- Health details are private and are not included in the AI planning context unless the user explicitly provides them in the question
-- Claude Claude Architect certification status: ${claudeCertStatus}
-- Databricks DEA exam: September 2026
-- UGC NET CS: December 2026
-- Use the current official government vacancy pages; do not rely on old application dates.
-- ${open} open follow-up items in office tracker
-- ${odPhd} overdue PhD tasks
-
-RESEARCH DETAILS:
-- Theme: Human-Centered Multimodal Explainable AI with Wearable Sensors for Special Needs Children
-- Scope: Autism, ADHD, Cerebral Palsy, non-verbal children
-- Modalities: Wearables (HRV, accel, temp) + Computer Vision (facial emotion) + Speech (cry/emotion)
-- Key ideas: Personalized distress prediction, XAI for caregivers, federated learning, digital twin
-- Supervisor instructions: Ideology of many, 15-20 keywords, 7-10 PS, minimal dataset, 4-year timeline
-
-PERSONALITY: Tends to take on too much. Needs structured, practical advice, realistic pacing, and clear next actions. Tamil background.
-
-Give warm, honest, practical advice. Acknowledge the challenges of managing everything. Suggest specific actions. Be a friend who happens to be an expert.`,messages:[{role:"user",content:adviceQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a warm, practical life coach and research advisor. Use the non-sensitive planning context supplied below. Do not infer, request, or repeat private medical details unless the user explicitly includes them in their question. Current context: TCS Data Engineering with 4+ years experience; part-time PhD at Shiv Nadar University; multimodal AI/XAI research; Claude Architect Foundations + Professional registered; Databricks Data Engineer Associate prerequisites in progress; AWS Data Engineer Associate and SnowPro Core preparation underway; UGC NET CS December 2026 target. Give structured, realistic, actionable advice and verify changing dates against official sources.`,messages:[{role:"user",content:adviceQ}]});
       setAdviceA(readAIText(d) || "No response.");
     } catch(err){setAdviceA(err.message || "Connection error. Please try again.");}
     setAdviceLoad(false);
@@ -986,7 +939,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askH = async()=>{
     if(!hAiQ.trim())return; setHAiLoad(true); setHAiA("");
     try{
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Use only information the user explicitly includes in the question. Do not infer a diagnosis, medication, lab result, weight, or mental-health condition from hidden app data. Do not change or prescribe medication. For medication, hypoglycemia, severe symptoms, or other high-risk situations, advise contacting a qualified clinician or urgent care as appropriate. Keep advice practical, gradual, and respectful.`,messages:[{role:"user",content:hAiQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a compassionate, non-judgmental general health information assistant. Answer only from information the user explicitly includes in the question. Do not infer a diagnosis, medication, lab result, weight, or mental-health condition from hidden app data. Do not change or prescribe medication. For medication questions, hypoglycemia, severe symptoms, or other high-risk situations, advise contacting a qualified clinician or urgent care as appropriate. Keep advice practical, gradual, and respectful.`,messages:[{role:"user",content:hAiQ}]});
       setHAiA(readAIText(d) || "No response.");
     }catch(err){setHAiA(err.message || "Error connecting. Please try again.");}
     setHAiLoad(false);
@@ -994,7 +947,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askC = async()=>{
     if(!cQ.trim())return; setCLoad(true); setCA("");
     try{
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: September 2026. PhD is ongoing at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, AWS/Snowflake/Databricks/Claude certification tracks, and government technical/research opportunities. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach. Current date: September 2026. The user is a Data Engineer with 4+ years of experience in SQL/Teradata, IBM DataStage, Unix/Shell and related data engineering work; B.E. ECE, M.Tech Data Science, and an ongoing part-time PhD in CSE/GenAI. Current certification tracks include Claude Architect Foundations + Professional, Databricks Data Engineer Associate, AWS Data Engineer Associate and SnowPro Core. UGC NET CS is planned for December 2026. Give specific, practical advice without inventing current deadlines; verify changing job and exam dates from official sources.`,messages:[{role:"user",content:cQ}]});
       setCA(readAIText(d) || "No response.");
     }catch(err){setCA(err.message || "Error connecting. Please try again.");}
     setCLoad(false);

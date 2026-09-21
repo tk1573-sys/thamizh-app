@@ -507,6 +507,76 @@ const certificationTracks = [
    guide:"https://learn.microsoft.com/credentials/certifications/",resource:"https://docs.github.com/en/copilot",summary:"Completed. Keep the credential visible and use it as evidence of AI-assisted development knowledge.",modules:[]}
 ];
 
+// ─── Canonical PhD research memory ────────────────────────────────────────────
+// One source of truth shared by PhD Planner + SNU Research. Keep the thesis title
+// explicitly marked as a working direction until the supervisor/doctoral committee
+// formally freezes the wording.
+const phdResearchHub = {
+  workingTitle: "AI-Based Personalized Multimodal Distress Detection and Early Intervention Using Wearable Devices, Generative AI, and Edge AI for Healthcare",
+  snuScope: "Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children",
+  university: "Shiv Nadar University (SNU), Chennai",
+  supervisor: "Dr. K. B. Badri Narayanan",
+  started: "July 2026",
+  mode: "Part-time PhD in Computer Science & Engineering",
+  coreObjective: "Build a personalized, privacy-aware multimodal AI system that learns an individual's baseline, predicts distress early from multimodal signals, explains the reason for an alert, and supports caregiver intervention.",
+  researchLineage: [
+    "M.Tech AI Emotional Wellness Buddy → longitudinal emotion/risk monitoring, privacy, explainability and safety routing",
+    "PhD expansion → personalized multimodal distress prediction for people who may have limited communication",
+    "Current SNU scope → special-needs children, wearable sensing, computer vision, speech/audio and caregiver decision support",
+    "Long-term research extensions → Generative AI/LLM caregiver assistance, Edge AI and privacy-preserving/federated learning"
+  ],
+  targetPopulation: [
+    "Special-needs children: non-verbal children, autism/ASD, ADHD, cerebral palsy and developmental/neurological conditions",
+    "Potential transferable use cases: elderly people and stroke/communication-limited patients, subject to separate validation"
+  ],
+  modalities: [
+    "Wearables: HR/HRV, PPG/ECG where available, skin temperature, EDA/GSR, accelerometer and gyroscope",
+    "Computer vision: facial affect, body gesture, movement/action and gaze where appropriate",
+    "Speech/audio: speech emotion, cry/distress vocalisation, non-verbal sounds and environmental audio",
+    "Context: routine, time, environment and caregiver-logged behavioural observations"
+  ],
+  researchPillars: [
+    {id:"p1",title:"Personalized baseline learning",detail:"Model each person's normal physiological, behavioural and contextual pattern instead of relying only on population averages."},
+    {id:"p2",title:"Early distress prediction",detail:"Study precursor signals and temporal patterns so the system can provide an early warning rather than only detecting distress after onset."},
+    {id:"p3",title:"Dynamic multimodal fusion",detail:"Fuse available modalities while remaining useful when one or more sensors are missing or unreliable."},
+    {id:"p4",title:"Explainable caregiver support",detail:"Explain why an alert was raised and present an understandable intervention rationale using XAI and natural-language support."},
+    {id:"p5",title:"Privacy-preserving learning",detail:"Investigate local/edge processing and federated or privacy-aware learning for sensitive healthcare data."},
+    {id:"p6",title:"Generative AI assistance",detail:"Use LLM/RAG/agent patterns only where they add value, such as summarization, caregiver guidance and research-facing interfaces, with grounding and safety controls."}
+  ],
+  problemStatements: [
+    "PS-1: Personalized distress prediction for an individual rather than a population-average detector.",
+    "PS-2: Explainable caregiver decision support — why the model raised an alert and what evidence supports the recommendation.",
+    "PS-3: Robust multimodal fusion with graceful handling of missing modalities.",
+    "PS-4: Longitudinal modelling of changing behavioural and physiological baselines.",
+    "PS-5: Privacy-preserving/federated learning for multi-site or multi-caregiver deployment.",
+    "PS-6: Edge-aware inference for low-latency and privacy-sensitive environments.",
+    "PS-7: Safe, grounded Generative AI assistance for caregiver-facing summaries and interventions."
+  ],
+  datasets: [
+    "DREAMER — multimodal physiological/emotion research data; use only for the signals and task it actually supports.",
+    "AffectNet — facial expression/affect research data for the computer-vision component.",
+    "MAHNOB-HCI — multimodal affect data for cross-modal research/benchmarking.",
+    "IEMOCAP — speech/audio emotion data for the audio component.",
+    "Minimal custom caregiver/behaviour logs — collect only the variables needed for the final research question."
+  ],
+  methodology: [
+    "Literature review → precise research gap → measurable hypotheses/research questions",
+    "Data quality and modality-specific preprocessing → temporal feature extraction",
+    "Personalized baseline + multimodal representation/fusion → predictive modelling",
+    "XAI layer → caregiver-facing explanation and intervention support",
+    "Ablation, missing-modality, personalization and longitudinal experiments",
+    "Privacy/security evaluation and, where justified, edge/federated prototype",
+    "Clinical/caregiver validation and ethics review before any real-world sensitive-data study"
+  ],
+  supervisorInstructions: [
+    "Prepare 15–20 research keywords.",
+    "Maintain 7–10 candidate problem statements before narrowing.",
+    "Prefer a minimal, defensible dataset strategy rather than collecting everything.",
+    "Keep a four-year month-by-month research timeline with concrete deliverables.",
+    "Meet the supervisor regularly and refine the problem statement from evidence, experiments and feedback."
+  ]
+};
+
 const futureCertifications = [
  {id:"aws-mla-c02",name:"AWS Certified Machine Learning Engineer – Associate",code:"MLA-C02",note:"Next cloud/ML option after the current DEA sprint. Verify the current exam guide and availability before scheduling.",url:"https://aws.amazon.com/certification/certified-machine-learning-engineer-associate/"},
  {id:"aws-genai-pro",name:"AWS Certified Generative AI Developer – Professional",code:"AIP-C01",note:"Longer-term production GenAI certification covering RAG, agents, security, evaluation, monitoring and enterprise integration.",url:"https://aws.amazon.com/certification/certified-generative-ai-developer-professional/"},
@@ -778,16 +848,19 @@ export default function App() {
 
 
 
+  const [memoryHydrated, setMemoryHydrated] = useState(false);
   const [mob, setMob] = useState(typeof window!=="undefined"?window.innerWidth<768:false);
   useEffect(()=>{const h=()=>setMob(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
 
-  // Load persisted data
+  // Load persisted data. Existing per-tab keys remain the primary store; the
+  // unified memory snapshot is a durable backup/migration layer for every tab.
   useEffect(()=>{
-    const journalEntries = storeJsonGet("j-entries", {});
+    const mem = storeJsonGet("life-memory-v2", {});
+    const journalEntries = storeJsonGet("j-entries", mem.journal?.entries || {});
     setEntries(journalEntries);
-    setDailyPlans(storeJsonGet("daily-plans", {}));
+    setDailyPlans(storeJsonGet("daily-plans", mem.journal?.dailyPlans || {}));
 
-    const officeData = storeJsonGet("o-data", {});
+    const officeData = storeJsonGet("o-data", mem.office?.data || {});
     setOffData(officeData);
     const t = todayKey();
     if (officeData[t]) {
@@ -797,18 +870,63 @@ export default function App() {
       setOffNote(officeData[t].note || "");
     }
 
-    const healthData = storeJsonGet("h-log", {});
+    const healthData = storeJsonGet("h-log", mem.health?.log || {});
     setHLog(healthData);
     if (healthData[t]) setHForm(f=>({...f,...healthData[t]}));
 
-    setLearnProgress(storeJsonGet("learn-progress", {}));
-    setPhdMeetings(storeJsonGet("phd-meetings", []));
-    setPhdTasks(storeJsonGet("phd-tasks", []));
-    setAllPending(storeJsonGet("all-pending", []));
-    setAppStatus(storeJsonGet("app-status", {}));
-    setCertProgress(storeJsonGet("cert-progress", {}));
-    setCertWrong(storeJsonGet("cert-wrong", []));
+    setLearnProgress(storeJsonGet("learn-progress", mem.learning?.progress || {}));
+    setPhdMeetings(storeJsonGet("phd-meetings", mem.phd?.meetings || []));
+    setPhdTasks(storeJsonGet("phd-tasks", mem.phd?.tasks || []));
+    setAllPending(storeJsonGet("all-pending", mem.shared?.pending || []));
+    setAppStatus(storeJsonGet("app-status", mem.career?.appStatus || {}));
+    setCertProgress(storeJsonGet("cert-progress", mem.certs?.progress || {}));
+    setCertWrong(storeJsonGet("cert-wrong", mem.certs?.wrong || []));
+
+    if (mem.ui) {
+      if (mem.ui.phdTab) setPhdTab(mem.ui.phdTab);
+      if (mem.ui.snuTab) setSnuTab(mem.ui.snuTab);
+      if (mem.ui.resumeTab) setResumeTab(mem.ui.resumeTab);
+      if (mem.ui.learnTab) setLearnTab(mem.ui.learnTab);
+      if (mem.ui.ugcView) setUgcView(mem.ui.ugcView);
+    }
+    if (mem.ai) {
+      if (mem.ai.phd) { setPhdAiQ(mem.ai.phd.q || ""); setPhdAiA(mem.ai.phd.a || ""); }
+      if (mem.ai.snu) { setSnuAiQ(mem.ai.snu.q || ""); setSnuAiA(mem.ai.snu.a || ""); }
+      if (mem.ai.health) { setHAiQ(mem.ai.health.q || ""); setHAiA(mem.ai.health.a || ""); }
+      if (mem.ai.coach) { setCQ(mem.ai.coach.q || ""); setCA(mem.ai.coach.a || ""); }
+    }
+    setMemoryHydrated(true);
   },[]);
+
+  // Unified long-term local memory. This snapshot is device-local and survives
+  // tab navigation, browser reloads and closing/reopening the app.
+  useEffect(()=>{
+    if (!memoryHydrated) return;
+    storeSet("life-memory-v2", JSON.stringify({
+      version: 2,
+      updatedAt: Date.now(),
+      ui: {activeTab:tab, phdTab, snuTab, resumeTab, learnTab, ugcView},
+      journal: {entries, dailyPlans},
+      health: {log:healthLog},
+      office: {data:offData},
+      learning: {progress:learnProgress},
+      phd: {meetings:phdMeetings, tasks:phdTasks},
+      certs: {progress:certProgress, wrong:certWrong},
+      career: {appStatus},
+      shared: {pending:allPending},
+      ai: {
+        phd:{q:phdAiQ,a:phdAiA},
+        snu:{q:snuAiQ,a:snuAiA},
+        health:{q:hAiQ,a:hAiA},
+        coach:{q:cQ,a:cA}
+      }
+    }));
+  },[
+    memoryHydrated,tab,phdTab,snuTab,resumeTab,learnTab,ugcView,
+    entries,dailyPlans,healthLog,offData,learnProgress,phdMeetings,phdTasks,
+    certProgress,certWrong,appStatus,allPending,phdAiQ,phdAiA,snuAiQ,snuAiA,
+    hAiQ,hAiA,cQ,cA
+  ]);
 
   useEffect(()=>{const e=entries[selDay]||{};setDNote(e.note||"");setDRem(e.reminder||"");setDMood(e.mood||"3");setJSaved(false);},[selDay,entries]);
 
@@ -1005,22 +1123,16 @@ export default function App() {
     try {
       const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
 
-RESEARCH: Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children (Autism, ADHD, Cerebral Palsy, non-verbal children).
-
-MODALITIES: Wearables (HRV, accelerometer, temperature, gyroscope) + Computer Vision (facial emotion, body gesture) + Speech (cry detection, emotion) + Context (location, routine, environment).
-
-CORE PROBLEMS:
-PS-1: Personalized multimodal distress PREDICTION (not detection) per individual child using physiological precursor signals
-PS-2: Explainable AI (XAI) for caregiver decision support - WHY alert triggered + WHAT intervention recommended (SHAP, attention maps, natural language)
-PS-3: Dynamic multimodal fusion handling missing modalities gracefully
-PS-5: Privacy-preserving federated learning for multi-hospital deployment
-
-KEY NOVELTY: Individual behavioral baseline per child (not population average) + Predictive (5-15 min before distress onset) + Explainable recommendations + Privacy-preserving
-
-DATASETS: DREAMER (wearable EEG+ECG, 23 participants), AffectNet (450K facial images), MAHNOB-HCI (multimodal affect), IEMOCAP (speech emotion), custom caregiver logs (minimal)
-
-SUPERVISOR INSTRUCTIONS: Ideology of many, 15-20 keywords, 7-10 PS, minimal dataset approach, 4-year timeline with no backlog.
-
+OVERALL PHD RESEARCH: ${phdResearchHub.workingTitle}
+SNU FOCUSED SCOPE: ${phdResearchHub.snuScope}
+CORE OBJECTIVE: ${phdResearchHub.coreObjective}
+TARGET POPULATION: ${phdResearchHub.targetPopulation.join(" | ")}
+MODALITIES: ${phdResearchHub.modalities.join(" | ")}
+PROBLEM STATEMENTS: ${phdResearchHub.problemStatements.join(" ")}
+RESEARCH PILLARS: ${phdResearchHub.researchPillars.map(p=>p.title+" — "+p.detail).join(" | ")}
+DATASETS: ${phdResearchHub.datasets.join(" | ")}
+METHODOLOGY: ${phdResearchHub.methodology.join(" | ")}
+SUPERVISOR INSTRUCTIONS: ${phdResearchHub.supervisorInstructions.join(" ")}
 RECENT MEETINGS: ${meetings}
 OPEN TASKS: ${openTasks}
 
@@ -2311,13 +2423,31 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
 
                     {tab==="phd"&&<div>
             <div style={S.h2}>🎓 PhD Research Planner</div>
+            <div style={{...gl(P.a4),padding:16,marginBottom:14,borderRadius:14,border:`1px solid ${P.a4}44`}}>
+              <div style={{fontSize:10,color:P.muted,fontWeight:800,letterSpacing:"0.7px",marginBottom:5}}>CANONICAL PHD RESEARCH MEMORY · ONE SOURCE OF TRUTH</div>
+              <div style={{fontSize:15,fontWeight:800,color:P.text,lineHeight:1.4,marginBottom:5}}>{phdResearchHub.workingTitle}</div>
+              <div style={{fontSize:11,color:P.a4,fontWeight:700,marginBottom:10}}>SNU execution scope: {phdResearchHub.snuScope}</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.55,marginBottom:10}}>{phdResearchHub.coreObjective}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {[
+                  ["🎯 Population",phdResearchHub.targetPopulation[0]],
+                  ["📡 Modalities","Wearables + vision + speech/audio + context"],
+                  ["🧠 Core pillars",phdResearchHub.researchPillars.length+" connected research pillars"],
+                  ["🔬 Data strategy","Minimal benchmark datasets + focused custom caregiver logs"],
+                ].map(([k,v])=>(
+                  <div key={k} style={{background:`${P.bg}88`,borderRadius:8,padding:"8px 10px"}}>
+                    <div style={{fontSize:10,color:P.muted}}>{k}</div><div style={{fontSize:11,color:P.sub,fontWeight:600,marginTop:2,lineHeight:1.4}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Info bar */}
             <div style={{...S.ib(P.a4),marginBottom:12}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                 <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>SUPERVISOR</div><div style={{fontSize:12,color:P.a4,fontWeight:700}}>Dr. K.D. Badri Narayanan</div></div>
                 <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>UNIVERSITY</div><div style={{fontSize:12,color:P.sub}}>Shiv Nadar University (SNU), Chennai</div></div>
-                <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>RESEARCH</div><div style={{fontSize:12,color:P.sub}}>Human-Centered Multimodal XAI + Wearables for Special Kids</div></div>
+                <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>RESEARCH DIRECTION</div><div style={{fontSize:12,color:P.sub,lineHeight:1.4}}>{phdResearchHub.workingTitle}</div></div>
                 <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>MODE</div><div style={{fontSize:12,color:P.sub}}>Part-time · Started July 2026 · 4-year plan</div></div>
               </div>
             </div>
@@ -2738,8 +2868,9 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
             {/* Research identity card */}
             <div style={{...gl(P.a4),padding:16,marginBottom:14,borderRadius:14,border:`1px solid ${P.a4}44`}}>
               <div style={{fontSize:11,color:P.muted,fontWeight:700,letterSpacing:"0.5px",marginBottom:6}}>ACTIVE RESEARCH — SHIV NADAR UNIVERSITY (SNU)</div>
-              <div style={{fontSize:15,fontWeight:800,color:P.text,marginBottom:4,lineHeight:1.4}}>Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children</div>
-              <div style={{fontSize:12,color:P.a4,fontWeight:600,marginBottom:10}}>Supervisor: Dr. K.D. Badri Narayanan · Part-time PhD · Started July 2026</div>
+              <div style={{fontSize:15,fontWeight:800,color:P.text,marginBottom:4,lineHeight:1.4}}>{phdResearchHub.snuScope}</div>
+              <div style={{fontSize:12,color:P.a4,fontWeight:600,marginBottom:7}}>Supervisor: {phdResearchHub.supervisor} · Part-time PhD · Started {phdResearchHub.started}</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.55,background:`${P.bg}88`,borderRadius:8,padding:"8px 10px"}}><b style={{color:P.a2}}>Connected to overall PhD:</b> This SNU scope is the current focused implementation of the broader personalized multimodal distress-prediction and early-intervention research direction. The same problem statements, datasets, methodology and four-year plan are shared with the PhD Planner.</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11}}>
                 {[["Mode","Part-time (alongside TCS)"],["Duration","4 years (Jul 2026 – Dec 2029)"],["Type","Computer Science & Engineering"],["Focus","Multimodal AI + XAI + Healthcare"]].map(([k,v])=>(
                   <div key={k} style={{background:`${P.bg}88`,borderRadius:7,padding:"6px 9px"}}>
@@ -2759,6 +2890,15 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
 
             {/* RESEARCH OVERVIEW */}
             {snuTab==="overview"&&<div>
+              <div style={{...S.CA(P.a1),marginBottom:12}}>
+                <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:8}}>🔗 Overall PhD → SNU Research Map</div>
+                <div style={{fontSize:11,color:P.sub,lineHeight:1.6,marginBottom:8}}>The PhD Planner is the master research record. This SNU tab is not a separate project: it is the focused SNU execution layer for the same research program.</div>
+                {phdResearchHub.researchPillars.map(p=>(
+                  <div key={p.id} style={{display:"flex",gap:8,marginBottom:6,alignItems:"flex-start"}}>
+                    <span style={{color:P.a1,fontWeight:800,flexShrink:0}}>›</span><span style={{fontSize:11,color:P.sub}}><b style={{color:P.text}}>{p.title}:</b> {p.detail}</span>
+                  </div>
+                ))}
+              </div>
               <div style={{...S.CA(P.a4),marginBottom:12}}>
                 <div style={{fontSize:13,fontWeight:700,color:P.a4,marginBottom:10}}>🎯 Core Research Problem</div>
                 {[
@@ -4054,12 +4194,12 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
             {resumeTab==="memory"&&<div>
               <div style={S.h2}>☁️ Data Storage & Cross-Device Guide</div>
               <div style={{...S.ib(P.a5),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Data does NOT sync across devices automatically</div>
-                <div style={{fontSize:12,color:P.muted}}>Journal, health log, and office tracker are stored locally on this device only. A different phone or laptop will show empty data.</div>
+                <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:4}}>🧠 Long-term app memory is now enabled</div>
+                <div style={{fontSize:12,color:P.muted}}>All important tab data is stored locally in its original store and mirrored into a unified <b style={{color:P.sub}}>life-memory-v2</b> snapshot. It survives tab navigation, reloads, and closing/reopening the app on the same browser/device.</div>
               </div>
               {[
-                {title:"📱 What is stored where",color:P.a1,items:["Journal entries → localStorage (persists across browser sessions on same device)","Health daily log → localStorage (same device only)","Office tracker → localStorage (same device only)","PIN for Health & Journal → sessionStorage (clears when tab closes — by design for security)","Resume & ATS results → in-memory only (generate fresh each time, not persisted)"]},
-                {title:"🔄 How to use on multiple devices",color:P.a2,items:["Option 1 (Recommended): Pick ONE primary device for daily logging (phone). Use any device for career/skills/resume tabs.","Option 2: Deploy to Vercel (free) + add Supabase database (free 500MB) for full cross-device sync. Ask Claude to build this.","Option 3: Export data periodically — copy Journal text to Google Keep or WhatsApp Saved Messages as backup.","Option 4: Use this app in Claude.ai on each device — storage persists per device in the artifact context."]},
+                {title:"📱 What is stored where",color:P.a1,items:["Journal entries → localStorage (persists across browser sessions on same device)","Health daily log → localStorage (same device only)","Office tracker → localStorage (same device only)","Health & Journal content → localStorage + unified life-memory-v2 backup (content survives closing/reopening the app)","Health & Journal PIN → sessionStorage only, so the PIN is re-entered after a browser-tab session for security","Resume & ATS generated results → still session-only unless explicitly saved; core user data is persisted"]},
+                {title:"🧠 What all-tab memory now covers",color:P.a2,items:["Journal: entries + daily plans","Health: daily log history","Office: tickets, follow-ups, ideas and notes","PhD: supervisor meetings + research tasks","Certifications: module progress + wrong-answer bank","Learning/Career: progress + application status + shared pending work","AI research conversations: PhD/SNU/Health/Coach questions and answers are mirrored locally","UI context: important research/learning sub-tabs are restored after reopening"]},
                 {title:"🚀 Deploy as standalone app (step by step)",color:P.a3,items:["Step 1: Download life-command-centre.jsx from this chat","Step 2: npm create vite@latest mylife -- --template react","Step 3: Replace src/App.jsx with the downloaded file","Step 4: npm install && npm run dev — test locally","Step 5: Push to GitHub, connect to Vercel.com (free), auto-deploys","Step 6: Your Vercel URL works on any device, same app everywhere","Step 7 (sync): supabase.com free tier, create tables, ask Claude to add Supabase API calls"]},
                 {title:"🔁 How updates from Claude work",color:P.a4,items:["Describe changes to Claude here, get updated .jsx file","Replace App.jsx on Vercel, auto-redeploys in 30 seconds","Your stored data (journal/health/office) is untouched — lives in storage, not the code","All chat history here is preserved — full context for every future update","PIN resets each browser session: correct security behaviour — your data is always safe"]},
               ].map((s,i)=>(

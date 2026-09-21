@@ -851,7 +851,7 @@ export default function App() {
     } catch(_) {
       addLog("✅","Analysis complete — check recommendations below","a2");
       setAgentSugs([
-        {priority:1,icon:"🏅",title:"Claude Architect Foundations / Professional",action:claudeDeadline.expired?`Deadline passed on exam date not scheduled. Verify whether a new official window exists before planning further study.`:`${claudeDeadline.label} to Aug 31. Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
+        {priority:1,icon:"🏅",title:"Claude Architect Foundations / Professional",action:`Registered but exam date not scheduled. Use Anthropic official documentation and the certification portal to prepare and schedule.`,tab:"certs",urgency:"high"},
         {priority:2,icon:"⚠️",title:"Replan Overdue Items",action:`${overduePending.length} office follow-ups are overdue. Go to Office → Follow-Up Board and set new target dates now.`,tab:"office",urgency:"high"},
         {priority:3,icon:"🎓",title:"PhD Task Review",action:`${overduePhdTasks.length} PhD tasks need replanning. Open PhD tab → Tasks and replan with realistic new dates.`,tab:"phd",urgency:"medium"},
         {priority:4,icon:"💊",title:"Health Logging",action:"Log your medicines and health data daily. Consistent tracking helps manage diabetes better.",tab:"health",urgency:"medium"},
@@ -1008,7 +1008,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const prC={P1:P.a5,P2:P.a3,P3:P.a1,P4:P.a2};
   const cur=monthPlan[monthIdx];
   const today = todayKey();
-  const claudeDeadline = deadlineStatus("2026-08-31");
+  const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
   const savedTodayPlan = dailyPlans[today];
   const savedTodaySlots = Array.isArray(savedTodayPlan) ? savedTodayPlan : Array.isArray(savedTodayPlan?.slots) ? savedTodayPlan.slots : [];
   const currentPlan = monthPlan.find(month => month.month === currentMonthLabel());

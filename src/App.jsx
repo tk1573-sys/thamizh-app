@@ -75,6 +75,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
   const [msg, setMsg]       = useState("");
 
   const SK = "pin_hash_" + storeKey;
+  const SK_LEN = SK + "_length";
 
   useEffect(() => {
     try {
@@ -100,7 +101,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
     if (phase !== "setup2" || pin2.length < pin1.length) return;
     const t = setTimeout(() => {
       if (pin2 === pin1) {
-        try { sessionStorage.setItem(SK, hashPin(pin1)); } catch(_) {}
+        try { sessionStorage.setItem(SK, hashPin(pin1)); sessionStorage.setItem(SK_LEN, String(pin1.length)); } catch(_) {}
         setMsg(""); setPhase("open");
       } else {
         doShake("PINs don't match — try again");
@@ -113,6 +114,10 @@ function PinGate({ label, color, icon, storeKey, children }) {
   // Unlock: check entry against stored hash
   useEffect(() => {
     if (phase !== "locked" || entry.length < 4) return;
+    let requiredLength = 4;
+    try { requiredLength = Number(sessionStorage.getItem(SK_LEN) || "4"); } catch(_) {}
+    if (!Number.isInteger(requiredLength) || requiredLength < 4 || requiredLength > 6) requiredLength = 4;
+    if (entry.length !== requiredLength) return;
     const t = setTimeout(() => {
       try {
         const stored = sessionStorage.getItem(SK);
@@ -125,7 +130,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
       } catch(_) { setEntry(""); }
     }, 200);
     return () => clearTimeout(t);
-  }, [entry, phase, SK]);
+  }, [entry, phase, SK, SK_LEN]);
 
   const addDigit = (d) => {
     if (phase === "setup1" && pin1.length < 6) setPin1(p => p+d);
@@ -138,7 +143,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
     if (phase === "locked") setEntry(p => p.slice(0,-1));
   };
   const resetPin = () => {
-    try { sessionStorage.removeItem(SK); } catch(_) {}
+    try { sessionStorage.removeItem(SK); sessionStorage.removeItem(SK_LEN); } catch(_) {}
     setPin1(""); setPin2(""); setEntry(""); setPhase("setup1"); setMsg("");
   };
 
@@ -534,7 +539,8 @@ function escHtml(str="") {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab]       = useState("now");
+  const VALID_APP_TABS = new Set(["now","jobs","radar","monthly","career","skills","learn","ugc","phd","snu","office","health","journal","resume","certs","govt","buddy","coach"]);
+  const [tab, setTab]       = useState(() => { try { const q = new URLSearchParams(window.location.search).get("tab"); return VALID_APP_TABS.has(q) ? q : "now"; } catch(_) { return "now"; } });
   const [monthIdx, setMonth]= useState(() => Math.max(0, monthPlan.findIndex(month => month.month === currentMonthLabel())));
   const [pillar, setPillar] = useState("job");
   const [careerIdx, setCareer] = useState(0);
@@ -800,7 +806,7 @@ export default function App() {
     const overduePending = allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today);
     const overduePhdTasks = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today);
     const pendingOpen = allPending.filter(p=>p.status!=="Done").length;
-    const claudeDeadline = deadlineStatus("2026-08-31");
+    const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
     const recentHealth = Object.entries(healthLog).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,3);
     const missedMeds = recentHealth.filter(([,e])=>!e.meds?.morning||!e.meds?.night).length;
     const recentJournal = Object.entries(entries).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,1);
@@ -810,8 +816,7 @@ export default function App() {
     await new Promise(r=>setTimeout(r,400));
 
     // Analysis
-    if(claudeDeadline.expired) addLog("⏱️",`Claude Architect certification ${claudeDeadline.label}`,"a5");
-    else if(claudeDeadline.days<=42) addLog("🚨",`Claude Architect certification ${claudeDeadline.label} — August 31, 2026`,"a5");
+    addLog("🏅",claudeCertStatus,"a3");
     if(overduePending.length) addLog("⚠️",`${overduePending.length} overdue follow-up items in Office need replanning`,"a5");
     if(overduePhdTasks.length) addLog("⚠️",`${overduePhdTasks.length} overdue PhD tasks — review timeline`,"a5");
     if(missedMeds>0) addLog("💊",`Missed medicine logging ${missedMeds} of last 3 days — health tracking incomplete`,"a3");
@@ -825,7 +830,7 @@ export default function App() {
     // Call AI for smart suggestions
     try {
       const context = [
-        `Today: ${today}. Claude Architect certification status: ${claudeDeadline.label}.`,
+        `Today: ${today}. Claude Architect certification status: ${claudeCertStatus}.`,
         `Overdue office follow-ups: ${overduePending.length}. Open follow-ups: ${pendingOpen}.`,
         `Overdue PhD tasks: ${overduePhdTasks.length}. PhD meetings logged: ${phdMeetings.length}.`,
         `Missed medicine logs last 3 days: ${missedMeds}. Days since last journal: ${lastJournalDays}.`,
@@ -846,7 +851,7 @@ export default function App() {
     } catch(_) {
       addLog("✅","Analysis complete — check recommendations below","a2");
       setAgentSugs([
-        {priority:1,icon:claudeDeadline.expired?"⏱️":"🚨",title:"Claude Architect Foundations / Professional",action:claudeDeadline.expired?`Deadline passed on Aug 31, 2026. Verify whether a new official window exists before planning further study.`:`${claudeDeadline.label} to Aug 31. Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
+        {priority:1,icon:"🏅",title:"Claude Architect Foundations / Professional",action:claudeDeadline.expired?`Deadline passed on exam date not scheduled. Verify whether a new official window exists before planning further study.`:`${claudeDeadline.label} to Aug 31. Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
         {priority:2,icon:"⚠️",title:"Replan Overdue Items",action:`${overduePending.length} office follow-ups are overdue. Go to Office → Follow-Up Board and set new target dates now.`,tab:"office",urgency:"high"},
         {priority:3,icon:"🎓",title:"PhD Task Review",action:`${overduePhdTasks.length} PhD tasks need replanning. Open PhD tab → Tasks and replan with realistic new dates.`,tab:"phd",urgency:"medium"},
         {priority:4,icon:"💊",title:"Health Logging",action:"Log your medicines and health data daily. Consistent tracking helps manage diabetes better.",tab:"health",urgency:"medium"},
@@ -859,7 +864,7 @@ export default function App() {
   const askCertStudy = async () => {
     if(!certStudyQ.trim()) return; setCertStudyLoad(true); setCertStudyA("");
     try {
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Architect Foundations (Claude Architect) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is exam date not scheduled.`,messages:[{role:"user",content:certStudyQ}]});
       setCertStudyA(readAIText(d) || "No response.");
     } catch(err){setCertStudyA(err.message || "Connection error. Please try again.");}
     setCertStudyLoad(false);
@@ -901,19 +906,19 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
     if(!adviceQ.trim()) return; setAdviceLoad(true); setAdviceA("");
     const open = allPending.filter(p=>p.status!=="Done").length;
     const odPhd = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
-    const ccdvfStatus = deadlineStatus("2026-08-31");
+    const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
     try {
       const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
 
-LIFE CONTEXT (August 2026):
+LIFE CONTEXT (September 2026):
 - Works full-time at TCS as Data Engineer (4.3 years): SQL/Teradata/DataStage/Unix/ServiceNow
 - Part-time PhD at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan
 - Research: Human-Centered Multimodal Explainable AI with Wearables for Special Kids
 - Health: Bipolar I (stable), Type 2 Diabetes (FBS managed), Obesity (140kg) — energy varies
-- Claude Claude Architect certification status: ${ccdvfStatus.label}
+- Claude Claude Architect certification status: ${claudeCertStatus}
 - Databricks DEA exam: September 2026
 - UGC NET CS: December 2026
-- ISRO application deadline: August 17 (TODAY/TOMORROW!)
+- Use the current official government vacancy pages; do not rely on old application dates.
 - ${open} open follow-up items in office tracker
 - ${odPhd} overdue PhD tasks
 
@@ -1210,7 +1215,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 {[
                   {org:"DRDO",post:"Scientist B (CS/ECE/AI disciplines)",when:"Sep–Oct 2026 (EXPECTED)",type:"EXPECTED",note:"DRDO regularly recruits Scientist B via GATE score through RAC. Advt 156 via GATE was April 2026. Next Scientist B cycle expected Q3/Q4 2026. Watch rac.gov.in",gate:"GATE CS/EC required",score:85,match:"🎯 HIGH — CS/ECE + M.Tech + PhD research aligns perfectly with DRDO AI labs"},
                   {org:"NIC (Next cycle)",post:"Scientist B / Scientific Technical Assistant A",when:"Sep–Dec 2026 (EXPECTED)",type:"EXPECTED",note:"NIC Scientist B 2026 (243 posts, Advt NIC/SCB/2026/1) closed April 24. Shortlist was cancelled/revised — still in process. Next full cycle expected. Also: NIC STA-A recruitment (376 posts) expected. Watch nic.gov.in",gate:"GATE CS/EC/DA required",score:88,match:"🎯 HIGHEST FIT — Data Science & AI discipline (50 posts) matches M.Tech DS + PhD GenAI + TCS experience perfectly"},
-                  {org:"TNPSC CTS Interview Posts",post:"Technical Officer / Scientific Officer",when:"Notification Aug 31, 2026 (CONFIRMED from planner)",type:"CONFIRMED from planner",note:"TNPSC Annual Planner 2026 confirms interview posts notification on Aug 31, 2026. Exam Nov 14, 2026. CS/ECE/IT candidates eligible for several posts.",gate:"No GATE required",score:80,match:"✅ Good match — Tamil Nadu domicile + SC advantage + no GATE needed"},
+                  {org:"TNPSC CTS Interview Posts",post:"Technical Officer / Scientific Officer",when:"Notification exam date not scheduled (CONFIRMED from planner)",type:"CONFIRMED from planner",note:"TNPSC Annual Planner 2026 confirms interview posts notification on exam date not scheduled. Exam Nov 14, 2026. CS/ECE/IT candidates eligible for several posts.",gate:"No GATE required",score:80,match:"✅ Good match — Tamil Nadu domicile + SC advantage + no GATE needed"},
                   {org:"C-DAC",post:"Project Engineer / Senior Project Engineer (AI/ML, Data Science)",when:"Sep–Oct 2026 (EXPECTED — JIT cycle)",type:"EXPECTED",note:"C-DAC JIT June 2026 (951 posts, Advt CORP/JIT/02/2026) closed June 20. Next JIT cycle expected Sep–Oct 2026. Senior PE requires 4+ years experience — you qualify. C-DAC Chennai centre available.",gate:"No GATE required",score:83,match:"🎯 HIGH — 4.5yr experience qualifies for Senior PE. AI/ML + Data Science domains. C-DAC Chennai available."},
                   {org:"SSC CGL 2026",post:"Assistant Section Officer / Technical posts",when:"Sep–Oct 2026 exam (EXPECTED)",type:"EXPECTED",note:"SSC CGL notification expected Aug–Sep 2026. While primarily administrative, check technical posts including Statistical Investigator, Inspector (IT), and specialist technical posts under CGL.",gate:"No GATE",score:55,match:"⚪ Moderate — Administrative posts are backup option. Check specific technical vacancies."},
                   {org:"NIELIT",post:"Scientist B / Technical Assistant",when:"Late 2026 (EXPECTED)",type:"EXPECTED",note:"NIELIT (National Institute of Electronics & IT, MeitY) conducts separate scientist and TA recruitment. Previous cycle had 402 posts. New cycle expected late 2026. Written exam + interview format (unlike NIC which uses GATE only).",gate:"Written exam — No GATE",score:82,match:"✅ Good — No GATE needed. Computer Science, Electronics, IT disciplines eligible."},
@@ -1339,7 +1344,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               </div>
               {[
                 {org:"TNPSC CTS — Computer Programmer",score:82,advt:"Advt 04/2026 (Non-interview) + Advt 06/2026 expected Aug 31",status:"🟣 Exam underway (Aug 16 – Sep 9)",note:"CTS Non-Interview 2026: Computer Programmer, Systems Manager included. Exam from Aug 16. If you missed this cycle, watch for CTS Interview posts (notification Aug 31, exam Nov 14, 2026). B.E CS/IT/ECE + MCA/M.Tech eligible.",gate:"No GATE",elig:"✅ B.E ECE + M.Tech DS eligible",phys:"GREEN",phd:"A — State govt typically allows external PhD with NOC"},
-                {org:"TNPSC CTS Interview Posts — Technical Officer",score:80,advt:"Advt 06/2026 — notification Aug 31, 2026 (CONFIRMED from planner)",status:"🔵 Notification expected Aug 31",note:"Technical officer, scientific officer posts under various TN departments. Interview posts have higher salary bands and seniority. Tamil Nadu domicile + SC gives significant advantage.",gate:"No GATE",elig:"✅ B.E ECE + M.Tech DS eligible",phys:"GREEN",phd:"A — Verify NOC requirement"},
+                {org:"TNPSC CTS Interview Posts — Technical Officer",score:80,advt:"Advt 06/2026 — notification exam date not scheduled (CONFIRMED from planner)",status:"🔵 Notification expected Aug 31",note:"Technical officer, scientific officer posts under various TN departments. Interview posts have higher salary bands and seniority. Tamil Nadu domicile + SC gives significant advantage.",gate:"No GATE",elig:"✅ B.E ECE + M.Tech DS eligible",phys:"GREEN",phd:"A — Verify NOC requirement"},
                 {org:"TNPSC Group 1 — Deputy Collector/ACS",score:45,advt:"Group 1 notification Jun 2026, exam Sep 2026",status:"🟣 Exam Sep 6, 2026",note:"HIGH COMPETITION. Administrative, not technical. Engineering graduates eligible but this is IAS-equivalent preparation. Consider only if genuinely interested in administration. LOW PRIORITY for technical profile.",gate:"No GATE",elig:"✅ Any degree eligible, but not technical role",phys:"GREEN",phd:"C — Full-time district administration incompatible with PhD"},
                 {org:"Tamil Nadu e-Governance Agency (TNeGA)",score:72,advt:"Project/contractual basis",status:"🔵 Monitor website",note:"TNeGA (State IT agency) recruits project-based IT and data professionals. Roles in digital governance, data analytics, e-services. Contract-based initially. Visit tnega.tn.gov.in.",gate:"No GATE",elig:"✅ CS/IT/Data background",phys:"GREEN",phd:"A — Project roles flexible"},
                 {org:"TANGEDCO / TNEB",score:55,advt:"Periodic AE/JE recruitment",status:"🔵 Watch tangedco.gov.in",note:"Tamil Nadu Generation and Distribution Corporation. Assistant Engineer (Electrical/Electronics) posts. B.E ECE eligible for Electronics AE. Not directly related to data/AI work — LOW PRIORITY for your career trajectory unless stability is primary concern.",gate:"No GATE typically",elig:"✅ B.E ECE eligible for Electronics AE",phys:"YELLOW — some field inspection",phd:"B — Verify"},
@@ -1432,7 +1437,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 {id:"drdo-sci-b-next",org:"DRDO Scientist B via GATE (next cycle)",deadline:"Expected Sep-Oct 2026",priority:"🟢 HIGH"},
                 {id:"drdo-sci-c-next",org:"DRDO Scientist C Lateral (next advt)",deadline:"Watch rac.gov.in",priority:"🟡 GOOD"},
                 {id:"nielit-next",org:"NIELIT Scientist B (next cycle)",deadline:"Expected late 2026",priority:"🟡 GOOD"},
-                {id:"ugc-net-dec-2026",org:"UGC NET CS December 2026",deadline:"Dec 2026 (Reg: Sep 2026)",priority:"🟢 HIGH — Academic gateway"},
+                {id:"ugc-net-dec-2026",org:"UGC NET CS December 2026",deadline:"Dec 2026 — registration date to be confirmed by NTA",priority:"🟢 HIGH — Academic gateway"},
                 {id:"csir-project",org:"CSIR Project Scientist / RA (various labs)",deadline:"Rolling",priority:"🟡 GOOD"},
               ].map(job=>(
                 <div key={job.id} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:`1px solid ${P.border}20`,alignItems:"center",flexWrap:"wrap"}}>
@@ -1517,7 +1522,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               {[
                 {
                   org:"🚀 ISRO Scientist/Engineer SC",
-                  status:"🚨 APPLY NOW — Deadline August 17, 2026",
+                  status:"⚪ CLOSED — ICRB 2026 window ended 16 Sep 2026",
                   statusColor:P.a5,
                   urgent:true,
                   details:[
@@ -1695,7 +1700,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={S.h2}>🤖 AI Job Advisor</div>
               <div style={{...S.ib(P.a4),marginBottom:14}}>
                 <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>Ask anything about jobs matching your profile</div>
-                <div style={{fontSize:12,color:P.muted}}>The AI knows your full TCS profile, SC category, PhD, certs, salary targets, and August 2026 context.</div>
+                <div style={{fontSize:12,color:P.muted}}>The AI uses the profile context configured in this app and the current September 2026 planning context.</div>
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
                 {[
@@ -1800,8 +1805,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           {tab==="ugc"&&<div>
             <div style={S.h2}>📋 UGC NET CS — December 2026</div>
             <div style={{...S.ib(P.a2),marginBottom:14}}>
-              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Exam: December 2026 · SC cutoff ~56% = ~84/150 · Your target: 100+/150</div>
-              <div style={{fontSize:12,color:P.muted}}>Registration: September–October 2026 window · Watch ugcnet.nta.ac.in · Set calendar reminder NOW</div>
+              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Target: 100+/150 (personal study target) · Verify the official NTA cycle notice for final schedule and cut-offs</div>
+              <div style={{fontSize:12,color:P.muted}}>Current status: monitor NTA for the December 2026 cycle; this dashboard does not assert a registration date until an official notice confirms it.</div>
             </div>
             <div style={{...S.CA(P.a2),marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:6}}>
@@ -2120,7 +2125,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:12,color:P.muted}}>Real advice for switching from TCS to Senior DE, AI-DE, or Analytics Engineer.</div>
               </div>
               {[
-                {title:"📍 Where you are now (August 2026)",color:P.a1,items:[
+                {title:"📍 Where you are now (September 2026)",color:P.a1,items:[
                   "4.3 years TCS Data Engineer — solid enterprise foundation, not a fresher",
                   "Expert in SQL (Teradata), IBM DataStage ETL, Unix/Shell, ServiceNow ITSM",
                   "PhD started at Shiv Nadar University in GenAI — extremely rare differentiator",
@@ -3419,7 +3424,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
                     <span style={{fontSize:28}}>🚨</span>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:800,color:P.a5}}>Claude Certified Developer Foundations (CCDV-F)</div>
+                      <div style={{fontSize:14,fontWeight:800,color:P.a5}}>Claude Architect Foundations (Claude Architect)</div>
                       <div style={{fontSize:12,color:P.muted,marginTop:2}}>Anthropic Architect Foundations + Professional — Registered; exam dates not yet scheduled</div>
                     </div>
                     <div style={{textAlign:"center",minWidth:90}}><div style={{fontSize:12,fontWeight:800,color:P.a5,lineHeight:1.3}}>{deadline.label}</div></div>
@@ -3438,7 +3443,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* Cert sub-tabs */}
             <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-              {[["roadmap","📅 Roadmap"],["claude","🤖 Claude CCDV-F"],["study","📚 Study Coach"]].map(([id,lb])=>(
+              {[["roadmap","📅 Roadmap"],["claude","🤖 Claude Claude Architect"],["study","📚 Study Coach"]].map(([id,lb])=>(
                 <button key={id} style={S.pill(certTab===id,P.a3)} onClick={()=>setCertTab(id)}>{lb}</button>
               ))}
             </div>
@@ -3467,7 +3472,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               })}
             </div>}
 
-            {/* CLAUDE CCDV-F STUDY GUIDE */}
+            {/* CLAUDE Claude Architect STUDY GUIDE */}
             {certTab==="claude"&&<div>
               <div style={{...S.ib(P.a5),marginBottom:14}}>
                 <div style={{fontSize:13,color:P.a5,fontWeight:800,marginBottom:4}}>🚨 Claude Architect Foundations + Professional — Study Guide</div>
@@ -3652,7 +3657,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
                 {[
                   "I'm overwhelmed with TCS + PhD + certs + UGC NET. Help me prioritise today.",
-                  "Should I apply to Current government technical jobs and upcoming exam deadlines or focus on CCDV-F cert?",
+                  "Should I apply to Current government technical jobs and upcoming exam deadlines or focus on Claude Architect cert?",
                   "How should I prepare for my six active certifications in the 20-day sprint?",
                   "I had a bad day and don't feel like doing anything. What should I do?",
                   "How do I manage my health (Bipolar, Diabetes) while doing a PhD part-time?",
@@ -3668,7 +3673,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 ))}
               </div>
               <textarea style={{...S.ta,minHeight:80,marginBottom:10}}
-                placeholder={"Tell me what's on your mind...\n\nI know you're managing TCS + SNU PhD + CCDV-F cert (17 days!) + Databricks + UGC NET + ISRO application + health + job switch. What do you need help thinking through right now?"}
+                placeholder={"Tell me what's on your mind...\n\nI know you're managing TCS + SNU PhD + Claude Architect cert (current sprint) + Databricks + UGC NET + ISRO application + health + job switch. What do you need help thinking through right now?"}
                 value={adviceQ} onChange={e=>setAdviceQ(e.target.value)}/>
               <button style={{...S.btn(adviceLoad?P.muted:P.a4),opacity:adviceLoad?0.7:1,width:"100%",...(adviceLoad?{}:{boxShadow:`0 4px 20px ${P.a4}44`})}}
                 onClick={askAdviceBuddy} disabled={adviceLoad}>
@@ -3704,10 +3709,10 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             <div style={S.C()}>
               <div style={S.L}>📅 Historical Balanced Schedule (Aug 14–17, 2026)</div>
               {[
-                {day:"Fri Aug 14",tasks:["7:30 AM: 30 min CCDV-F — API fundamentals + tool use","9 AM: TCS work (check INCs, DataStage tasks)","7-8 PM: Databricks DEA course — 1 module","8-9 PM: UGC NET — 20 DBMS MCQs","9:30 PM: Log today in journal + tomorrow plan"]},
-                {day:"Sat Aug 15 (Weekend Deep Work)",tasks:["8 AM: 1 hour CCDV-F — Prompt engineering + safety topics","9 AM-12 PM: PhD — Read 2 papers on multimodal wearable AI + notes","2-4 PM: Databricks DEA — 2 modules (catch up)","4 PM: Check ISRO application status + submit if not done"]},
+                {day:"Fri Sep 18",tasks:["7:30 AM: 30 min Claude Architect — API fundamentals + tool use","9 AM: TCS work (check INCs, DataStage tasks)","7-8 PM: Databricks DEA course — 1 module","8-9 PM: UGC NET — 20 DBMS MCQs","9:30 PM: Log today in journal + tomorrow plan"]},
+                {day:"Sat Sep 19 (Weekend Deep Work)",tasks:["8 AM: 1 hour Claude Architect — Prompt engineering + safety topics","9 AM-12 PM: PhD — Read 2 papers on multimodal wearable AI + notes","2-4 PM: Databricks DEA — 2 modules (catch up)","4 PM: Check ISRO application status + submit if not done"]},
                 {day:"Sun Aug 16 (UGC NET + Review)",tasks:["9-11 AM: UGC NET full timed mock — Paper 1 + Paper 2","11-12 PM: Mock analysis — every wrong answer reviewed","3-4 PM: PhD — Log any research ideas, update task list","4-5 PM: Weekly review — update office follow-ups, PhD tasks, cert progress"]},
-                {day:"Mon Aug 17 (ISRO DEADLINE)",tasks:["ISRO Scientist SC final deadline — submit before midnight if applying","7:30 AM: 30 min CCDV-F — Multi-turn conversations + vision API","Evening: UGC NET — 20 OS MCQs (scheduling algorithms)"]},
+                {day:"Mon Sep 21 (current government review)",tasks:["Review current ISRO opportunities and apply only to an open official notification.","7:30 AM: 30 min Claude Architect — Multi-turn conversations + vision API","Evening: UGC NET — 20 OS MCQs (scheduling algorithms)"]},
               ].map((d,i)=>(
                 <div key={i} style={{marginBottom:12}}>
                   <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:6}}>{d.day}</div>

@@ -810,8 +810,8 @@ export default function App() {
     await new Promise(r=>setTimeout(r,400));
 
     // Analysis
-    if(claudeDeadline.expired) addLog("⏱️",`Claude cert (CCDV-F) ${claudeDeadline.label}`,"a5");
-    else if(claudeDeadline.days<=42) addLog("🚨",`Claude cert (CCDV-F) ${claudeDeadline.label} — August 31, 2026`,"a5");
+    if(claudeDeadline.expired) addLog("⏱️",`Claude Architect certification ${claudeDeadline.label}`,"a5");
+    else if(claudeDeadline.days<=42) addLog("🚨",`Claude Architect certification ${claudeDeadline.label} — August 31, 2026`,"a5");
     if(overduePending.length) addLog("⚠️",`${overduePending.length} overdue follow-up items in Office need replanning`,"a5");
     if(overduePhdTasks.length) addLog("⚠️",`${overduePhdTasks.length} overdue PhD tasks — review timeline`,"a5");
     if(missedMeds>0) addLog("💊",`Missed medicine logging ${missedMeds} of last 3 days — health tracking incomplete`,"a3");
@@ -825,17 +825,17 @@ export default function App() {
     // Call AI for smart suggestions
     try {
       const context = [
-        `Today: ${today}. Claude cert CCDV-F status: ${claudeDeadline.label}.`,
+        `Today: ${today}. Claude Architect certification status: ${claudeDeadline.label}.`,
         `Overdue office follow-ups: ${overduePending.length}. Open follow-ups: ${pendingOpen}.`,
         `Overdue PhD tasks: ${overduePhdTasks.length}. PhD meetings logged: ${phdMeetings.length}.`,
         `Missed medicine logs last 3 days: ${missedMeds}. Days since last journal: ${lastJournalDays}.`,
         `Blocked tickets: ${tickets.filter(t=>t.status==="Blocked").length}.`,
-        `Cert urgent: Claude CCDV-F (Aug 31), Databricks DEA (Sep-Oct 2026), GCP DE (Nov 2026).`,
+        `20-day sprint: AWS DEA, SnowPro Core, Databricks DEA, Claude Architect Foundations, Claude Architect Professional, Databricks GenAI.`,
       ].join(" ");
 
       const d = await callAI({
         model:"gemini-3.8-flash", max_tokens:700,
-        system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. URGENT: Claude CCDV-F cert deadline Aug 31 2026. Also: Databricks DEA, GCP DE, health management (Bipolar I, T2 Diabetes). Analyse the context and return EXACTLY 5 specific, actionable recommendations ranked by urgency. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
+        system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. URGENT: Claude Architect certification deadline Aug 31 2026. Also: Databricks DEA, GCP DE, health management (Bipolar I, T2 Diabetes). Analyse the context and return EXACTLY 5 specific, actionable recommendations ranked by urgency. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
         messages:[{role:"user",content:`Analyse my situation and give 5 smart recommendations: ${context}`}]
       });
       const raw = readAIText(d) || "[]";
@@ -846,7 +846,7 @@ export default function App() {
     } catch(_) {
       addLog("✅","Analysis complete — check recommendations below","a2");
       setAgentSugs([
-        {priority:1,icon:claudeDeadline.expired?"⏱️":"🚨",title:"Claude CCDV-F Cert",action:claudeDeadline.expired?`Deadline passed on Aug 31, 2026. Verify whether a new official window exists before planning further study.`:`${claudeDeadline.label} to Aug 31. Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
+        {priority:1,icon:claudeDeadline.expired?"⏱️":"🚨",title:"Claude Architect Foundations / Professional",action:claudeDeadline.expired?`Deadline passed on Aug 31, 2026. Verify whether a new official window exists before planning further study.`:`${claudeDeadline.label} to Aug 31. Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
         {priority:2,icon:"⚠️",title:"Replan Overdue Items",action:`${overduePending.length} office follow-ups are overdue. Go to Office → Follow-Up Board and set new target dates now.`,tab:"office",urgency:"high"},
         {priority:3,icon:"🎓",title:"PhD Task Review",action:`${overduePhdTasks.length} PhD tasks need replanning. Open PhD tab → Tasks and replan with realistic new dates.`,tab:"phd",urgency:"medium"},
         {priority:4,icon:"💊",title:"Health Logging",action:"Log your medicines and health data daily. Consistent tracking helps manage diabetes better.",tab:"health",urgency:"medium"},
@@ -910,7 +910,7 @@ LIFE CONTEXT (August 2026):
 - Part-time PhD at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan
 - Research: Human-Centered Multimodal Explainable AI with Wearables for Special Kids
 - Health: Bipolar I (stable), Type 2 Diabetes (FBS managed), Obesity (140kg) — energy varies
-- Claude CCDV-F cert deadline status: ${ccdvfStatus.label}
+- Claude Claude Architect certification status: ${ccdvfStatus.label}
 - Databricks DEA exam: September 2026
 - UGC NET CS: December 2026
 - ISRO application deadline: August 17 (TODAY/TOMORROW!)
@@ -948,7 +948,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askJobAI = async () => {
     if(!jobAiQ.trim()) return; setJobAiLoad(true); setJobAiA("");
     try {
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
       setJobAiA(readAIText(d) || "No response.");
     } catch(err){setJobAiA(err.message || "Connection error. Please try again.");}
     setJobAiLoad(false);
@@ -2126,7 +2126,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   "PhD started at Shiv Nadar University in GenAI — extremely rare differentiator",
                   "Learning Python, PySpark, LangChain, GCP — right track",
                   "Databricks DEA exam target Sep-Oct 2026 — cert adds immediate resume credibility",
-                  "Claude CCDV-F deadline Aug 31 — 2 weeks away, study 30 min/day NOW",
+                  "Claude Architect Foundations + Professional are registered; use the 20-day sprint for preparation and scheduling.",
                 ]},
                 {title:"🎯 Fastest path to 40-60% salary hike",color:P.a2,items:[
                   "TODAY: Apply to 3+ Senior ETL/DE roles on Naukri — Cognizant, DXC, HCL, Capgemini. Zero reskilling.",
@@ -2181,7 +2181,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   onClick={async()=>{
                     if(!switchGuideQ.trim())return;
                     setSwitchGuideLoad(true);setSwitchGuideA("");
-                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude CCDV-F (Aug 31), Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
+                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
                     try{
                       const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
                       setSwitchGuideA(readAIText(d) || "No response.");
@@ -2545,7 +2545,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               {[
                 {phase:"Phase 1: Foundation",period:"Jul–Dec 2026",color:P.a1,items:[
                   "Jul 2026 ✅: First supervisor meeting — ideology, keywords, PS (DONE)",
-                  "Aug 2026: CCDV-F cert (Aug 31) + PhD coursework Sem 1 begins + Read 15+ papers",
+                  "Sep–Oct 2026: 20-day certification sprint + PhD research tasks + UGC NET preparation",
                   "Sep 2026: Finalise 1-2 core problem statements with supervisor + 30+ papers reviewed",
                   "Oct 2026: Chapter 1 Introduction draft submitted + UGC NET registration + dataset identified",
                   "Nov 2026: Chapter 2 Literature Survey 50% complete + baseline experiments started",
@@ -2923,7 +2923,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               {[
                 {phase:"Phase 1: Foundation",period:"Jul–Dec 2026",color:P.a1,items:[
                   "Jul 2026 ✅: First supervisor meeting — ideology, 15-20 keywords, 10 PS (DONE)",
-                  "Aug 2026: CCDV-F cert (Aug 31) + start reading 15 survey papers + environment setup",
+                  "Sep–Oct 2026: certification sprint + research literature survey + environment setup",
                   "Sep 2026: Finalise 2 core PS with supervisor + 30 papers reviewed + Chapter 1 started",
                   "Oct 2026: Chapter 1 Introduction complete + UGC NET registration + minimal dataset identified",
                   "Nov 2026: Chapter 2 Literature Survey 50% + DREAMER dataset experiments started",
@@ -3420,7 +3420,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     <span style={{fontSize:28}}>🚨</span>
                     <div style={{flex:1}}>
                       <div style={{fontSize:14,fontWeight:800,color:P.a5}}>Claude Certified Developer Foundations (CCDV-F)</div>
-                      <div style={{fontSize:12,color:P.muted,marginTop:2}}>Anthropic Official Certification — Deadline August 31, 2026</div>
+                      <div style={{fontSize:12,color:P.muted,marginTop:2}}>Anthropic Architect Foundations + Professional — Registered; exam dates not yet scheduled</div>
                     </div>
                     <div style={{textAlign:"center",minWidth:90}}><div style={{fontSize:12,fontWeight:800,color:P.a5,lineHeight:1.3}}>{deadline.label}</div></div>
                   </div>
@@ -3470,8 +3470,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             {/* CLAUDE CCDV-F STUDY GUIDE */}
             {certTab==="claude"&&<div>
               <div style={{...S.ib(P.a5),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a5,fontWeight:800,marginBottom:4}}>🚨 Claude CCDV-F — Complete Study Guide</div>
-                <div style={{fontSize:12,color:P.muted}}>Deadline: August 31, 2026. Study 30 min/day. Topics below cover everything tested.</div>
+                <div style={{fontSize:13,color:P.a5,fontWeight:800,marginBottom:4}}>🚨 Claude Architect Foundations + Professional — Study Guide</div>
+                <div style={{fontSize:12,color:P.muted}}>Focus: architecture, Claude/API concepts, prompt design, tool use, safety, context management, evaluation and production system design. Use official Anthropic documentation as the source of truth.</div>
               </div>
 
               {[
@@ -3554,12 +3554,12 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
               {/* Study schedule */}
               <div style={{...S.ib(P.a2),marginTop:4}}>
-                <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:8}}>📅 30-day Study Plan (Start Today!)</div>
+                <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:8}}>📅 20-Day Architect Certification Sprint</div>
                 {[
                   ["Week 1 (Days 1-7)","Read Anthropic docs: Models, API basics, Messages API. Build a simple chatbot using the API. Test streaming."],
                   ["Week 2 (Days 8-14)","Study prompt engineering deeply. Practice few-shot, CoT, XML tags. Build a tool-use example. Study vision API."],
                   ["Week 3 (Days 15-21)","Focus on safety, multi-turn conversations, production practices. Study batch API and caching. Practice exam questions."],
-                  ["Week 4 (Days 22-30)","Full revision of all 8 topics. Take practice tests. Use the Study Coach below for weak areas. Book exam slot."],
+                  ["Week 4 (Days 22-30)","Full revision of all 8 topics. Take practice tests. Use the Study Coach below for weak areas. Book the appropriate exam slots after preparation and registration requirements are confirmed."],
                 ].map(([w,t],i,arr)=>(
                   <div key={i} style={{...S.li(i===arr.length-1),flexDirection:"column",gap:3}}>
                     <span style={{color:P.a2,fontWeight:700,fontSize:12}}>{w}</span>
@@ -3571,7 +3571,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* AI STUDY COACH */}
             {certTab==="study"&&<div>
-              <div style={S.h2}>📚 Claude CCDV-F Study Coach</div>
+              <div style={S.h2}>📚 Claude Architect Study Coach</div>
               <div style={{...S.ib(P.a4),marginBottom:14}}>
                 <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>Ask anything about the Claude certification</div>
                 <div style={{fontSize:12,color:P.muted}}>Powered by Claude itself — the best way to learn Claude is to use Claude.</div>
@@ -3629,7 +3629,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:10}}>📊 Your Current Situation ({fmtDate(today_, {day:"numeric",month:"long",year:"numeric"})})</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     {[
-                      {l:"CCDV-F Deadline",v:certStatus.label,c:certStatus.expired?P.a5:certStatus.days<=14?P.a5:P.a3},
+                      {l:"Claude Architect status",v:certStatus.label,c:certStatus.expired?P.a5:certStatus.days<=14?P.a5:P.a3},
                       {l:"ISRO Opportunity",v:"Historical · verify new notices",c:P.muted},
                       {l:"Overdue Follow-ups",v:odPending,c:odPending>0?P.a5:P.a2},
                       {l:"Overdue PhD Tasks",v:odPhd,c:odPhd>0?P.a5:P.a2},
@@ -3652,8 +3652,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
                 {[
                   "I'm overwhelmed with TCS + PhD + certs + UGC NET. Help me prioritise today.",
-                  "Should I apply to ISRO Scientist SC before Aug 17 or focus on CCDV-F cert?",
-                  "How do I study for CCDV-F cert in just 17 days while working full time at TCS?",
+                  "Should I apply to Current government technical jobs and upcoming exam deadlines or focus on CCDV-F cert?",
+                  "How should I prepare for my six active certifications in the 20-day sprint?",
                   "I had a bad day and don't feel like doing anything. What should I do?",
                   "How do I manage my health (Bipolar, Diabetes) while doing a PhD part-time?",
                   "I haven't logged my medicines for 2 days. I'm slipping. What should I do?",
@@ -3689,7 +3689,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 {title:"⚡ The 2-Hour Evening Block",desc:"7-9 PM is your power window. Mon/Wed/Fri = Python or UGC NET. Tue/Thu = Databricks or GenAI. Fri = PhD writing. Sat morning = deep work. This 2-hour commitment = 60 hrs/month of compounding progress."},
                 {title:"🎓 PhD — 1 task per day minimum",desc:"Even on TCS heavy days, do ONE PhD task: read 1 paper abstract, write 2 sentences in your chapter draft, or log a supervisor note. Consistency beats intensity for part-time PhD."},
                 {title:"📋 UGC NET — 20 MCQs every evening",desc:"20 MCQs takes 20 minutes. Do it before dinner every day. Sunday = 1 full mock test (2 hours). This rhythm over 4 months = Dec 2026 cleared. SC cutoff is just 56% — you can do this."},
-                {title:"🚨 CCDV-F RIGHT NOW",desc:"30 minutes every morning before TCS work. Start with API fundamentals today. 17 days × 30 min = 8.5 hours of study. That's enough to clear a developer foundations cert. Read: docs.anthropic.com every morning."},
+                {title:"🚨 20-DAY CERTIFICATION SPRINT",desc:"30 minutes every morning before TCS work. Start with API fundamentals today. 17 days × 30 min = 8.5 hours of study. That's enough to clear a developer foundations cert. Read: docs.anthropic.com every morning."},
                 {title:"❤️ Health = Priority 0",desc:"Bipolar I means some days you'll have low energy. Never feel guilty on those days. A bad day of doing nothing is better than burning out for a week. Log your mood and meds daily — data helps you see patterns."},
                 {title:"🔄 Weekly Reset (Sunday 3-5 PM)",desc:"Review everything: what got done, what slipped, what to replan. Update PhD tasks, office follow-ups, cert progress. 2 hours of planning saves 10 hours of confusion during the week."},
               ].map((item,i,arr)=>(
@@ -3805,7 +3805,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       "CERTIFICATIONS IN PROGRESS (2026):",
                       "• Databricks Certified Data Engineer Associate (exam target: Sep–Oct 2026)",
                       "• Google Gemini Enterprise Developer — TCS Talent Pool (2026)",
-                      "• GCP Professional Data Engineer (target: Nov 2026)",
+                      "• Databricks Generative AI Engineer — active learning track",
                       "",
                       "ACADEMIC/RESEARCH:",
                       "• PhD research area: Generative AI, Large Language Models, Retrieval-Augmented Generation (RAG)",

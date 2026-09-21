@@ -397,7 +397,7 @@ const govtJobs = [
 ];
 
 const certList = [
-  { cert:"Claude Certified Developer Foundations (CCDV-F)", status:"🚨 DEADLINE: August 31, 2026 — 6 weeks away!", when:"Aug 31, 2026", color:P.a5, urgent:true, daysLeft:()=>Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24))), tip:"Anthropic's official Claude developer certification. Study: claude.ai/docs, Anthropic API docs, prompt engineering guide. Topics: API usage, prompt design, safety, tool use, multi-turn conversations. Free to attempt via Anthropic's certification portal. Add to LinkedIn immediately after passing — high market signal in 2026." },
+  { cert:"Claude Certified Developer Foundations (CCDV-F)", deadline:"2026-08-31", when:"Aug 31, 2026", color:P.a5, urgent:true, tip:"Anthropic's official Claude developer certification. Study: claude.ai/docs, Anthropic API docs, prompt engineering guide. Topics: API usage, prompt design, safety, tool use, multi-turn conversations. Free to attempt via Anthropic's certification portal. Add to LinkedIn immediately after passing — high market signal in 2026." },
   { cert:"Databricks Certified Data Engineer Associate", status:"🔥 Priority 2 – target Sep/Oct 2026", when:"Sep–Oct 2026", color:P.a3, tip:"You already started. 45 MCQs, 90 min. Use community.databricks.com free + Databricks Academy prep materials. Exam voucher ~$200 USD." },
   { cert:"Google Gemini Enterprise Developer", status:"TCS Talent Pool – complete all modules", when:"Aug 2026", color:P.a4, tip:"Complete all Google Cloud Skills Boost modules via TCS Talent Pool. Already partially done – finish every module and claim the badge." },
   { cert:"GCP Professional Data Engineer", status:"High value – Nov 2026 target", when:"Nov 2026", color:P.a1, tip:"Builds on Gemini Talent Pool knowledge. Exam $200 USD. Use Skills Boost + ExamPro free YouTube. Salary impact: +₹5–10 LPA immediately." },
@@ -438,9 +438,27 @@ const medicines = [
   { time:"Night 🌙", color:P.a4, meds:["Arkamin — as prescribed","Epitril Beta","Zonisamide 100mg (after first month)","Glycomet GP 2/500 — BEFORE dinner ⚠️","Vildagliptin 50mg — AFTER dinner","Lipvas 10mg","Healvit (multivitamin)"] },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const todayKey = () => new Date().toISOString().slice(0,10);
-const fmtDate  = k => { const d=new Date(k); return d.toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}); };
+// ─── India-time calendar helpers ───────────────────────────────────────────────
+// Calendar records are keyed by Asia/Kolkata dates; never derive them from UTC.
+const INDIA_TIME_ZONE = "Asia/Kolkata";
+const indiaParts = (date = new Date()) => Object.fromEntries(
+  new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year:"numeric", month:"2-digit", day:"2-digit" })
+    .formatToParts(date).filter(({ type }) => type !== "literal").map(({ type, value }) => [type, value])
+);
+const todayKey = (date = new Date()) => { const { year, month, day } = indiaParts(date); return `${year}-${month}-${day}`; };
+const dateFromKey = key => new Date(`${key}T12:00:00+05:30`);
+const fmtDate = (key, options = { weekday:"short", day:"numeric", month:"short" }) =>
+  dateFromKey(key).toLocaleDateString("en-IN", { timeZone: INDIA_TIME_ZONE, ...options });
+const daysBetween = (fromKey, toKey) => Math.round((Date.UTC(...toKey.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v)) - Date.UTC(...fromKey.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v))) / 86400000);
+const daysUntil = deadline => daysBetween(todayKey(), deadline);
+const dateKeyDaysAgo = days => { const date = new Date(); date.setDate(date.getDate() - days); return todayKey(date); };
+const deadlineStatus = deadline => {
+  const days = daysUntil(deadline);
+  if (days < 0) return { days, label:`Expired · ${fmtDate(deadline, { month:"short", day:"numeric", year:"numeric" })}`, expired:true };
+  if (days === 0) return { days, label:"Due today", expired:false };
+  return { days, label:`${days} days left`, expired:false };
+};
+const currentMonthLabel = () => new Intl.DateTimeFormat("en-IN", { timeZone: INDIA_TIME_ZONE, month:"long", year:"numeric" }).format(new Date());
 
 // ─── Storage: localStorage (persists across sessions on same device) ─────────
 function storeGet(key) {
@@ -452,17 +470,22 @@ function storeSet(key, val) {
 function storeJsonGet(key, fallback) {
   const raw = storeGet(key);
   if (!raw) return fallback;
-  try { return JSON.parse(raw); } catch(_) { return fallback; }
+  try {
+    const value = JSON.parse(raw);
+    if (Array.isArray(fallback)) return Array.isArray(value) ? value : fallback;
+    if (fallback && typeof fallback === "object") return value && typeof value === "object" && !Array.isArray(value) ? value : fallback;
+    return value;
+  } catch(_) { return fallback; }
 }
-function readClaudeText(data) {
+function readAIText(data) {
   if (!data || typeof data !== "object") return "";
   if (Array.isArray(data.content)) {
     return data.content.map(block => block?.text || "").join("").trim();
   }
   return "";
 }
-async function callClaude(payload) {
-  const r = await fetch("/api/claude",{
+async function callAI(payload) {
+  const r = await fetch("/api/gemini",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify(payload)
@@ -487,7 +510,7 @@ function escHtml(str="") {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab]       = useState("now");
-  const [monthIdx, setMonth]= useState(0);
+  const [monthIdx, setMonth]= useState(() => Math.max(0, monthPlan.findIndex(month => month.month === currentMonthLabel())));
   const [pillar, setPillar] = useState("job");
   const [careerIdx, setCareer] = useState(0);
   const [skillIdx, setSkill]   = useState(0);
@@ -495,6 +518,7 @@ export default function App() {
 
   // Journal
   const [entries, setEntries]   = useState({});
+  const [dailyPlans, setDailyPlans] = useState({});
   const [selDay, setSelDay]     = useState(todayKey());
   const [dNote, setDNote]       = useState("");
   const [dRem, setDRem]         = useState("");
@@ -621,6 +645,7 @@ export default function App() {
   useEffect(()=>{
     const journalEntries = storeJsonGet("j-entries", {});
     setEntries(journalEntries);
+    setDailyPlans(storeJsonGet("daily-plans", {}));
 
     const officeData = storeJsonGet("o-data", {});
     setOffData(officeData);
@@ -728,8 +753,8 @@ export default function App() {
     const meetings = phdMeetings.slice(-3).map(m=>`Meeting ${m.date}: ${m.instructions}`).join(". ");
     const tasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>`${t.title} (${t.status}, due ${t.due||"TBD"})`).join(", ");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]});
-      setPhdAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]});
+      setPhdAiA(readAIText(d) || "No response.");
     } catch(err){ setPhdAiA(err.message || "Connection error. Please try again."); }
     setPhdAiLoad(false);
   };
@@ -750,17 +775,18 @@ export default function App() {
     const overduePending = allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today);
     const overduePhdTasks = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today);
     const pendingOpen = allPending.filter(p=>p.status!=="Done").length;
-    const daysToClaudeCert = Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
+    const claudeDeadline = deadlineStatus("2026-08-31");
     const recentHealth = Object.entries(healthLog).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,3);
     const missedMeds = recentHealth.filter(([,e])=>!e.meds?.morning||!e.meds?.night).length;
     const recentJournal = Object.entries(entries).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,1);
-    const lastJournalDays = recentJournal.length ? Math.floor((new Date()-new Date(recentJournal[0][0]))/(1000*60*60*24)) : 99;
+    const lastJournalDays = recentJournal.length ? Math.max(0, daysBetween(recentJournal[0][0], today)) : 99;
 
     addLog("🔍","Scanning all sections for issues and opportunities...","a3");
     await new Promise(r=>setTimeout(r,400));
 
     // Analysis
-    if(daysToClaudeCert<=42) addLog("🚨",`Claude cert (CCDV-F) deadline in ${daysToClaudeCert} days — August 31, 2026!`,"a5");
+    if(claudeDeadline.expired) addLog("⏱️",`Claude cert (CCDV-F) ${claudeDeadline.label}`,"a5");
+    else if(claudeDeadline.days<=42) addLog("🚨",`Claude cert (CCDV-F) ${claudeDeadline.label} — August 31, 2026`,"a5");
     if(overduePending.length) addLog("⚠️",`${overduePending.length} overdue follow-up items in Office need replanning`,"a5");
     if(overduePhdTasks.length) addLog("⚠️",`${overduePhdTasks.length} overdue PhD tasks — review timeline`,"a5");
     if(missedMeds>0) addLog("💊",`Missed medicine logging ${missedMeds} of last 3 days — health tracking incomplete`,"a3");
@@ -774,7 +800,7 @@ export default function App() {
     // Call AI for smart suggestions
     try {
       const context = [
-        `Today: ${today}. Days to Claude cert CCDV-F deadline (Aug 31): ${daysToClaudeCert}.`,
+        `Today: ${today}. Claude cert CCDV-F status: ${claudeDeadline.label}.`,
         `Overdue office follow-ups: ${overduePending.length}. Open follow-ups: ${pendingOpen}.`,
         `Overdue PhD tasks: ${overduePhdTasks.length}. PhD meetings logged: ${phdMeetings.length}.`,
         `Missed medicine logs last 3 days: ${missedMeds}. Days since last journal: ${lastJournalDays}.`,
@@ -782,12 +808,12 @@ export default function App() {
         `Cert urgent: Claude CCDV-F (Aug 31), Databricks DEA (Sep-Oct 2026), GCP DE (Nov 2026).`,
       ].join(" ");
 
-      const d = await callClaude({
-        model:"claude-sonnet-4-6", max_tokens:700,
+      const d = await callAI({
+        model:"gemini-3.8-flash", max_tokens:700,
         system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. URGENT: Claude CCDV-F cert deadline Aug 31 2026. Also: Databricks DEA, GCP DE, health management (Bipolar I, T2 Diabetes). Analyse the context and return EXACTLY 5 specific, actionable recommendations ranked by urgency. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
         messages:[{role:"user",content:`Analyse my situation and give 5 smart recommendations: ${context}`}]
       });
-      const raw = readClaudeText(d) || "[]";
+      const raw = readAIText(d) || "[]";
       const si=raw.indexOf("["); const ei=raw.lastIndexOf("]");
       const sugs = JSON.parse(si>=0&&ei>=0?raw.slice(si,ei+1):"[]");
       setAgentSugs(sugs);
@@ -795,7 +821,7 @@ export default function App() {
     } catch(_) {
       addLog("✅","Analysis complete — check recommendations below","a2");
       setAgentSugs([
-        {priority:1,icon:"🚨",title:"Claude CCDV-F Cert",action:`${daysToClaudeCert} days left to Aug 31! Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
+        {priority:1,icon:claudeDeadline.expired?"⏱️":"🚨",title:"Claude CCDV-F Cert",action:claudeDeadline.expired?`Deadline passed on Aug 31, 2026. Verify whether a new official window exists before planning further study.`:`${claudeDeadline.label} to Aug 31. Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
         {priority:2,icon:"⚠️",title:"Replan Overdue Items",action:`${overduePending.length} office follow-ups are overdue. Go to Office → Follow-Up Board and set new target dates now.`,tab:"office",urgency:"high"},
         {priority:3,icon:"🎓",title:"PhD Task Review",action:`${overduePhdTasks.length} PhD tasks need replanning. Open PhD tab → Tasks and replan with realistic new dates.`,tab:"phd",urgency:"medium"},
         {priority:4,icon:"💊",title:"Health Logging",action:"Log your medicines and health data daily. Consistent tracking helps manage diabetes better.",tab:"health",urgency:"medium"},
@@ -808,8 +834,8 @@ export default function App() {
   const askCertStudy = async () => {
     if(!certStudyQ.trim()) return; setCertStudyLoad(true); setCertStudyA("");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]});
-      setCertStudyA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]});
+      setCertStudyA(readAIText(d) || "No response.");
     } catch(err){setCertStudyA(err.message || "Connection error. Please try again.");}
     setCertStudyLoad(false);
   };
@@ -819,7 +845,7 @@ export default function App() {
     const meetings = phdMeetings.slice(-2).map(m=>`${m.date}: ${m.instructions?.substring(0,100)}`).join(". ");
     const openTasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>t.title).join(", ");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
 
 RESEARCH: Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children (Autism, ADHD, Cerebral Palsy, non-verbal children).
 
@@ -841,7 +867,7 @@ RECENT MEETINGS: ${meetings}
 OPEN TASKS: ${openTasks}
 
 Give expert, specific, actionable research advice. Reference actual papers, methods, and datasets where relevant.`,messages:[{role:"user",content:snuAiQ}]});
-      setSnuAiA(readClaudeText(d) || "No response.");
+      setSnuAiA(readAIText(d) || "No response.");
     } catch(err){setSnuAiA("Connection error: "+err.message);}
     setSnuAiLoad(false);
   };
@@ -850,16 +876,16 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
     if(!adviceQ.trim()) return; setAdviceLoad(true); setAdviceA("");
     const open = allPending.filter(p=>p.status!=="Done").length;
     const odPhd = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
-    const daysCCDVF = Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
+    const ccdvfStatus = deadlineStatus("2026-08-31");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
 
 LIFE CONTEXT (August 2026):
 - Works full-time at TCS as Data Engineer (4.3 years): SQL/Teradata/DataStage/Unix/ServiceNow
 - Part-time PhD at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan
 - Research: Human-Centered Multimodal Explainable AI with Wearables for Special Kids
 - Health: Bipolar I (stable), Type 2 Diabetes (FBS managed), Obesity (140kg) — energy varies
-- URGENT: Claude CCDV-F cert deadline August 31 (${daysCCDVF} days left)
+- Claude CCDV-F cert deadline status: ${ccdvfStatus.label}
 - Databricks DEA exam: September 2026
 - UGC NET CS: December 2026
 - ISRO application deadline: August 17 (TODAY/TOMORROW!)
@@ -876,7 +902,7 @@ RESEARCH DETAILS:
 PERSONALITY: Tends to take on too much. Needs reminders to pace himself. Health must come first. Responds well to structured practical advice. Bipolar — never push on bad days. Tamil background.
 
 Give warm, honest, practical advice. Acknowledge the challenges of managing everything. Suggest specific actions. Be a friend who happens to be an expert.`,messages:[{role:"user",content:adviceQ}]});
-      setAdviceA(readClaudeText(d) || "No response.");
+      setAdviceA(readAIText(d) || "No response.");
     } catch(err){setAdviceA(err.message || "Connection error. Please try again.");}
     setAdviceLoad(false);
   };
@@ -888,8 +914,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askRadarAI = async () => {
     if(!radarAiQ.trim()) return; setRadarAiLoad(true); setRadarAiA("");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]});
-      setRadarAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]});
+      setRadarAiA(readAIText(d) || "No response.");
     } catch(err){setRadarAiA(err.message || "Connection error.");}
     setRadarAiLoad(false);
   };
@@ -897,8 +923,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askJobAI = async () => {
     if(!jobAiQ.trim()) return; setJobAiLoad(true); setJobAiA("");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is August 14 2026. SC quota gives 5-year age relaxation. GATE score needed for ISRO/NIC. Give specific, actionable, honest advice about jobs matching this profile. Name specific organizations, portals, and deadlines.`,messages:[{role:"user",content:jobAiQ}]});
-      setJobAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
+      setJobAiA(readAIText(d) || "No response.");
     } catch(err){setJobAiA(err.message || "Connection error. Please try again.");}
     setJobAiLoad(false);
   };
@@ -930,27 +956,32 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askH = async()=>{
     if(!hAiQ.trim())return; setHAiLoad(true); setHAiA("");
     try{
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]});
-      setHAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]});
+      setHAiA(readAIText(d) || "No response.");
     }catch(err){setHAiA(err.message || "Error connecting. Please try again.");}
     setHAiLoad(false);
   };
   const askC = async()=>{
     if(!cQ.trim())return; setCLoad(true); setCA("");
     try{
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
-      setCA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
+      setCA(readAIText(d) || "No response.");
     }catch(err){setCA(err.message || "Error connecting. Please try again.");}
     setCLoad(false);
   };
 
-  const last7=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const last7=Array.from({length:7},(_,i)=>dateKeyDaysAgo(6-i));
   const mE=["","😔","😐","🙂","😊","🔥"];
   const bsC=v=>{const n=parseFloat(v);if(!n)return P.muted;if(n<100)return P.a2;if(n<140)return P.a3;return P.a5;};
   const stC={"In Progress":P.a1,"Completed":P.a2,"Blocked":P.a5,"On Hold":P.a3,"Pending":P.a3,"Done":P.a2,"Idea":P.muted};
   const tyC={INC:P.a5,"Current Ticket":P.a1,"Dev Work":P.a4,Task:P.a3};
   const prC={P1:P.a5,P2:P.a3,P3:P.a1,P4:P.a2};
   const cur=monthPlan[monthIdx];
+  const today = todayKey();
+  const claudeDeadline = deadlineStatus("2026-08-31");
+  const savedTodayPlan = dailyPlans[today];
+  const savedTodaySlots = Array.isArray(savedTodayPlan) ? savedTodayPlan : Array.isArray(savedTodayPlan?.slots) ? savedTodayPlan.slots : [];
+  const currentPlan = monthPlan.find(month => month.month === currentMonthLabel());
 
   const S={
     app:{background:P.bg,minHeight:"100vh",fontFamily:"'Segoe UI',system-ui,sans-serif",color:P.text,paddingBottom:mob?72:0},
@@ -1014,73 +1045,42 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
           {/* NOW */}
           {tab==="now"&&<div>
-            <div style={S.h2}>🔥 Today — {new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} IST</div>
+            <div style={S.h2}>🔥 Today — {fmtDate(today, {weekday:"long",day:"numeric",month:"long",year:"numeric"})} IST</div>
 
             {/* Live countdown for CCDV-F */}
             {(()=>{
-              const days=Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
               return(
                 <div style={{...gl(P.a5),padding:14,marginBottom:14,borderRadius:12,border:`2px solid ${P.a5}66`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
                     <div>
                       <div style={{fontSize:13,fontWeight:800,color:P.a5}}>🚨 Claude CCDV-F Certification Deadline</div>
-                      <div style={{fontSize:12,color:P.muted}}>August 31, 2026 — Study 30 min today or miss the window</div>
+                      <div style={{fontSize:12,color:P.muted}}>Deadline: Aug 31, 2026</div>
                     </div>
                     <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:36,fontWeight:900,color:P.a5,lineHeight:1}}>{days}</div>
-                      <div style={{fontSize:10,color:P.muted}}>days left</div>
+                      <div style={{fontSize:13,fontWeight:800,color:P.a5,lineHeight:1.3}}>{claudeDeadline.label}</div>
                     </div>
                   </div>
-                  <div style={{background:"rgba(255,255,255,0.06)",borderRadius:5,height:6,marginTop:10,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${Math.max(5,100-Math.round((days/42)*100))}%`,background:`linear-gradient(90deg,${P.a5},${P.a3})`,borderRadius:5}}/>
-                  </div>
+                  {!claudeDeadline.expired&&<div style={{background:"rgba(255,255,255,0.06)",borderRadius:5,height:6,marginTop:10,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.max(5,100-Math.round((claudeDeadline.days/42)*100))}%`,background:`linear-gradient(90deg,${P.a5},${P.a3})`,borderRadius:5}}/></div>}
                 </div>
               );
             })()}
 
-            {/* Today's IST Time Schedule */}
+            {/* Only saved plans are presented as today's schedule. */}
             <div style={{...S.CA(P.a1),marginBottom:14}}>
-              <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:10}}>⏰ Today's Plan — Friday Aug 14, 2026 (IST)</div>
-              {[
-                {time:"6:30 AM",task:"Wake up · Morning medicines (Glycomet GP BEFORE breakfast ⚠️)",status:"morning",c:P.a3},
-                {time:"7:00 AM",task:"Breakfast (within 30 min of Glycomet GP) · All morning meds after eating",status:"morning",c:P.a3},
-                {time:"7:30–8:00 AM",task:"📚 Claude CCDV-F Study — Read Anthropic API docs: Tool Use & Multi-turn",status:"urgent",c:P.a5},
-                {time:"9:00 AM",task:"TCS Office — Check TCS emails, triage all INCidents, update ticket statuses",status:"work",c:P.a1},
-                {time:"10:00–12:00",task:"TCS Deep Work — DataStage pipeline tasks, SQL queries, project work",status:"work",c:P.a1},
-                {time:"12:30–1:00 PM",task:"Lunch break — Brown rice, sambar, curd · NO sugar in drinks",status:"health",c:P.a2},
-                {time:"2:00–4:00 PM",task:"TCS afternoon session — office work, any client/team calls",status:"work",c:P.a1},
-                {time:"4:30 PM",task:"Evening snack — peanuts/chana + green tea (no sugar) · Check any new govt job notifications",status:"health",c:P.a2},
-                {time:"5:30–6:30 PM",task:"TCS wrap-up — EOD note, handover, update all ticket statuses",status:"work",c:P.a1},
-                {time:"7:00–8:00 PM",task:"🐍 Python / 🗄️ SQL Practice — LeetCode 2 problems OR Databricks DEA course",status:"study",c:P.a3},
-                {time:"8:00–9:00 PM",task:"📋 UGC NET — 20 MCQs DBMS/OS/DSA on GeeksForGeeks",status:"ugc",c:P.a2},
-                {time:"9:00 PM",task:"Dinner (BEFORE night Glycomet GP ⚠️) · Night medicines after dinner",status:"health",c:P.a3},
-                {time:"9:30–10:00 PM",task:"📓 Journal entry + tomorrow's to-do list · Check follow-up board",status:"reflect",c:P.a4},
-                {time:"10:00 PM",task:"Wind down · No phone after this · Warm milk optional · Sleep by 10:30 PM",status:"rest",c:P.muted},
-              ].map((slot,i,arr)=>{
-                const colors={morning:P.a3,urgent:P.a5,work:P.a1,health:P.a2,study:P.a3,ugc:P.a2,reflect:P.a4,rest:P.muted};
-                const c=colors[slot.status]||P.muted;
-                return(
-                  <div key={i} style={{display:"flex",gap:10,padding:"7px 0",borderBottom:i===arr.length-1?"none":`1px solid ${P.border}20`,alignItems:"flex-start"}}>
-                    <div style={{minWidth:90,fontSize:11,color:P.muted,fontWeight:600,flexShrink:0,paddingTop:2}}>{slot.time}</div>
-                    <div style={{flex:1,fontSize:12,color:slot.status==="urgent"?P.a5:P.sub,lineHeight:1.4,fontWeight:slot.status==="urgent"?700:400}}>{slot.task}</div>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:c,flexShrink:0,marginTop:4}}/>
-                  </div>
-                );
-              })}
+              <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:10}}>⏰ Today's Plan — {fmtDate(today, {weekday:"short",day:"numeric",month:"short",year:"numeric"})} (IST)</div>
+              {savedTodaySlots.length ? savedTodaySlots.map((slot,i)=><div key={slot.id||i} style={{...S.li(i===savedTodaySlots.length-1),padding:"7px 0"}}><span style={{minWidth:90,fontSize:11,color:P.muted,fontWeight:600}}>{slot.time||"Any time"}</span><span style={{fontSize:12,color:P.sub}}>{slot.task||slot.title||String(slot)}</span></div>) : <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>No saved plan for today. Historical daily schedules are kept as planning history and are not shown as a current plan.</div>}
             </div>
 
             {/* This week's non-negotiables */}
             <div style={S.C()}>
-              <div style={S.L}>⚡ This Week's Non-Negotiables (Aug 11–17)</div>
-              {[
-                {icon:"🚨",label:"Claude CCDV-F — 30 min study DAILY. Topics: API, Prompt Eng, Tool Use, Safety",when:"Every day",color:P.a5},
-                {icon:"🚀",label:"ISRO Scientist SC — Apply BEFORE August 17! 92 vacancies, CS stream. isro.gov.in",when:"⚠️ Deadline Aug 17",color:P.a5},
-                {icon:"🗄️",label:"Databricks DEA course — 2 modules this weekend to stay on Sep exam track",when:"This weekend",color:P.a3},
-                {icon:"📋",label:"UGC NET Dec 2026 — DBMS topics today, registration opens Sep 2026",when:"Daily 8–9 PM",color:P.a2},
-                {icon:"🎓",label:"PhD — Log supervisor meeting details, add research tasks to PhD tab",when:"This week",color:P.a4},
-                {icon:"💼",label:"Job switch — Apply 3+ Senior DE / AI-DE roles on Naukri this week",when:"3 applications",color:P.a1},
-                {icon:"📓",label:"Write journal entry tonight — track mood, meds, study progress",when:"Tonight 9:30 PM",color:P.a4},
-              ].map((a,i)=>(
+              <div style={S.L}>⚡ Existing plan priorities {currentPlan ? `— ${currentPlan.month}` : ""}</div>
+              {(currentPlan ? [
+                {icon:"💼",label:currentPlan.items.job[0],when:"Career",color:P.a1},
+                {icon:"🎓",label:currentPlan.items.phd[0],when:"PhD",color:P.a4},
+                {icon:"📋",label:currentPlan.items.ugc[0],when:"UGC NET",color:P.a2},
+                {icon:"🏅",label:currentPlan.items.cert[0],when:"Certifications",color:P.a3},
+                {icon:"🏛️",label:currentPlan.items.govt[0],when:"Government jobs",color:P.a5},
+              ] : [{icon:"📅",label:"No monthly plan is saved for the current month.",when:"Plan",color:P.muted}]).map((a,i)=>(
                 <div key={i} style={{...S.ib(a.color),display:"flex",alignItems:"flex-start",gap:12,marginBottom:8}}>
                   <span style={{fontSize:20,flexShrink:0}}>{a.icon}</span>
                   <div style={{flex:1}}>
@@ -1442,9 +1442,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
 
                     {tab==="jobs"&&<div>
-            <div style={S.h2}>💡 Job Opportunities — Live August 2026</div>
+            <div style={S.h2}>💡 Job Opportunities</div>
             <div style={{...S.ib(P.a5),marginBottom:14}}>
-              <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>🚨 ISRO Scientist SC — Apply by August 17, 2026 (3 days left!)</div>
+              <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>⏱️ Historical opportunity — ISRO Scientist SC deadline was August 17, 2026</div>
               <div style={{fontSize:12,color:P.muted}}>92 vacancies across CS, Electronics, and other disciplines. SC category — application fee WAIVED. Salary ₹56,100/month. isro.gov.in</div>
             </div>
 
@@ -1886,8 +1886,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                           '{"question":"<question text>","options":{"A":"<option>","B":"<option>","C":"<option>","D":"<option>"},"correct":"<A|B|C|D>","explanation":"<3-4 sentence explanation>","tip":"<1 practical tip>"}'
                         ].join("\n");
                         try{
-                          const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:prompt}]});
-                          const raw = readClaudeText(d) || "{}";
+                          const d = await callAI({model:"gemini-3.8-flash",max_tokens:700,messages:[{role:"user",content:prompt}]});
+                          const raw = readAIText(d) || "{}";
                           const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
                           if(si>=0&&ei>=0){setQuizQ(JSON.parse(raw.slice(si,ei+1)));}
                           else{setQuizQ({question:"Error parsing response. Please try again.",options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"",tip:""});}
@@ -1967,8 +1967,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       '{"front":"<term or short question>","back":"<full explanation with example>","category":"<subcategory>","difficulty":"<Easy|Medium|Hard>"}'
                     ].join("\n");
                     try{
-                      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:prompt}]});
-                      const raw = readClaudeText(d) || "{}";
+                      const d = await callAI({model:"gemini-3.8-flash",max_tokens:400,messages:[{role:"user",content:prompt}]});
+                      const raw = readAIText(d) || "{}";
                       const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
                       if(si>=0&&ei>=0){setFlashcard(JSON.parse(raw.slice(si,ei+1)));}
                       else setFlashcard({front:"Parse error",back:"Please try again.",category:"—",difficulty:"—"});
@@ -2066,8 +2066,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     setSwitchGuideLoad(true);setSwitchGuideA("");
                     const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude CCDV-F (Aug 31), Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
                     try{
-                      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
-                      setSwitchGuideA(readClaudeText(d) || "No response.");
+                      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
+                      setSwitchGuideA(readAIText(d) || "No response.");
                     }catch(err){setSwitchGuideA("Connection error: "+err.message);}
                     setSwitchGuideLoad(false);
                   }}
@@ -2916,7 +2916,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* ── DAILY TRACKER ── */}
             {offDay!=="followup"&&offDay!=="ideas"&&(()=>{
-              const d7=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+              const d7=Array.from({length:7},(_,i)=>dateKeyDaysAgo(6-i));
               const selDay=d7.includes(offDay)?offDay:todayKey();
               return(<div>
                 {/* Day strip */}
@@ -3152,7 +3152,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
               {hTab==="today"&&<div>
                 <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto"}}>
-                  {Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);}).map(d=>{
+                  {Array.from({length:7},(_,i)=>dateKeyDaysAgo(6-i)).map(d=>{
                     const e=healthLog[d];const isSel=d===hDay;
                     return <div key={d} onClick={()=>switchH(d)} style={{minWidth:54,...gl(isSel?P.a2:null),borderRadius:10,padding:"7px 4px",textAlign:"center",cursor:"pointer",flexShrink:0,border:`1px solid ${isSel?P.a2:P.border}`}}>
                       <div style={{fontSize:10,color:isSel?P.a2:P.muted,fontWeight:700}}>{fmtDate(d).slice(0,3)}</div>
@@ -3273,7 +3273,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <input style={{...S.inp,marginBottom:16}} placeholder="e.g. Submit PhD assignment, apply to 3 roles, LeetCode 2 problems..." value={dRem} onChange={e=>setDRem(e.target.value)}/>
                 <button style={S.btn(jSaved?P.a2:P.a1)} onClick={saveJournal}>{jSaved?"✅ Saved!":"💾 Save Entry"}</button>
               </div>
-              {(()=>{const y=new Date();y.setDate(y.getDate()-1);const yk=y.toISOString().slice(0,10);const ye=entries[yk];if(!ye?.reminder)return null;return(
+              {(()=>{const yk=dateKeyDaysAgo(1);const ye=entries[yk];if(!ye?.reminder)return null;return(
                 <div style={{...S.ib(P.a3),marginTop:4}}><div style={{fontSize:11,color:P.a3,fontWeight:700,marginBottom:3}}>🔔 Yesterday's reminder for today</div><div style={{fontSize:13,color:P.sub}}>{ye.reminder}</div></div>
               );})()}
               {Object.keys(entries).length>0&&<div style={{...S.C(),marginTop:4}}>
@@ -3295,8 +3295,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* CLAUDE CERT URGENT BANNER */}
             {(()=>{
-              const days=Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
-              const pct=Math.round((1-(days/42))*100);
+              const deadline=deadlineStatus("2026-08-31");
+              const pct=Math.round((1-(deadline.days/42))*100);
               return(
                 <div style={{...gl(P.a5),padding:16,marginBottom:14,borderRadius:14,border:`2px solid ${P.a5}88`,...glow(P.a5)}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
@@ -3305,14 +3305,11 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       <div style={{fontSize:14,fontWeight:800,color:P.a5}}>Claude Certified Developer Foundations (CCDV-F)</div>
                       <div style={{fontSize:12,color:P.muted,marginTop:2}}>Anthropic Official Certification — Deadline August 31, 2026</div>
                     </div>
-                    <div style={{textAlign:"center",minWidth:60}}>
-                      <div style={{fontSize:32,fontWeight:900,color:days<=14?P.a5:days<=30?P.a3:P.a2,lineHeight:1}}>{days}</div>
-                      <div style={{fontSize:10,color:P.muted}}>days left</div>
-                    </div>
+                    <div style={{textAlign:"center",minWidth:90}}><div style={{fontSize:12,fontWeight:800,color:P.a5,lineHeight:1.3}}>{deadline.label}</div></div>
                   </div>
-                  <div style={{background:"rgba(255,255,255,0.06)",borderRadius:6,height:8,marginBottom:10,overflow:"hidden"}}>
+                  {!deadline.expired&&<div style={{background:"rgba(255,255,255,0.06)",borderRadius:6,height:8,marginBottom:10,overflow:"hidden"}}>
                     <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:`linear-gradient(90deg,${P.a5},${P.a3})`,borderRadius:6,transition:"width 0.5s"}}/>
-                  </div>
+                  </div>}
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {[["📚 Study Now","claude.ai/docs"],["🔧 API Docs","docs.anthropic.com"],["🎯 Prompt Guide","anthropic.com/research"],["💡 Practice","console.anthropic.com"]].map(([lb,url])=>(
                       <a key={lb} href={`https://${url}`} target="_blank" rel="noreferrer" style={{...S.btn(P.a5),padding:"6px 12px",fontSize:11,textDecoration:"none",display:"inline-block"}}>{lb}</a>
@@ -3336,17 +3333,17 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:12,color:P.muted}}>Each cert adds ₹3–10 LPA to market value. CCDV-F is the most urgent — deadline Aug 31.</div>
               </div>
               {certList.map((c,i)=>{
-                const days = c.cert.includes("CCDV-F") ? Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24))) : null;
+                const deadline = c.deadline ? deadlineStatus(c.deadline) : null;
                 return(
                   <div key={i} style={{...S.CA(c.color),marginBottom:10,...(c.urgent?glow(c.color):{})}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:6,marginBottom:6}}>
                       <div style={{flex:1}}>
                         <span style={{fontWeight:700,fontSize:14,color:c.urgent?c.color:P.text}}>{c.urgent?"🚨 ":""}{c.cert}</span>
-                        {days!==null&&<span style={{marginLeft:8,...S.chip(days<=14?P.a5:days<=30?P.a3:P.a2),fontSize:10}}>{days}d left</span>}
+                        {deadline&&<span style={{marginLeft:8,...S.chip(deadline.expired?P.a5:deadline.days<=14?P.a5:deadline.days<=30?P.a3:P.a2),fontSize:10}}>{deadline.label}</span>}
                       </div>
                       <span style={S.chip(c.color)}>{c.when}</span>
                     </div>
-                    <div style={{fontSize:12,color:c.color,marginBottom:6,fontWeight:600}}>{c.status}</div>
+                    <div style={{fontSize:12,color:c.color,marginBottom:6,fontWeight:600}}>{deadline ? deadline.label : c.status}</div>
                     <div style={{fontSize:12,color:P.muted,lineHeight:1.55}}>{c.tip}</div>
                   </div>
                 );
@@ -3369,7 +3366,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   "When to use which model: Haiku for simple tasks, Sonnet for most use cases, Opus for complex reasoning",
                 ]},
                 {topic:"2. Anthropic API Fundamentals",color:P.a2,items:[
-                  "API endpoint: POST /api/claude",
+                  "API endpoint: POST /api/gemini",
                   "Required headers: x-api-key, anthropic-version, content-type",
                   "Message structure: role (user/assistant), content (string or array)",
                   "System prompts: set behaviour, persona, constraints before conversation",
@@ -3500,23 +3497,23 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             <div style={S.h2}>🫂 Advice Buddy — Your Personal Life Coach</div>
             <div style={{...S.ib(P.a4),marginBottom:14}}>
               <div style={{fontSize:13,color:P.a4,fontWeight:800,marginBottom:4}}>Hi Thamizh 👋 I know everything about your life right now.</div>
-              <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>TCS work · PhD at SNU · CCDV-F cert (17 days!) · UGC NET Dec · Health · Job switch · ISRO deadline Aug 17. Ask me anything — I'll give you honest, warm, practical advice.</div>
+              <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>TCS work · PhD at SNU · UGC NET Dec · Health · Job switch. Deadline status is calculated from the current IST date. Ask me anything — I'll give you honest, warm, practical advice.</div>
             </div>
 
             {/* Situation summary */}
             {(()=>{
               const today_=todayKey();
               const certDeadline="2026-08-31";
-              const days=Math.max(0,Math.ceil((new Date(certDeadline)-new Date(today_))/(1000*60*60*24)));
+              const certStatus=deadlineStatus(certDeadline);
               const odPending=allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today_).length;
               const odPhd=phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today_).length;
               return(
                 <div style={{...S.CA(P.a1),marginBottom:14}}>
-                  <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:10}}>📊 Your Current Situation (August 14, 2026)</div>
+                  <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:10}}>📊 Your Current Situation ({fmtDate(today_, {day:"numeric",month:"long",year:"numeric"})})</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     {[
-                      {l:"CCDV-F Deadline",v:`${days} days`,c:days<=14?P.a5:P.a3},
-                      {l:"ISRO Deadline",v:"Aug 17 ⚠️",c:P.a5},
+                      {l:"CCDV-F Deadline",v:certStatus.label,c:certStatus.expired?P.a5:certStatus.days<=14?P.a5:P.a3},
+                      {l:"ISRO Opportunity",v:"Historical · verify new notices",c:P.muted},
                       {l:"Overdue Follow-ups",v:odPending,c:odPending>0?P.a5:P.a2},
                       {l:"Overdue PhD Tasks",v:odPhd,c:odPhd>0?P.a5:P.a2},
                       {l:"PhD Meetings Logged",v:phdMeetings.length,c:phdMeetings.length>0?P.a2:P.a3},
@@ -3588,9 +3585,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* Weekly schedule for everything */}
             <div style={S.C()}>
-              <div style={S.L}>📅 This Week's Balanced Schedule (Aug 14–17)</div>
+              <div style={S.L}>📅 Historical Balanced Schedule (Aug 14–17, 2026)</div>
               {[
-                {day:"Fri Aug 14 (Today)",tasks:["7:30 AM: 30 min CCDV-F — API fundamentals + tool use","9 AM: TCS work (check INCs, DataStage tasks)","7-8 PM: Databricks DEA course — 1 module","8-9 PM: UGC NET — 20 DBMS MCQs","9:30 PM: Log today in journal + tomorrow plan"]},
+                {day:"Fri Aug 14",tasks:["7:30 AM: 30 min CCDV-F — API fundamentals + tool use","9 AM: TCS work (check INCs, DataStage tasks)","7-8 PM: Databricks DEA course — 1 module","8-9 PM: UGC NET — 20 DBMS MCQs","9:30 PM: Log today in journal + tomorrow plan"]},
                 {day:"Sat Aug 15 (Weekend Deep Work)",tasks:["8 AM: 1 hour CCDV-F — Prompt engineering + safety topics","9 AM-12 PM: PhD — Read 2 papers on multimodal wearable AI + notes","2-4 PM: Databricks DEA — 2 modules (catch up)","4 PM: Check ISRO application status + submit if not done"]},
                 {day:"Sun Aug 16 (UGC NET + Review)",tasks:["9-11 AM: UGC NET full timed mock — Paper 1 + Paper 2","11-12 PM: Mock analysis — every wrong answer reviewed","3-4 PM: PhD — Log any research ideas, update task list","4-5 PM: Weekly review — update office follow-ups, PhD tasks, cert progress"]},
                 {day:"Mon Aug 17 (ISRO DEADLINE)",tasks:["ISRO Scientist SC final deadline — submit before midnight if applying","7:30 AM: 30 min CCDV-F — Multi-turn conversations + vision API","Evening: UGC NET — 20 OS MCQs (scheduling algorithms)"]},
@@ -3711,8 +3708,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       "10. Generate the complete premium resume now:"
                     ].filter(Boolean).join("\n");
                     try {
-                      const data = await callClaude({model:"claude-sonnet-4-6",max_tokens:2500,messages:[{role:"user",content:prompt}]});
-                      setRResult(readClaudeText(data) || "Error generating. Please try again.");
+                      const data = await callAI({model:"gemini-3.8-flash",max_tokens:2500,messages:[{role:"user",content:prompt}]});
+                      setRResult(readAIText(data) || "Error generating. Please try again.");
                     } catch(err){ setRResult(err.message || "Connection error. Please try again."); }
                     setRLoad(false);
                   }}
@@ -3787,8 +3784,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     ];
                     const prompt = lines.join("\n");
                     try {
-                      const data = await callClaude({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt}]});
-                      const raw = readClaudeText(data) || "{}";
+                      const data = await callAI({model:"gemini-3.8-flash",max_tokens:1500,messages:[{role:"user",content:prompt}]});
+                      const raw = readAIText(data) || "{}";
                       const s = raw.indexOf("{"); const e2 = raw.lastIndexOf("}");
                       const clean = s>=0&&e2>=0 ? raw.slice(s,e2+1) : "{}";
                       try{ setAtsResult(JSON.parse(clean)); }

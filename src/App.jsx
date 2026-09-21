@@ -881,6 +881,7 @@ export default function App() {
   const [syncPassphrase, setSyncPassphrase] = useState(()=>{try{return sessionStorage.getItem("life-sync-passphrase") || "";}catch(_){return "";}});
   const [syncStatus, setSyncStatus] = useState("local");
   const [syncBusy, setSyncBusy] = useState(false);
+  const [syncReady, setSyncReady] = useState(false);
   const [syncLastAt, setSyncLastAt] = useState("");
 
   const [mob, setMob] = useState(typeof window!=="undefined"?window.innerWidth<768:false);
@@ -996,8 +997,13 @@ export default function App() {
     if(!id){id=crypto.randomUUID().replace(/-/g,"");setSyncId(id);storeSet("life-sync-id",id);}
     try{sessionStorage.setItem("life-sync-passphrase",pass);}catch(_){}
     if(window.location.search!==`?sync=${encodeURIComponent(id)}`) history.replaceState({}, "", `?sync=${encodeURIComponent(id)}`);
-    if(mode==="download") await pullCloudMemory(pass);
-    else await pushCloudMemory(pass);
+    if(mode==="download") {
+      const ok=await pullCloudMemory(pass);
+      if(ok) setSyncReady(true);
+    } else {
+      const ok=await pushCloudMemory(pass);
+      if(ok) setSyncReady(true);
+    }
   };
 
   // Save locally first, then automatically mirror to cloud when connected.
@@ -1005,7 +1011,7 @@ export default function App() {
     if(!memoryHydrated) return;
     const snapshot=buildMemorySnapshot();
     saveLocalMemory(snapshot);
-    if(!syncId || syncPassphrase.length<10) return;
+    if(!syncId || syncPassphrase.length<10 || !syncReady) return;
     const t=setTimeout(()=>pushCloudMemory(syncPassphrase),2500);
     return ()=>clearTimeout(t);
   },[memoryHydrated,buildMemorySnapshot,syncId,syncPassphrase,pushCloudMemory,saveLocalMemory]);
@@ -1015,7 +1021,7 @@ export default function App() {
     if(!memoryHydrated || !syncId || syncPassphrase.length<10) return;
     const key="life-sync-pulled-"+syncId;
     if(storeGet(key)==="1") return;
-    pullCloudMemory(syncPassphrase,true).then(ok=>{if(ok)storeSet(key,"1");});
+    pullCloudMemory(syncPassphrase,true).then(ok=>{if(ok){storeSet(key,"1");setSyncReady(true);}});
   },[memoryHydrated,syncId,syncPassphrase,pullCloudMemory]);
 
 

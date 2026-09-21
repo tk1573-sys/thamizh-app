@@ -20,12 +20,18 @@ const glow = c => ({ boxShadow:`0 0 24px ${c}44, 0 4px 16px ${c}22` });
 // On first visit: user sets PIN → stored in sessionStorage (tab-level, safe).
 // Re-entering tab: user must re-enter PIN each session for security.
 function hashPin(pin) {
-  // Simple djb2 hash — enough for local privacy, not sent anywhere
+  // Lightweight local hash. This is a browser-session privacy gate, not account authentication.
   let h = 5381;
   for (let i = 0; i < pin.length; i++) h = ((h << 5) + h) + pin.charCodeAt(i);
   return String(h >>> 0);
 }
-
+function pinStrength(pin) {
+  if (pin.length < 4) return { label:"Too short", color:P.a5 };
+  const unique = new Set(pin).size;
+  if (pin.length === 6 && unique >= 4) return { label:"Strongest available (6 digits)", color:P.a2 };
+  if (pin.length >= 5) return { label:"Medium (use 6 digits for stronger protection)", color:P.a3 };
+  return { label:"Basic (4 digits)", color:P.a5 };
+}
 function PinDots({ count, filled, color }) {
   return (
     <div style={{ display:"flex", gap:10, justifyContent:"center", margin:"18px 0" }}>
@@ -41,7 +47,6 @@ function PinDots({ count, filled, color }) {
     </div>
   );
 }
-
 function NumPad({ onKey, onDelete, color }) {
   return (
     <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, maxWidth:230, margin:"0 auto" }}>
@@ -64,43 +69,39 @@ function NumPad({ onKey, onDelete, color }) {
     </div>
   );
 }
-
 function PinGate({ label, color, icon, storeKey, children }) {
-  // phase: "checking" | "setup1" | "setup2" | "locked" | "open"
   const [phase, setPhase]   = useState("checking");
-  const [pin1, setPin1]     = useState("");   // new PIN entry 1
-  const [pin2, setPin2]     = useState("");   // new PIN entry 2 (confirm)
-  const [entry, setEntry]   = useState("");   // unlock attempt
+  const [pin1, setPin1]     = useState("");
+  const [pin2, setPin2]     = useState("");
+  const [entry, setEntry]   = useState("");
   const [shake, setShake]   = useState(false);
   const [msg, setMsg]       = useState("");
-
+  const [legacyPin, setLegacyPin] = useState(false);
   const SK = "pin_hash_" + storeKey;
 
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(SK);
-      if (stored) setPhase("locked");
-      else setPhase("setup1");
-    } catch(_) {
-      setPhase("setup1");
-    }
+      if (stored) {
+        setLegacyPin(!stored.startsWith("v2|"));
+        setPhase("locked");
+      } else setPhase("setup1");
+    } catch(_) { setPhase("setup1"); }
   }, [SK]);
 
   const doShake = (m) => { setMsg(m); setShake(true); setTimeout(()=>setShake(false),500); };
 
-  // Setup phase 1 → advance to phase 2 when 4+ digits entered
   useEffect(() => {
     if (phase !== "setup1" || pin1.length < 4) return;
     const t = setTimeout(() => { setPhase("setup2"); setMsg(""); }, 300);
     return () => clearTimeout(t);
   }, [pin1, phase]);
 
-  // Setup phase 2 → validate + save
   useEffect(() => {
     if (phase !== "setup2" || pin2.length < pin1.length) return;
     const t = setTimeout(() => {
       if (pin2 === pin1) {
-        try { sessionStorage.setItem(SK, hashPin(pin1)); } catch(_) {}
+        try { sessionStorage.setItem(SK, `v2|${pin1.length}|${hashPin(pin1)}`); } catch(_) {}
         setMsg(""); setPhase("open");
       } else {
         doShake("PINs don't match — try again");
@@ -110,22 +111,29 @@ function PinGate({ label, color, icon, storeKey, children }) {
     return () => clearTimeout(t);
   }, [pin2, pin1, phase, SK]);
 
-  // Unlock: check entry against stored hash
   useEffect(() => {
     if (phase !== "locked" || entry.length < 4) return;
+    let requiredLength = 4;
+    try {
+      const stored = sessionStorage.getItem(SK) || "";
+      if (stored.startsWith("v2|")) requiredLength = Number(stored.split("|")[1]);
+    } catch(_) {}
+    if (!Number.isInteger(requiredLength) || requiredLength < 4 || requiredLength > 6) requiredLength = 4;
+    if (entry.length !== requiredLength) return;
     const t = setTimeout(() => {
       try {
-        const stored = sessionStorage.getItem(SK);
-        if (stored === hashPin(entry)) {
+        const stored = sessionStorage.getItem(SK) || "";
+        const expectedHash = stored.startsWith("v2|") ? stored.split("|")[2] : stored;
+        if (expectedHash === hashPin(entry)) {
           setMsg(""); setPhase("open");
         } else {
-          doShake("Wrong PIN");
+          doShake(legacyPin ? "Wrong PIN — reset once if this was a 5–6 digit legacy PIN" : "Wrong PIN");
           setEntry("");
         }
       } catch(_) { setEntry(""); }
     }, 200);
     return () => clearTimeout(t);
-  }, [entry, phase, SK]);
+  }, [entry, phase, SK, legacyPin]);
 
   const addDigit = (d) => {
     if (phase === "setup1" && pin1.length < 6) setPin1(p => p+d);
@@ -139,56 +147,41 @@ function PinGate({ label, color, icon, storeKey, children }) {
   };
   const resetPin = () => {
     try { sessionStorage.removeItem(SK); } catch(_) {}
-    setPin1(""); setPin2(""); setEntry(""); setPhase("setup1"); setMsg("");
+    setPin1(""); setPin2(""); setEntry(""); setLegacyPin(false); setPhase("setup1"); setMsg("");
   };
 
-  if (phase === "checking") return (
-    <div style={{textAlign:"center",padding:60,color:P.muted}}>Loading...</div>
-  );
+  if (phase === "checking") return <div style={{textAlign:"center",padding:60,color:P.muted}}>Loading...</div>;
   if (phase === "open") return children;
 
-  const current = phase==="setup1" ? pin1 : phase==="setup2" ? pin2 : entry;
-
+  const strength = pinStrength(phase==="setup2" ? pin2 : pin1);
   return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:420,padding:16}}>
-      <div style={{
-        ...gl(color), padding:32, textAlign:"center",
-        maxWidth:300, width:"100%",
-        animation: shake ? "shake 0.4s ease" : "none",
-      }}>
+      <div style={{...gl(color),padding:32,textAlign:"center",maxWidth:300,width:"100%",animation:shake ? "shake 0.4s ease" : "none"}}>
         <style>{`@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}`}</style>
         <div style={{fontSize:48,marginBottom:8}}>{icon}</div>
         <div style={{fontSize:18,fontWeight:800,color,marginBottom:4}}>{label}</div>
-
         {phase === "setup1" && <>
           <div style={{fontSize:13,color:P.muted,marginBottom:2}}>Create a PIN to protect this section</div>
-          <div style={{fontSize:11,color:P.a3}}>Enter 4–6 digits</div>
+          <div style={{fontSize:11,color:P.a3}}>Enter 4–6 digits · 6 digits recommended</div>
           <PinDots count={6} filled={pin1.length} color={color}/>
+          {pin1.length>=4&&<div style={{fontSize:10,color:strength.color,fontWeight:700,marginBottom:8}}>PIN strength: {strength.label}</div>}
         </>}
-
         {phase === "setup2" && <>
           <div style={{fontSize:13,color:P.muted,marginBottom:2}}>Re-enter your PIN to confirm</div>
           <div style={{fontSize:11,color:P.a2}}>✓ First PIN set ({pin1.length} digits)</div>
           <PinDots count={6} filled={pin2.length} color={color}/>
+          {pin2.length>=4&&<div style={{fontSize:10,color:strength.color,fontWeight:700,marginBottom:8}}>PIN strength: {strength.label}</div>}
         </>}
-
         {phase === "locked" && <>
           <div style={{fontSize:13,color:P.muted}}>Enter your PIN to unlock</div>
+          <div style={{fontSize:11,color:P.a3,marginTop:3}}>PIN is checked only after the saved PIN length is entered</div>
+          {legacyPin&&<div style={{fontSize:10,color:P.a3,marginTop:5}}>Legacy PIN format detected. Reset once if you previously used 5–6 digits.</div>}
           <PinDots count={6} filled={entry.length} color={color}/>
         </>}
-
         {msg && <div style={{fontSize:12,color:P.a5,fontWeight:600,marginBottom:10}}>{msg}</div>}
-
         <NumPad color={color} onKey={addDigit} onDelete={delDigit}/>
-
-        {phase === "locked" && (
-          <button onClick={resetPin} style={{marginTop:14,background:"transparent",border:`1px solid ${P.border}`,borderRadius:8,padding:"8px 20px",color:P.muted,fontSize:11,cursor:"pointer"}}>
-            Forgot PIN? Reset
-          </button>
-        )}
-        <div style={{fontSize:10,color:P.muted,marginTop:18}}>
-          🔒 PIN stays in this browser tab only
-        </div>
+        {phase === "locked" && <button onClick={resetPin} style={{marginTop:14,background:"transparent",border:`1px solid ${P.border}`,borderRadius:8,padding:"8px 20px",color:P.muted,fontSize:11,cursor:"pointer"}}>Forgot PIN? Reset</button>}
+        <div style={{fontSize:10,color:P.muted,marginTop:18}}>🔒 PIN hash + length stay in this browser tab only · not an account password</div>
       </div>
     </div>
   );
@@ -222,21 +215,21 @@ const monthPlan = [
     job:["PySpark basics: SparkSession, DataFrames, transformations on Databricks Community","LangChain: chains, prompt templates, memory, output parsers","Build Project 2: PySpark ETL job on Databricks Community Edition (free)","Apply 5+ AI-DE and GenAI-DE roles/week – shift focus to AI roles","LeetCode: 2 hard SQL problems/week for Senior DE interviews"],
     phd:["Chapter 1 first draft: Introduction + Research Motivation (1000 words)","Identify 1 national conference for abstract submission (Nov–Dec 2026)","Attend PhD colloquium if offered by SSN","Supervisor meeting: review progress, refine problem statement"],
     ugc:["Computer Networks: OSI, TCP/IP, subnetting, routing protocols, DNS/HTTP","TOC: DFA, NFA, epsilon-NFA conversion, CFG, PDA – 15 problems/day","UGC NET Dec 2026 registration opens – REGISTER IMMEDIATELY when open (Sep–Oct)","30 MCQs/day – 2 full mocks this month"],
-    cert:["DATABRICKS DEA EXAM – target this month or early October","GCP Professional DE: 40% prep done","Spark Udemy: complete remaining modules"],
+    cert:["DATABRICKS DEA EXAM – target this month or early October","Cloud learning: continue GCP/BigQuery hands-on as a supporting skill","Spark Udemy: complete remaining modules"],
     govt:["Apply NIC Scientist B if notification out","ISRO VSSC/SAC – check quarterly openings","TNPSC Group 1/2 technical posts – check notification"],
   }},
   { month:"October 2026", theme:"Interview Sprint + UGC NET Registration", color:P.a4, items:{
     job:["Build Project 3: RAG chatbot – PDF question answering using LangChain + ChromaDB","Portfolio: 3 GitHub projects with README, demo screenshots, live links","LinkedIn: post 1 article on GenAI + Data Engineering (establishes credibility)","Target 5+ interview calls this month – convert at least 2 to technical rounds","Mock interview: 1/week using Pramp, system design for data pipelines"],
     phd:["Submit conference abstract (GenAI / NLP track) to identified conference","Chapter 1 revised after supervisor feedback","Start Chapter 2 outline: Literature Review (collect 20 papers minimum)","Attend any FDP (Faculty Development Programme) if offered"],
     ugc:["REGISTER FOR UGC NET DEC 2026 – do not miss this window","Programming: C pointers, Java OOP, Python generators – MCQ intensive","Software Engineering: SDLC, Agile, UML, testing types","Full Paper 1 + Paper 2 combined mock – analyse results thoroughly"],
-    cert:["GCP Professional DE: 70% prep – schedule exam for Nov","AWS DE Associate: begin Stephane Maarek Udemy course (₹499 on sale)","dbt Learn: start free course at courses.getdbt.com"],
+    cert:["Continue cloud/data-engineering hands-on; keep certification planning aligned to the current active certification list","AWS DE Associate: begin Stephane Maarek Udemy course (₹499 on sale)","dbt Learn: start free course at courses.getdbt.com"],
     govt:["DRDO CEPTAM written test if shortlisted","SSC CGL technical posts 2026 – check eligibility and notification","Coast Guard / Navy civilian tech roles – quarterly check"],
   }},
   { month:"November 2026", theme:"UGC NET Final Push + Cert Completion", color:P.a5, items:{
     job:["Evaluate any job offers – negotiate strongly for 40-60% hike","If offer received: assess role fit vs TCS + PhD compatibility","LinkedIn: post 2nd article (Python automation + ETL use case)","Keep applying 3+ roles/week even if in negotiations","Walking Professor: finalise 1–2 weekend slots at engineering colleges"],
     phd:["Chapter 1 final version submitted to supervisor","Chapter 2 first draft: Literature Review (1500 words)","Attend conference if abstract accepted","Apply for SSN internal PhD fellowship / funding if available"],
     ugc:["FINAL MONTH BEFORE EXAM – 2 hours/day dedicated slot non-negotiable","Complete all 5 UGC NET previous year papers (Dec 2022 to Jun 2026)","Paper 1: all 10 units revised – teaching, research, reasoning, ICT","Paper 2: formula cheat sheets for DBMS, OS, Networks, TOC","Sunday: 1 full timed mock – target 65%+ consistently"],
-    cert:["GCP Professional DE: EXAM THIS MONTH","Databricks cert: post on LinkedIn if passed","AWS DE: 50% complete – exam plan for Jan 2027"],
+    cert:["Review active certification sprint progress and schedule the exams for which coupons/registrations are currently available","Databricks cert: post on LinkedIn if passed","AWS DE: 50% complete – exam plan for Jan 2027"],
     govt:["Submit all pending central govt applications before year-end","DRDO/ISRO: prepare domain test if any shortlisting received","NIC Scientist B: follow up on application status"],
   }},
   { month:"December 2026", theme:"UGC NET EXAM + Year Review", color:P.a2, items:{
@@ -534,7 +527,7 @@ function escHtml(str="") {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab]       = useState("now");
+  const VALID_APP_TABS = new Set(["now","jobs","radar","monthly","career","skills","learn","ugc","phd","snu","office","health","journal","resume","certs","govt","buddy","coach"]);\n  const [tab, setTab]       = useState(() => { try { const q = new URLSearchParams(window.location.search).get("tab"); return VALID_APP_TABS.has(q) ? q : "now"; } catch(_) { return "now"; } });
   const [monthIdx, setMonth]= useState(() => Math.max(0, monthPlan.findIndex(month => month.month === currentMonthLabel())));
   const [pillar, setPillar] = useState("job");
   const [careerIdx, setCareer] = useState(0);
@@ -800,7 +793,7 @@ export default function App() {
     const overduePending = allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today);
     const overduePhdTasks = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today);
     const pendingOpen = allPending.filter(p=>p.status!=="Done").length;
-    const claudeDeadline = deadlineStatus("2026-08-31");
+    const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
     const recentHealth = Object.entries(healthLog).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,3);
     const missedMeds = recentHealth.filter(([,e])=>!e.meds?.morning||!e.meds?.night).length;
     const recentJournal = Object.entries(entries).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,1);
@@ -810,8 +803,7 @@ export default function App() {
     await new Promise(r=>setTimeout(r,400));
 
     // Analysis
-    if(claudeDeadline.expired) addLog("⏱️",`Claude Architect certification ${claudeDeadline.label}`,"a5");
-    else if(claudeDeadline.days<=42) addLog("🚨",`Claude Architect certification ${claudeDeadline.label} — August 31, 2026`,"a5");
+    addLog("🏅",claudeCertStatus,"a3");
     if(overduePending.length) addLog("⚠️",`${overduePending.length} overdue follow-up items in Office need replanning`,"a5");
     if(overduePhdTasks.length) addLog("⚠️",`${overduePhdTasks.length} overdue PhD tasks — review timeline`,"a5");
     if(missedMeds>0) addLog("💊",`Missed medicine logging ${missedMeds} of last 3 days — health tracking incomplete`,"a3");
@@ -825,7 +817,7 @@ export default function App() {
     // Call AI for smart suggestions
     try {
       const context = [
-        `Today: ${today}. Claude Architect certification status: ${claudeDeadline.label}.`,
+        `Today: ${today}. ${claudeCertStatus}`,
         `Overdue office follow-ups: ${overduePending.length}. Open follow-ups: ${pendingOpen}.`,
         `Overdue PhD tasks: ${overduePhdTasks.length}. PhD meetings logged: ${phdMeetings.length}.`,
         `Missed medicine logs last 3 days: ${missedMeds}. Days since last journal: ${lastJournalDays}.`,
@@ -901,7 +893,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
     if(!adviceQ.trim()) return; setAdviceLoad(true); setAdviceA("");
     const open = allPending.filter(p=>p.status!=="Done").length;
     const odPhd = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
-    const ccdvfStatus = deadlineStatus("2026-08-31");
+    const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
     try {
       const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
 
@@ -910,10 +902,10 @@ LIFE CONTEXT (August 2026):
 - Part-time PhD at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan
 - Research: Human-Centered Multimodal Explainable AI with Wearables for Special Kids
 - Health: Bipolar I (stable), Type 2 Diabetes (FBS managed), Obesity (140kg) — energy varies
-- Claude Claude Architect certification status: ${ccdvfStatus.label}
+- Claude Architect certification status: ${claudeCertStatus}
 - Databricks DEA exam: September 2026
 - UGC NET CS: December 2026
-- ISRO application deadline: August 17 (TODAY/TOMORROW!)
+- Use current official government vacancy pages; do not rely on old application dates.
 - ${open} open follow-up items in office tracker
 - ${odPhd} overdue PhD tasks
 
@@ -948,7 +940,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askJobAI = async () => {
     if(!jobAiQ.trim()) return; setJobAiLoad(true); setJobAiA("");
     try {
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), current active certification sprint. UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
       setJobAiA(readAIText(d) || "No response.");
     } catch(err){setJobAiA(err.message || "Connection error. Please try again.");}
     setJobAiLoad(false);
@@ -989,7 +981,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askC = async()=>{
     if(!cQ.trim())return; setCLoad(true); setCA("");
     try{
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Current date: September 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
       setCA(readAIText(d) || "No response.");
     }catch(err){setCA(err.message || "Error connecting. Please try again.");}
     setCLoad(false);
@@ -1003,7 +995,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const prC={P1:P.a5,P2:P.a3,P3:P.a1,P4:P.a2};
   const cur=monthPlan[monthIdx];
   const today = todayKey();
-  const claudeDeadline = deadlineStatus("2026-08-31");
+  const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
   const savedTodayPlan = dailyPlans[today];
   const savedTodaySlots = Array.isArray(savedTodayPlan) ? savedTodayPlan : Array.isArray(savedTodayPlan?.slots) ? savedTodayPlan.slots : [];
   const currentPlan = monthPlan.find(month => month.month === currentMonthLabel());
@@ -1411,7 +1403,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               ))}
               <div style={{...S.ib(P.a5)}}>
                 <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:5}}>⚠️ CRITICAL — UGC NET CS December 2026</div>
-                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","SC cutoff approximately 56% — aim 65%+ for safe margin","Registration opens September 2026 — set phone reminder NOW","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
+                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","Do not rely on an old cutoff figure; use the official NTA category-wise cutoff for the relevant cycle.","Registration date: not asserted here until the official NTA notice is published.","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
                   <div key={i} style={{...S.li(i===arr.length-1),fontSize:11}}><span style={{color:P.a5}}>›</span><span>{p}</span></div>
                 ))}
               </div>
@@ -1515,114 +1507,16 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               </div>
 
               {[
-                {
-                  org:"🚀 ISRO Scientist/Engineer SC",
-                  status:"🚨 APPLY NOW — Deadline August 17, 2026",
-                  statusColor:P.a5,
-                  urgent:true,
-                  details:[
-                    "92 vacancies — Computer Science stream available",
-                    "Qualification: B.E/B.Tech with 65%+ marks + Valid GATE score (GATE CS)",
-                    "Age: Max 28 years (SC relaxation +5 years = 33 years for you ✅)",
-                    "Salary: ₹56,100/month (Pay Level 10, 7th CPC) + DA + HRA + medical",
-                    "Selection: GATE score shortlisting (1:7 ratio) + Technical Interview",
-                    "SC candidates: Application fee WAIVED (₹250 fee exempt)",
-                    "Fee payment deadline: August 19, 2026 (even if main deadline is Aug 17)",
-                  ],
-                  action:"Apply NOW at isro.gov.in → Careers → ICRB Scientist SC 2026",
-                  link:"isro.gov.in",
-                  match:"⚠️ GATE CS score needed — check if your score qualifies. Strong match on education and SC quota.",
-                  color:P.a5,
-                },
-                {
-                  org:"💻 NIC Scientist B",
-                  status:"Closed (April 24, 2026) — Watch for next cycle",
-                  statusColor:P.muted,
-                  details:[
-                    "243 vacancies in Computer Science & IT (168 posts) and Data Science & AI (50 posts)",
-                    "Qualification: B.E/B.Tech or M.Tech in CS/IT/ECE + Valid GATE score",
-                    "Salary: ₹56,100–₹1,77,500 (Pay Level 10) — Group A Gazetted officer",
-                    "Selection: GATE score + Personal Interview (no separate written exam)",
-                    "Data Science & AI discipline directly matches your M.Tech + PhD profile",
-                    "50 DS&AI vacancies — least competition among the 3 disciplines",
-                  ],
-                  action:"Last date was April 24, 2026. Watch nic.in for next notification expected late 2026.",
-                  link:"nic.gov.in",
-                  match:"🎯 Perfect match: M.Tech DS + PhD GenAI + TCS experience. High priority for next NIC cycle.",
-                  color:P.a1,
-                },
-                {
-                  org:"🖥️ C-DAC Project Engineer / Senior Project Engineer",
-                  status:"JIT June 2026 cycle closed — Next cycle expected Sep–Oct 2026",
-                  statusColor:P.a3,
-                  details:[
-                    "951 vacancies in JIT June 2026 cycle across 11 C-DAC centres",
-                    "Roles: AI/ML, Full Stack, Cybersecurity, Software Development",
-                    "Senior Project Engineer (4+ yrs exp): ₹8.49–14 LPA CTC",
-                    "Your profile: 4.3yr TCS + ETL/SQL/Python = Senior Project Engineer eligible",
-                    "C-DAC Chennai centre available — stays in Chennai ✅",
-                    "No application fee for any category",
-                    "Contractual (3 years, project-based) — good for PhD compatibility",
-                  ],
-                  action:"Next JIT cycle expected Sep–Oct 2026. Set alert at careers.cdac.in",
-                  link:"careers.cdac.in",
-                  match:"🎯 Strong match: 4.3yr experience qualifies for Senior PE. AI/ML + Data Science domains match perfectly.",
-                  color:P.a4,
-                },
-                {
-                  org:"🛡️ DRDO CEPTAM",
-                  status:"CEPTAM 11 Tier 2 result expected — CEPTAM 12 watch for 2026-27",
-                  statusColor:P.muted,
-                  details:[
-                    "CEPTAM 11: 764 vacancies (STA-B + Technician A) — Tier 2 exam was June 15, 2026",
-                    "STA-B Computer Science: Diploma or B.Sc in CS/IT eligible",
-                    "CEPTAM 12 expected: 1,000–3,000+ vacancies typical",
-                    "Age: 18–28 years (SC relaxation +5 years = 33 years ✅)",
-                    "Salary: ₹35,400–₹1,12,400 (Pay Level 6, 7th CPC)",
-                    "Selection: Tier I CBT (general aptitude) + Tier II (subject specific)",
-                    "Syllabus overlaps with UGC NET CS — prep is shared ✅",
-                  ],
-                  action:"Monitor ceptam.drdo.gov.in for CEPTAM 12 notification. Expected late 2026 / early 2027.",
-                  link:"drdo.gov.in",
-                  match:"✅ Good match: B.E ECE + M.Tech DS. UGC NET prep directly useful for CEPTAM Tier II.",
-                  color:P.a3,
-                },
-                {
-                  org:"🏛️ TNPSC Group 1/2 Technical Posts",
-                  status:"Check tnpsc.gov.in for current notifications",
-                  statusColor:P.a2,
-                  details:[
-                    "Technical cadre posts: Assistant Engineer, Junior Scientific Officer, etc.",
-                    "Tamil Nadu state quota — SC reservation applies",
-                    "Combined Engineering Services Exam (CESE) for tech posts",
-                    "Age: generally up to 30-32 years for tech posts (check each notification)",
-                    "Salary: ₹36,400–₹1,15,700 state government pay scale",
-                    "Based in Tamil Nadu — no relocation needed ✅",
-                  ],
-                  action:"Register at tnpscexams.in. Set up job alerts for Computer Science and IT technical posts.",
-                  link:"tnpsc.gov.in",
-                  match:"✅ Tamil Nadu domicile advantage. SC state quota. Stays in Chennai/TN.",
-                  color:P.a2,
-                },
-                {
-                  org:"🏢 BEL / HAL / ECIL — PSU Engineer",
-                  status:"Annual recruitment cycle — typically Q2-Q3 each year",
-                  statusColor:P.muted,
-                  details:[
-                    "BEL (Bharat Electronics Limited): Engineer roles in CS/IT/Electronics",
-                    "HAL (Hindustan Aeronautics): IT System Admin and software roles",
-                    "ECIL (Electronics Corporation): CS/IT project roles",
-                    "Recruitment typically via GATE score (for direct entry) or own exam",
-                    "Salary: ₹40,000–₹1,40,000 (IDA pay scale, PSU)",
-                    "Permanent government job with pension benefits",
-                    "SC reservation applies across all PSUs",
-                  ],
-                  action:"Watch bel-india.in, hal-india.in, ecil.co.in for annual notifications. GATE CS score helps.",
-                  link:"bel-india.in",
-                  match:"✅ B.E ECE background helps for HAL/BEL. M.Tech DS + TCS experience = competitive profile.",
-                  color:P.a2,
-                },
+                {org:"🏦 IBPS RRB XV — Officers + Office Assistants",status:"🔴 Closes 21 Sep 2026",statusColor:P.a5,urgent:true,details:["Officer Scale I/II/III and Office Assistant registration closes 21 Sep 2026 on the official IBPS portals.","Eligibility differs by post; use the official notification and registration page.","Online fee payment also closes 21 Sep 2026."],action:"Verify eligibility and apply through the official IBPS RRB XV registration pages.",link:"ibpsreg.ibps.in",match:"Current central banking recruitment; verify post-specific eligibility before applying.",color:P.a5},
+                {org:"🏦 IBPS PFRDA Officer Grade A",status:"🟠 Closes 24 Sep 2026",statusColor:P.a3,details:["Registration opened 3 Sep 2026 and closes 24 Sep 2026.","Post: Officer Grade A (Assistant Manager); stream-specific eligibility applies.","The official portal states that submission is subject to later eligibility scrutiny."],action:"Check the official notification/FAQ and submit before 24 Sep if eligible.",link:"ibpsreg.ibps.in",match:"Current Officer Grade A recruitment; verify stream and experience criteria.",color:P.a3},
+                {org:"💻 C-DAC Chennai — Project Engineer / Senior Project Engineer",status:"🟠 Registration closes 22 Sep 2026",statusColor:P.a3,details:["C-DAC Chennai recruitment lists 27 Project Engineer and 10 Senior Project Engineer posts, plus other project roles.","Registration closes 22 Sep 2026 at 17:00 hours.","Senior Project Engineer requires minimum 4 years post-qualification relevant experience; ECE is a listed discipline.","Interview is tentatively in the fourth week of September; eligible candidates receive confirmation by email."],action:"Read the C-DAC Chennai advertisement and complete registration if eligible.",link:"cdac.in",match:"Current Chennai technical recruitment with an ECE/experience route; verify the exact skill set for the selected post.",color:P.a4},
+                {org:"🚀 ISRO SAC — JRF / Research Associate / Project Scientist-I",status:"🟠 Closes 30 Sep 2026",statusColor:P.a3,details:["SAC advertisement SAC:02:2026 opened 10 Sep 2026.","Online applications close 30 Sep 2026 at 17:00.","Location: Ahmedabad; roles are research/project positions."],action:"Read the official ISRO SAC advertisement and check qualification/discipline requirements.",link:"isro.gov.in",match:"Current ISRO research recruitment; location and post-specific qualification should be checked.",color:P.a3},
+                {org:"🛡️ DRDO — Current vacancies",status:"🔵 Rolling official vacancy page",statusColor:P.a1,details:["DRDO official vacancies currently list multiple laboratory/research opportunities and recruitment updates.","Examples include JRF/RA opportunities and CEPTAM-related updates.","Each post has its own eligibility, deadline and selection process."],action:"Open the DRDO vacancies page and filter for CS/IT/ECE/research roles.",link:"drdo.gov.in",match:"Use the current official vacancy page rather than an old CEPTAM date.",color:P.a1},
+                {org:"🏛️ TNPSC — upcoming/current planner items",status:"🔵 Check final notification",statusColor:P.a1,details:["TNPSC planner dates are tentative until final notification.","Group IV was planned for notification in Oct 2026 and examination in Dec 2026 in the published planner.","Check the official TNPSC site for revisions or final notifications."],action:"Monitor the official TNPSC notification/planner pages and confirm dates before applying.",link:"tnpsc.gov.in",match:"Relevant state-government exam track; final notification controls eligibility and dates.",color:P.a2},
+                {org:"🧾 SSC — 2026–27 examination calendar",status:"🔵 Calendar / upcoming cycles",statusColor:P.a1,details:["The official SSC calendar lists CHSL, Stenographer, Hindi Translators, MTS/Havaldar, SI Delhi Police/CAPFs and Constable GD 2027 in the 2026–27 cycle.","Calendar dates are tentative and should be checked against individual notices."],action:"Use the SSC calendar as the planning index, then open the individual notice before applying.",link:"ssc.gov.in",match:"Current central-government exam planning source; individual notices determine final dates.",color:P.a1},
+                {org:"🏛️ UPSC — active examinations",status:"🔵 Current active-exam index",statusColor:P.a1,details:["UPSC active examinations currently include Civil Services Main 2026 and Engineering Services Preliminary 2027 among other examinations.","Some listed examinations have closed application windows; verify each examination separately."],action:"Use UPSC Active Examinations and the individual examination page as the source of truth.",link:"upsc.gov.in",match:"Current official index for UPSC exam status; verify each examination separately.",color:P.a1},
               ].map((job,i)=>(
+
                 <div key={i} style={{...S.CA(job.color),marginBottom:12,...(job.urgent?{boxShadow:`0 0 20px ${job.color}33`}:{})}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:6,marginBottom:8}}>
                     <div style={{fontSize:15,fontWeight:800,color:job.urgent?job.color:P.text}}>{job.org}</div>
@@ -1662,7 +1556,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   {company:"Razorpay / Flipkart / Meesho",role:"Data Engineer — Analytics Platform",salary:"₹18–35 LPA",skills:"PySpark + Databricks + SQL + Python — strong after cert",apply:"LinkedIn + company careers page"},
                   {company:"Amazon India / PayPay / Urban Company",role:"Data Engineer II / Senior DE",salary:"₹20–40 LPA",skills:"SQL + cloud + Python — match after your upskilling",apply:"Amazon.jobs + LinkedIn Easy Apply"},
                 ]},
-                {tier:"Tier 3 — AI-DE Roles (After RAG Project + GCP cert, Nov 2026)",color:P.a4,roles:[
+                {tier:"Tier 3 — AI-DE Roles (After RAG Project + cloud/GenAI project readiness)",color:P.a4,roles:[
                   {company:"Sarvam AI / Krutrim / AI startups",role:"AI Data Engineer / GenAI Engineer",salary:"₹25–50 LPA",skills:"LangChain + RAG + Python + GCP — after 1 deployed project",apply:"LinkedIn + angel.co + startup direct email"},
                   {company:"Google India / Microsoft India",role:"Senior Data Engineer / AI Platform Engineer",salary:"₹30–60 LPA",skills:"GCP DE cert + GenAI + strong SQL + PhD research — strong profile",apply:"careers.google.com + careers.microsoft.com"},
                   {company:"CRED / PhonePe / Swiggy",role:"AI Data Engineer / Analytics Engineer",salary:"₹22–45 LPA",skills:"dbt + Python + GenAI — high demand in fintech/consumer tech",apply:"LinkedIn + referral through network"},
@@ -1800,8 +1694,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           {tab==="ugc"&&<div>
             <div style={S.h2}>📋 UGC NET CS — December 2026</div>
             <div style={{...S.ib(P.a2),marginBottom:14}}>
-              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Exam: December 2026 · SC cutoff ~56% = ~84/150 · Your target: 100+/150</div>
-              <div style={{fontSize:12,color:P.muted}}>Registration: September–October 2026 window · Watch ugcnet.nta.ac.in · Set calendar reminder NOW</div>
+              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Target: 100+/150 (personal study target) · Verify the official NTA cycle notice for final schedule and cut-offs</div>
+              <div style={{fontSize:12,color:P.muted}}>Current status: monitor NTA for the December 2026 cycle; this dashboard does not assert a registration date until an official notice confirms it.</div>
             </div>
             <div style={{...S.CA(P.a2),marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:6}}>
@@ -1824,7 +1718,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:11,color:P.a2}}>📚 {s.resource}</div>
               </div>))}
               <div style={{...S.ib(P.a4)}}><div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:4}}>⚡ The daily habit that wins UGC NET</div><div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>8:00–9:00 PM every night without exception. 20 MCQs = 20 minutes. Review wrong answers = 20 minutes. Note weak topic = 10 minutes. 6 months × 30 days × 20 MCQs = 3,600 problems solved. That is how SC candidates clear it.</div></div>
-              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>UGC NET Dec 2026 registration window typically opens September–October. Missing it means waiting until June 2027. Set a phone reminder for September 1st to check ugcnet.nta.ac.in daily.</div></div>
+              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>Registration dates can change. Check the official NTA notice board and UGC-NET portal for the December 2026 cycle before acting on any third-party date.</div></div>
             </div>}
             {ugcView==="p2"&&ugcPaper2.map((u,i)=>(<div key={i} style={{...S.CA(P.a2),marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:8}}><div style={{fontSize:14,fontWeight:700,color:P.text}}>{u.unit}</div><span style={S.chip(P.a2)}>{u.weight}</span></div>
@@ -2120,7 +2014,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:12,color:P.muted}}>Real advice for switching from TCS to Senior DE, AI-DE, or Analytics Engineer.</div>
               </div>
               {[
-                {title:"📍 Where you are now (August 2026)",color:P.a1,items:[
+                {title:"📍 Where you are now (September 2026)",color:P.a1,items:[
                   "4.3 years TCS Data Engineer — solid enterprise foundation, not a fresher",
                   "Expert in SQL (Teradata), IBM DataStage ETL, Unix/Shell, ServiceNow ITSM",
                   "PhD started at Shiv Nadar University in GenAI — extremely rare differentiator",
@@ -2146,7 +2040,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   "Tier 1 (apply NOW): Cognizant, Capgemini, DXC, HCL, Mphasis for Senior ETL/DataStage. 40-60% hike.",
                   "Tier 2 (Sep 2026, after Databricks): Zoho, Freshworks, TCS Digital, Accenture Analytics. Rs 15-30 LPA.",
                   "Tier 3 (Oct-Nov 2026, after RAG project): Razorpay, Flipkart, Swiggy, Zerodha. Rs 20-35 LPA.",
-                  "Tier 4 (Nov+ 2026, after GCP cert): Sarvam AI, Google, Microsoft, CRED. Rs 25-50 LPA AI-DE roles.",
+                  "Tier 4 (Nov+ 2026, after cloud/GenAI project readiness): Sarvam AI, Google, Microsoft, CRED. Rs 25-50 LPA AI-DE roles.",
                   "How: LinkedIn Easy Apply + Naukri for speed. Company career pages for higher shortlist rate.",
                 ]},
                 {title:"📞 What to say in interviews",color:P.a5,items:[
@@ -2181,7 +2075,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   onClick={async()=>{
                     if(!switchGuideQ.trim())return;
                     setSwitchGuideLoad(true);setSwitchGuideA("");
-                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
+                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), current active certification sprint. Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
                     try{
                       const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
                       setSwitchGuideA(readAIText(d) || "No response.");
@@ -3894,7 +3788,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       "INTERMEDIATE/LEARNING 2026: Python (Pandas/NumPy/PySpark), LangChain/RAG/ChromaDB, GCP (BigQuery/Dataflow/Cloud Storage/Pub-Sub), Databricks (Spark/Delta Lake), dbt, Docker, FastAPI, MLflow",
                       "EXPERIENCE: 4.3yr TCS — ETL pipelines, 50K+ daily transactions, 15+ pipelines, 200+ incidents resolved, cross-functional delivery",
                       "EDUCATION: PhD CS GenAI (SSN 2025-ongoing), M.Tech Data Science (completed), B.E ECE (completed)",
-                      "CERTS IN PROGRESS: Databricks DEA (Sep 2026), GCP Professional DE (Nov 2026), Google Gemini Enterprise Dev (2026)",
+                      "CERTS IN PROGRESS: Databricks DEA (Sep 2026), current active certification sprint, Google Gemini Enterprise Dev (2026)",
                       "JOB DESCRIPTION:\n" + jd,
                       "Return ONLY valid JSON, no markdown, no backticks, no text outside JSON:",
                       '{"score":<0-100 be strict>,"grade":"<A+|A|B+|B|C+|C|D>","verdict":"<one sharp sentence>","apply_recommendation":"<Definitely Apply|Apply with Cover Letter|Apply After Upskilling|Not a Good Fit Yet>","experience_match":"<Excellent|Strong|Moderate|Weak>","education_match":"<Excellent|Strong|Moderate|Weak>","skills_match_percent":<0-100>,"matched_keywords":["list","of","matched","keywords"],"missing_critical":["list","of","must-have","missing"],"missing_nice":["list","of","nice-to-have","missing"],"strengths":["3-5 specific strengths"],"gaps":["3-5 specific gaps"],"resume_fixes":["4-6 specific resume text changes — be very specific"],"quick_wins":["3-4 immediate score boosters"],"cover_letter_angle":"one sentence strongest angle","upskill_priority":["ranked 1-3 skills to learn"]}'

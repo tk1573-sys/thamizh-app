@@ -1103,7 +1103,18 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           </div>}
 
                     {tab==="radar"&&<div>
-            <div style={S.h2}>🎯 Government Career Radar</div>
+            <div style={S.h2}>🎯 Government Career Radar</div>            <div style={{...S.CA(P.a2),marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:800,color:P.a2,marginBottom:4}}>📰 Free Official Government Exam & Current-Affairs Sources</div>
+              <div style={{fontSize:11,color:P.muted,marginBottom:8}}>For latest notifications, dates and results, open the recruiting authority's official source. AI summaries are optional.</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {[
+                  ["UPSC","https://www.upsc.gov.in/"],["SSC","https://ssc.gov.in/"],["TNPSC","https://www.tnpsc.gov.in/"],
+                  ["NTA / UGC NET","https://ugcnet.nta.ac.in/"],["IBPS","https://www.ibps.in/"],["Employment News","https://employmentnews.gov.in/"],
+                  ["DRDO","https://www.drdo.gov.in/"],["ISRO","https://www.isro.gov.in/"],["NCS","https://www.ncs.gov.in/"],["PIB","https://www.pib.gov.in/"]
+                ].map(([name,url])=><a key={name} href={url} target="_blank" rel="noreferrer" style={{...S.chip(P.a2),textDecoration:"none"}}>{name} ↗</a>)}
+              </div>
+            </div>
+
             <div style={{...S.ib(P.a5),marginBottom:10}}>
               <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>⚠️ ISRO Scientist/Engineer SC — Deadline TODAY August 17, 2026 (Last few hours!)</div>
               <div style={{fontSize:11,color:P.muted}}>92 vacancies. Computer Science stream available. GATE required. SC fee waived. Apply at isro.gov.in before midnight.</div>

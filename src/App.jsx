@@ -1393,6 +1393,29 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
               )}
             </div>
 
+            {/* Master research portfolio — shared with SNU Research */}
+            <div style={{...S.CA(P.a1),marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:800,color:P.a1,marginBottom:8}}>🧬 Overall Research Portfolio</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.55,marginBottom:10}}>{phdResearchHub.coreObjective}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                <div>
+                  <div style={{fontSize:10,color:P.muted,fontWeight:800,marginBottom:5}}>RESEARCH PILLARS</div>
+                  {phdResearchHub.researchPillars.map(p=><div key={p.id} style={{fontSize:11,color:P.sub,lineHeight:1.45,marginBottom:5}}><b style={{color:P.text}}>{p.title}</b> — {p.detail}</div>)}
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:P.muted,fontWeight:800,marginBottom:5}}>CURRENT PROBLEM STATEMENTS</div>
+                  {phdResearchHub.problemStatements.map((p,i)=><div key={i} style={{fontSize:11,color:P.sub,lineHeight:1.45,marginBottom:5}}>{p}</div>)}
+                </div>
+              </div>
+              <div style={{fontSize:10,color:P.muted,fontWeight:800,marginBottom:5}}>DATA + METHOD</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.5,marginBottom:7}}><b style={{color:P.text}}>Datasets:</b> {phdResearchHub.datasets.join(" · ")}</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.5}}><b style={{color:P.text}}>Method:</b> {phdResearchHub.methodology.join(" → ")}</div>
+              <div style={{marginTop:10,paddingTop:9,borderTop:`1px solid ${P.border}`}}>
+                <div style={{fontSize:10,color:P.a2,fontWeight:800,marginBottom:4}}>🔗 SNU CONNECTION</div>
+                <div style={{fontSize:11,color:P.sub,lineHeight:1.5}}>SNU Research is the focused implementation layer for this portfolio: {phdResearchHub.snuScope}. Changes made after supervisor feedback should update the master PhD direction first, then the SNU execution details.</div>
+              </div>
+            </div>
+
             {/* Sub tabs */}
             <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",flexWrap:"wrap"}}>
               {[["radar","📡 Radar Dashboard"],["scientist","🔬 Scientist/Research"],["ai","🤖 AI/Data/CS"],["defence","🛡️ Defence/Intel"],["tn","🏛️ Tamil Nadu"],["psu","🏢 PSU"],["academic","🎓 Academic"],["tracker","📋 Application Tracker"],["ask","💬 Eligibility Advisor"]].map(([id,lb])=>(

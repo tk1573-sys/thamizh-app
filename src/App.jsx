@@ -677,6 +677,34 @@ function storeJsonGet(key, fallback) {
     return value;
   } catch(_) { return fallback; }
 }
+function bytesToB64(bytes) {
+  let s=""; const a=new Uint8Array(bytes);
+  for(let i=0;i<a.length;i+=0x8000) s+=String.fromCharCode(...a.subarray(i,i+0x8000));
+  return btoa(s);
+}
+function b64ToBytes(str) {
+  const s=atob(str); const a=new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i);
+  return a;
+}
+async function deriveSyncKey(passphrase, salt) {
+  const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(passphrase),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:210000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function encryptSyncSnapshot(snapshot, passphrase) {
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveSyncKey(passphrase,salt);
+  const plain=new TextEncoder().encode(JSON.stringify(snapshot));
+  const ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plain);
+  return {salt:bytesToB64(salt),iv:bytesToB64(iv),ciphertext:bytesToB64(ciphertext),updatedAt:Date.now()};
+}
+async function decryptSyncSnapshot(payload, passphrase) {
+  const salt=b64ToBytes(payload.salt), iv=b64ToBytes(payload.iv), ciphertext=b64ToBytes(payload.ciphertext);
+  const key=await deriveSyncKey(passphrase,salt);
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,ciphertext);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
 function readAIText(data) {
   if (!data || typeof data !== "object") return "";
   if (Array.isArray(data.content)) {
@@ -849,6 +877,12 @@ export default function App() {
 
 
   const [memoryHydrated, setMemoryHydrated] = useState(false);
+  const [syncId, setSyncId] = useState(()=>{try{return new URLSearchParams(window.location.search).get("sync") || localStorage.getItem("life-sync-id") || "";}catch(_){return "";}});
+  const [syncPassphrase, setSyncPassphrase] = useState(()=>{try{return sessionStorage.getItem("life-sync-passphrase") || "";}catch(_){return "";}});
+  const [syncStatus, setSyncStatus] = useState("local");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncLastAt, setSyncLastAt] = useState("");
+
   const [mob, setMob] = useState(typeof window!=="undefined"?window.innerWidth<768:false);
   useEffect(()=>{const h=()=>setMob(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
 
@@ -898,35 +932,92 @@ export default function App() {
     setMemoryHydrated(true);
   },[]);
 
-  // Unified long-term local memory. This snapshot is device-local and survives
-  // tab navigation, browser reloads and closing/reopening the app.
+  const buildMemorySnapshot = useCallback(() => ({
+    version: 3, updatedAt: Date.now(),
+    ui:{activeTab:tab,phdTab,snuTab,resumeTab,learnTab,ugcView},
+    journal:{entries,dailyPlans}, health:{log:healthLog}, office:{data:offData},
+    learning:{progress:learnProgress}, phd:{meetings:phdMeetings,tasks:phdTasks},
+    certs:{progress:certProgress,wrong:certWrong}, career:{appStatus},
+    shared:{pending:allPending},
+    ai:{phd:{q:phdAiQ,a:phdAiA},snu:{q:snuAiQ,a:snuAiA},health:{q:hAiQ,a:hAiA},coach:{q:cQ,a:cA}}
+  }),[tab,phdTab,snuTab,resumeTab,learnTab,ugcView,entries,dailyPlans,healthLog,offData,learnProgress,phdMeetings,phdTasks,certProgress,certWrong,appStatus,allPending,phdAiQ,phdAiA,snuAiQ,snuAiA,hAiQ,hAiA,cQ,cA]);
+
+  const applyMemorySnapshot = useCallback((mem) => {
+    if(!mem || typeof mem!=="object") return;
+    if(mem.journal){setEntries(mem.journal.entries||{});setDailyPlans(mem.journal.dailyPlans||{});}
+    if(mem.health){setHLog(mem.health.log||{}); const t=todayKey(); if(mem.health.log?.[t]) setHForm(f=>({...f,...mem.health.log[t]}));}
+    if(mem.office){setOffData(mem.office.data||{}); const t=todayKey(); const o=mem.office.data?.[t]||{}; setTickets(o.tickets||[]);setPending(o.pending||[]);setIdeas(o.ideas||[]);setOffNote(o.note||"");}
+    if(mem.learning) setLearnProgress(mem.learning.progress||{});
+    if(mem.phd){setPhdMeetings(mem.phd.meetings||[]);setPhdTasks(mem.phd.tasks||[]);}
+    if(mem.certs){setCertProgress(mem.certs.progress||{});setCertWrong(mem.certs.wrong||[]);}
+    if(mem.career) setAppStatus(mem.career.appStatus||{});
+    if(mem.shared) setAllPending(mem.shared.pending||[]);
+    if(mem.ui){if(mem.ui.phdTab)setPhdTab(mem.ui.phdTab);if(mem.ui.snuTab)setSnuTab(mem.ui.snuTab);if(mem.ui.resumeTab)setResumeTab(mem.ui.resumeTab);if(mem.ui.learnTab)setLearnTab(mem.ui.learnTab);if(mem.ui.ugcView)setUgcView(mem.ui.ugcView);}
+    if(mem.ai){if(mem.ai.phd){setPhdAiQ(mem.ai.phd.q||"");setPhdAiA(mem.ai.phd.a||"");}if(mem.ai.snu){setSnuAiQ(mem.ai.snu.q||"");setSnuAiA(mem.ai.snu.a||"");}if(mem.ai.health){setHAiQ(mem.ai.health.q||"");setHAiA(mem.ai.health.a||"");}if(mem.ai.coach){setCQ(mem.ai.coach.q||"");setCA(mem.ai.coach.a||"");}}
+  },[]);
+
+  const saveLocalMemory = useCallback((snapshot) => {
+    storeSet("life-memory-v3",JSON.stringify(snapshot));
+    storeSet("life-memory-v2",JSON.stringify(snapshot));
+  },[]);
+
+  const pushCloudMemory = useCallback(async (pass=syncPassphrase) => {
+    if(!syncId || !pass || pass.length<10) return false;
+    setSyncBusy(true); setSyncStatus("syncing");
+    try{
+      const encrypted=await encryptSyncSnapshot(buildMemorySnapshot(),pass);
+      const r=await fetch(`/api/sync?id=${encodeURIComponent(syncId)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(encrypted)});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||`Cloud sync failed (${r.status})`);
+      setSyncStatus("synced"); setSyncLastAt(new Date().toLocaleString("en-IN")); return true;
+    }catch(err){setSyncStatus("error");setSyncLastAt(err.message||"Sync error");return false;}
+    finally{setSyncBusy(false);}
+  },[syncId,syncPassphrase,buildMemorySnapshot]);
+
+  const pullCloudMemory = useCallback(async (pass=syncPassphrase, replaceLocal=true) => {
+    if(!syncId || !pass || pass.length<10) return false;
+    setSyncBusy(true); setSyncStatus("syncing");
+    try{
+      const r=await fetch(`/api/sync?id=${encodeURIComponent(syncId)}`,{cache:"no-store"});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||`Cloud download failed (${r.status})`);
+      const mem=await decryptSyncSnapshot(d.data,pass);
+      if(replaceLocal) applyMemorySnapshot(mem);
+      saveLocalMemory(mem);
+      setSyncStatus("synced"); setSyncLastAt(new Date().toLocaleString("en-IN")); return true;
+    }catch(err){setSyncStatus("error");setSyncLastAt(err.message||"Wrong passphrase or sync error");return false;}
+    finally{setSyncBusy(false);}
+  },[syncId,syncPassphrase,applyMemorySnapshot,saveLocalMemory]);
+
+  const createOrConnectSync = async (mode) => {
+    const pass=syncPassphrase.trim();
+    if(pass.length<10){setSyncStatus("error");setSyncLastAt("Use a passphrase of at least 10 characters.");return;}
+    let id=syncId;
+    if(!id){id=crypto.randomUUID().replace(/-/g,"");setSyncId(id);storeSet("life-sync-id",id);}
+    try{sessionStorage.setItem("life-sync-passphrase",pass);}catch(_){}
+    if(window.location.search!==`?sync=${encodeURIComponent(id)}`) history.replaceState({}, "", `?sync=${encodeURIComponent(id)}`);
+    if(mode==="download") await pullCloudMemory(pass);
+    else await pushCloudMemory(pass);
+  };
+
+  // Save locally first, then automatically mirror to cloud when connected.
   useEffect(()=>{
-    if (!memoryHydrated) return;
-    storeSet("life-memory-v2", JSON.stringify({
-      version: 2,
-      updatedAt: Date.now(),
-      ui: {activeTab:tab, phdTab, snuTab, resumeTab, learnTab, ugcView},
-      journal: {entries, dailyPlans},
-      health: {log:healthLog},
-      office: {data:offData},
-      learning: {progress:learnProgress},
-      phd: {meetings:phdMeetings, tasks:phdTasks},
-      certs: {progress:certProgress, wrong:certWrong},
-      career: {appStatus},
-      shared: {pending:allPending},
-      ai: {
-        phd:{q:phdAiQ,a:phdAiA},
-        snu:{q:snuAiQ,a:snuAiA},
-        health:{q:hAiQ,a:hAiA},
-        coach:{q:cQ,a:cA}
-      }
-    }));
-  },[
-    memoryHydrated,tab,phdTab,snuTab,resumeTab,learnTab,ugcView,
-    entries,dailyPlans,healthLog,offData,learnProgress,phdMeetings,phdTasks,
-    certProgress,certWrong,appStatus,allPending,phdAiQ,phdAiA,snuAiQ,snuAiA,
-    hAiQ,hAiA,cQ,cA
-  ]);
+    if(!memoryHydrated) return;
+    const snapshot=buildMemorySnapshot();
+    saveLocalMemory(snapshot);
+    if(!syncId || syncPassphrase.length<10) return;
+    const t=setTimeout(()=>pushCloudMemory(syncPassphrase),2500);
+    return ()=>clearTimeout(t);
+  },[memoryHydrated,buildMemorySnapshot,syncId,syncPassphrase,pushCloudMemory,saveLocalMemory]);
+
+  // If a sync link + passphrase already exist in this browser session, restore cloud state.
+  useEffect(()=>{
+    if(!memoryHydrated || !syncId || syncPassphrase.length<10) return;
+    const key="life-sync-pulled-"+syncId;
+    if(storeGet(key)==="1") return;
+    pullCloudMemory(syncPassphrase,true).then(ok=>{if(ok)storeSet(key,"1");});
+  },[memoryHydrated,syncId,syncPassphrase,pullCloudMemory]);
+
 
   useEffect(()=>{const e=entries[selDay]||{};setDNote(e.note||"");setDRem(e.reminder||"");setDMood(e.mood||"3");setJSaved(false);},[selDay,entries]);
 
@@ -1285,6 +1376,14 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
               </button>
             </div>
           </div>
+        </div>
+        <div style={{padding:"8px 20px",background:P.card,borderBottom:`1px solid ${P.border}`,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,fontWeight:800,color:syncStatus==="synced"?P.a2:syncStatus==="error"?P.a5:P.muted}}>☁️ {syncStatus==="synced"?"Cloud memory synced":syncStatus==="syncing"?"Syncing…":syncStatus==="error"?"Cloud sync needs attention":"Local memory"}</span>
+          <input value={syncPassphrase} onChange={e=>setSyncPassphrase(e.target.value)} type="password" placeholder="Cloud passphrase (10+ chars)" style={{background:P.card3,border:`1px solid ${P.border}`,borderRadius:7,padding:"6px 9px",color:P.text,fontSize:11,minWidth:190}}/>
+          <button onClick={()=>createOrConnectSync("upload")} disabled={syncBusy} style={{...S.btn(P.a2),padding:"6px 10px",fontSize:10}}>{syncBusy?"…":"☁️ Save / Sync"}</button>
+          <button onClick={()=>createOrConnectSync("download")} disabled={syncBusy||!syncId} style={{...S.btn(P.a1),padding:"6px 10px",fontSize:10}}>↥ Restore</button>
+          {syncId&&<button onClick={()=>{navigator.clipboard?.writeText(`${window.location.origin}/?sync=${syncId}`);setSyncLastAt("Link copied");}} style={{...S.btn(P.a4),padding:"6px 10px",fontSize:10}}>🔗 Copy Device Link</button>}
+          <span style={{fontSize:10,color:P.muted}}>{syncLastAt || (syncId?"Same encrypted cloud memory can be opened on any device.":"Create a cloud memory link with Save / Sync.")}</span>
         </div>
         <div style={S.nav}>{navItems.map(([id,em,lb])=><button key={id} style={S.nB(tab===id)} onClick={()=>setTab(id)}>{em} {lb}</button>)}</div>
 

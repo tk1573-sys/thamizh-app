@@ -74,7 +74,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
   const [shake, setShake]   = useState(false);
   const [msg, setMsg]       = useState("");
 
-  const SK = "pin_hash_" + storeKey;\n  const SK_LEN = SK + "_length";
+  const SK = "pin_hash_" + storeKey;
 
   useEffect(() => {
     try {
@@ -100,7 +100,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
     if (phase !== "setup2" || pin2.length < pin1.length) return;
     const t = setTimeout(() => {
       if (pin2 === pin1) {
-        try { sessionStorage.setItem(SK, hashPin(pin1)); sessionStorage.setItem(SK_LEN, String(pin1.length)); } catch(_) {}
+        try { sessionStorage.setItem(SK, hashPin(pin1)); } catch(_) {}
         setMsg(""); setPhase("open");
       } else {
         doShake("PINs don't match — try again");
@@ -113,10 +113,6 @@ function PinGate({ label, color, icon, storeKey, children }) {
   // Unlock: check entry against stored hash
   useEffect(() => {
     if (phase !== "locked" || entry.length < 4) return;
-    let requiredLength = 4;
-    try { requiredLength = Number(sessionStorage.getItem(SK_LEN) || "4"); } catch(_) {}
-    if (!Number.isInteger(requiredLength) || requiredLength < 4 || requiredLength > 6) requiredLength = 4;
-    if (entry.length !== requiredLength) return;
     const t = setTimeout(() => {
       try {
         const stored = sessionStorage.getItem(SK);
@@ -129,7 +125,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
       } catch(_) { setEntry(""); }
     }, 200);
     return () => clearTimeout(t);
-  }, [entry, phase, SK, SK_LEN]);
+  }, [entry, phase, SK]);
 
   const addDigit = (d) => {
     if (phase === "setup1" && pin1.length < 6) setPin1(p => p+d);
@@ -142,7 +138,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
     if (phase === "locked") setEntry(p => p.slice(0,-1));
   };
   const resetPin = () => {
-    try { sessionStorage.removeItem(SK); sessionStorage.removeItem(SK_LEN); } catch(_) {}
+    try { sessionStorage.removeItem(SK); } catch(_) {}
     setPin1(""); setPin2(""); setEntry(""); setPhase("setup1"); setMsg("");
   };
 
@@ -538,7 +534,7 @@ function escHtml(str="") {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const VALID_APP_TABS = new Set(["now","jobs","radar","monthly","career","skills","learn","ugc","phd","snu","office","health","journal","resume","certs","govt","buddy","coach"]);\n  const [tab, setTab]       = useState(() => { try { const q = new URLSearchParams(window.location.search).get("tab"); return VALID_APP_TABS.has(q) ? q : "now"; } catch(_) { return "now"; } });
+  const [tab, setTab]       = useState("now");
   const [monthIdx, setMonth]= useState(() => Math.max(0, monthPlan.findIndex(month => month.month === currentMonthLabel())));
   const [pillar, setPillar] = useState("job");
   const [careerIdx, setCareer] = useState(0);
@@ -1415,7 +1411,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               ))}
               <div style={{...S.ib(P.a5)}}>
                 <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:5}}>⚠️ CRITICAL — UGC NET CS December 2026</div>
-                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","Do not rely on an old cutoff figure; use the official NTA category-wise cutoff for the relevant cycle.","Registration date: not asserted here until the official NTA notice is published.","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
+                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","SC cutoff approximately 56% — aim 65%+ for safe margin","Registration opens September 2026 — set phone reminder NOW","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
                   <div key={i} style={{...S.li(i===arr.length-1),fontSize:11}}><span style={{color:P.a5}}>›</span><span>{p}</span></div>
                 ))}
               </div>
@@ -1804,8 +1800,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           {tab==="ugc"&&<div>
             <div style={S.h2}>📋 UGC NET CS — December 2026</div>
             <div style={{...S.ib(P.a2),marginBottom:14}}>
-              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Target: 100+/150 (personal study target) · Verify the official NTA cycle notice for final schedule and cut-offs</div>
-              <div style={{fontSize:12,color:P.muted}}>Current status: monitor NTA for the December 2026 cycle; this dashboard does not assert a registration date until an official notice confirms it.</div>
+              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Exam: December 2026 · SC cutoff ~56% = ~84/150 · Your target: 100+/150</div>
+              <div style={{fontSize:12,color:P.muted}}>Registration: September–October 2026 window · Watch ugcnet.nta.ac.in · Set calendar reminder NOW</div>
             </div>
             <div style={{...S.CA(P.a2),marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:6}}>
@@ -1828,7 +1824,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:11,color:P.a2}}>📚 {s.resource}</div>
               </div>))}
               <div style={{...S.ib(P.a4)}}><div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:4}}>⚡ The daily habit that wins UGC NET</div><div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>8:00–9:00 PM every night without exception. 20 MCQs = 20 minutes. Review wrong answers = 20 minutes. Note weak topic = 10 minutes. 6 months × 30 days × 20 MCQs = 3,600 problems solved. That is how SC candidates clear it.</div></div>
-              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>Registration dates can change. Check the official NTA notice board and UGC-NET portal for the December 2026 cycle before acting on any third-party date.</div></div>
+              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>UGC NET Dec 2026 registration window typically opens September–October. Missing it means waiting until June 2027. Set a phone reminder for September 1st to check ugcnet.nta.ac.in daily.</div></div>
             </div>}
             {ugcView==="p2"&&ugcPaper2.map((u,i)=>(<div key={i} style={{...S.CA(P.a2),marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:8}}><div style={{fontSize:14,fontWeight:700,color:P.text}}>{u.unit}</div><span style={S.chip(P.a2)}>{u.weight}</span></div>

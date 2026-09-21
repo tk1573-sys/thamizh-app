@@ -1369,7 +1369,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
               ))}
               <div style={{...S.ib(P.a5)}}>
                 <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:5}}>⚠️ CRITICAL — UGC NET CS December 2026</div>
-                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","SC cutoff approximately 56% — aim 65%+ for safe margin","Registration opens September 2026 — set phone reminder NOW","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
+                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","Official cut-offs are category-, subject- and cycle-specific; check the final NTA result/cut-off notice.","No registration date is asserted here until NTA publishes the official December 2026 cycle notice","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
                   <div key={i} style={{...S.li(i===arr.length-1),fontSize:11}}><span style={{color:P.a5}}>›</span><span>{p}</span></div>
                 ))}
               </div>
@@ -1779,15 +1779,15 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
                 <div style={{fontSize:12,color:P.muted,marginBottom:4}}>{s.daily}</div>
                 <div style={{fontSize:11,color:P.a2}}>📚 {s.resource}</div>
               </div>))}
-              <div style={{...S.ib(P.a4)}}><div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:4}}>⚡ The daily habit that wins UGC NET</div><div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>8:00–9:00 PM every night without exception. 20 MCQs = 20 minutes. Review wrong answers = 20 minutes. Note weak topic = 10 minutes. 6 months × 30 days × 20 MCQs = 3,600 problems solved. That is how SC candidates clear it.</div></div>
-              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>UGC NET Dec 2026 registration window typically opens September–October. Missing it means waiting until June 2027. Set a phone reminder for September 1st to check ugcnet.nta.ac.in daily.</div></div>
+              <div style={{...S.ib(P.a4)}}><div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:4}}>⚡ The daily habit that wins UGC NET</div><div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>Use a sustainable daily MCQ block: 15–20 questions, review every wrong answer, and keep a weak-topic list. The app's offline question bank works even when Gemini is unavailable.</div></div>
+              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>NTA has not been given a fixed registration date in this app. Check the official NTA notice board for the December 2026 cycle and do not rely on a typical-window estimate.</div></div>
             </div>}
             {ugcView==="p2"&&ugcPaper2.map((u,i)=>(<div key={i} style={{...S.CA(P.a2),marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:8}}><div style={{fontSize:14,fontWeight:700,color:P.text}}>{u.unit}</div><span style={S.chip(P.a2)}>{u.weight}</span></div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{u.topics.map((tp,j)=><span key={j} style={{background:`${P.bg}88`,border:`1px solid ${P.border}`,borderRadius:6,padding:"3px 9px",fontSize:12,color:P.sub}}>{tp}</span>)}</div>
             </div>))}
             {ugcView==="p1"&&<div>
-              <div style={{...S.ib(P.a3),marginBottom:14}}><div style={{fontSize:12,color:P.a3,fontWeight:700,marginBottom:3}}>Paper 1: 50 marks · 50 questions · General Teaching & Research Aptitude</div><div style={{fontSize:12,color:P.muted}}>Do not neglect Paper 1. Aim 35+/50. SC cutoff for Paper 1 alone can disqualify you.</div></div>
+              <div style={{...S.ib(P.a3),marginBottom:14}}><div style={{fontSize:12,color:P.a3,fontWeight:700,marginBottom:3}}>Paper 1: 50 marks · 50 questions · General Teaching & Research Aptitude</div><div style={{fontSize:12,color:P.muted}}>Do not neglect Paper 1. Aim 35+/50. Use 35+/50 as a personal practice target; official cut-offs are category-, subject- and cycle-specific.</div></div>
               {ugcPaper1.map((u,i)=>(<div key={i} style={{...S.C(),marginBottom:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:6}}><div style={{fontSize:13,fontWeight:700,color:P.text}}>{u.unit}</div><span style={S.chip(P.a3)}>{u.weight}</span></div><div style={{fontSize:12,color:P.muted,lineHeight:1.5}}>{u.tips}</div></div>))}
             </div>}
             {ugcView==="res"&&[

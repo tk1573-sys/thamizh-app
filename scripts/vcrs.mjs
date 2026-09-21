@@ -2,6 +2,7 @@ import fs from "node:fs";
 import process from "node:process";
 
 const app = fs.readFileSync("src/App.jsx", "utf8");
+const sync = fs.readFileSync("api/sync.js", "utf8");
 const vite = fs.readFileSync("vite.config.js", "utf8");
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 

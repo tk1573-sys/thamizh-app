@@ -401,14 +401,117 @@ const govtJobs = [
   { org:"TNPSC", role:"Group 1/2 Technical / AE", physical:"None for technical posts", timing:"tnpsc.gov.in – watch state-level notifications", color:P.a5, icon:"🏛️" },
 ];
 
-const certList = [
-  { cert:"Microsoft GitHub Copilot Certification", status:"✅ Completed", when:"Completed", color:P.a2, tip:"Completed. Keep the credential visible on LinkedIn and use it as supporting evidence for AI-assisted development skills." },
-  { cert:"AWS Certified Data Engineer – Associate", status:"🟡 Coupon received · exam not scheduled", when:"20-day sprint", color:P.a2, tip:"Priority exam. Prepare with the official AWS DEA exam guide, data engineering services, ETL/data pipelines, storage, analytics, security and practice questions. Schedule within the 20-day sprint when mock performance is ready." },
-  { cert:"Snowflake SnowPro Core", status:"🟡 Coupon received · preparation underway", when:"20-day sprint", color:P.a3, tip:"Finish Snowflake fundamentals, architecture, virtual warehouses, storage, data loading, security, performance and practice tests. Complete required bootcamp/practice work and schedule the exam." },
-  { cert:"Databricks Certified Data Engineer Associate", status:"🟡 ILT attended · prerequisites/tasks remaining", when:"20-day sprint", color:P.a4, tip:"Complete Databricks Fundamentals and all required learning/tasks first. Then obtain the voucher and schedule the Data Engineer Associate exam." },
-  { cert:"Claude Architect Foundations", status:"🟡 Registered · exam not scheduled", when:"20-day sprint", color:P.a5, tip:"Prepare around architecture fundamentals, Claude/API concepts, prompt design, tool use, safety, context management, evaluation and production patterns. Use Anthropic's official documentation as the source of truth." },
-  { cert:"Claude Architect Professional", status:"🟡 Registered · exam not scheduled", when:"20-day sprint", color:P.a5, tip:"Advanced architecture preparation: production system design, agentic workflows, tool orchestration, reliability, security, evaluation, cost/latency trade-offs and deployment patterns. Schedule after Foundations preparation is solid." },
-  { cert:"Databricks Generative AI Engineer", status:"🟡 Active learning / certification track", when:"Continue sprint", color:P.a4, tip:"Continue the GenAI Engineer learning track alongside DEA preparation: RAG, vector search, model serving, evaluation, governance and production GenAI workflows." },
+const certificationTracks = [
+  {id:"aws-dea",name:"AWS Certified Data Engineer – Associate",short:"AWS DEA",provider:"AWS",examCode:"DEA-C01",status:"active",color:P.a2,priority:"P1",voucher:"Coupon received",examDate:"",
+   guide:"https://docs.aws.amazon.com/pdfs/aws-certification/latest/data-engineer-associate-01/data-engineer-associate-01.pdf",resource:"https://aws.amazon.com/certification/certified-data-engineer-associate/",
+   summary:"Prepare across ingestion, transformation, data stores, operations, security and governance.",
+   modules:[
+    {id:"ingest",title:"Data Ingestion & Transformation",weight:"34%",topics:["Kinesis","Glue","Lambda","EMR","DMS","Step Functions","ETL patterns"],lab:"Build an ETL pipeline: ingest CSV/JSON, transform with Spark/Python, and write partitioned Parquet."},
+    {id:"stores",title:"Data Store Management",weight:"26%",topics:["S3","Redshift","DynamoDB","RDS","OpenSearch","partitioning","formats"],lab:"Design an S3 + Glue Catalog + Athena lake and explain when Redshift or DynamoDB fits."},
+    {id:"ops",title:"Data Operations & Support",weight:"22%",topics:["CloudWatch","EventBridge","orchestration","monitoring","quality","retries","cost"],lab:"Create a failed-pipeline runbook covering retry, alerting, replay and data-quality checks."},
+    {id:"security",title:"Security & Governance",weight:"18%",topics:["IAM","KMS","Lake Formation","VPC","least privilege","audit"],lab:"Write a least-privilege IAM design for a pipeline that reads S3 and writes analytics data."}
+   ],
+   questions:[
+    {q:"Which S3 design best supports analytics over large historical datasets?",o:["One giant CSV","Partitioned columnar files such as Parquet","Only DynamoDB","Only Lambda logs"],a:1,e:"Partitioned columnar data reduces scanned data and improves analytical query efficiency."},
+    {q:"Which service provides serverless SQL querying of data in S3?",o:["Athena","SQS","Route 53","SNS"],a:0,e:"Athena runs SQL directly against supported data in S3."},
+    {q:"What is the core least-privilege principle?",o:["AdministratorAccess everywhere","Only required actions on required resources","Disable encryption","Share one IAM user"],a:1,e:"Least privilege limits permissions to what the workload actually needs."},
+    {q:"Which service commonly orchestrates multi-step AWS workflows?",o:["Step Functions","CloudFront","Route 53","WAF"],a:0,e:"Step Functions coordinates stateful workflows and service integrations."},
+    {q:"A pipeline partially writes output before failing. What should you design for?",o:["No retries","Idempotency and safe replay","Manual editing only","No monitoring"],a:1,e:"Idempotent stages and replay-safe writes help recover without corrupting data."}
+   ]},
+  {id:"snowpro-core",name:"SnowPro Core",short:"SnowPro Core",provider:"Snowflake",examCode:"COF-C03",status:"active",color:P.a3,priority:"P2",voucher:"Coupon received",examDate:"",
+   guide:"https://learn.snowflake.com/en/certifications/snowpro-core-kor-C03",resource:"https://learn.snowflake.com/",
+   summary:"Master Snowflake architecture, virtual warehouses, loading, security, performance and account concepts.",
+   modules:[
+    {id:"arch",title:"Architecture & Storage",weight:"Core",topics:["micro-partitions","metadata","clustering","storage/compute","Time Travel"],lab:"Explain a query path from SQL to virtual warehouse to micro-partitions and metadata pruning."},
+    {id:"compute",title:"Virtual Warehouses & Performance",weight:"Core",topics:["warehouse sizing","auto-suspend","multi-cluster","caching","query profile"],lab:"Compare warehouse sizing and auto-suspend for ETL versus interactive BI."},
+    {id:"load",title:"Data Loading & Transformation",weight:"Core",topics:["stages","COPY INTO","Snowpipe","file formats","streams","tasks","dynamic tables"],lab:"Design an incremental cloud-storage ingestion flow and explain transformation choices."},
+    {id:"security",title:"Security & Governance",weight:"Core",topics:["RBAC","roles","grants","network policies","masking","row access"],lab:"Create least-privilege role hierarchy for analyst, engineer and data-admin access."},
+    {id:"share",title:"Data Sharing & Operations",weight:"Core",topics:["Secure Data Sharing","Marketplace","replication","monitoring","resource monitors"],lab:"Design governed data sharing without copying provider data into a consumer account."}
+   ],
+   questions:[
+    {q:"What does Snowflake's architecture separate?",o:["Storage and compute","Users and SQL","Tables and columns","Indexes and keys"],a:0,e:"Snowflake separates storage from compute so virtual warehouses can scale independently."},
+    {q:"What is a virtual warehouse?",o:["A logical compute cluster","A file format","A database role","A storage bucket"],a:0,e:"A virtual warehouse supplies compute resources for queries and DML."},
+    {q:"What is RBAC primarily used for?",o:["Role-based access control","Row-based backup copies","Randomized compression","Resource billing allocation"],a:0,e:"RBAC assigns privileges to roles and roles to users."},
+    {q:"What helps Snowflake skip irrelevant micro-partitions?",o:["Metadata pruning","Disabling statistics","Using only CSV","Removing clustering information"],a:0,e:"Micro-partition metadata enables pruning."},
+    {q:"Which feature supports continuous loading from cloud storage?",o:["Snowpipe","Time Travel","Secure Data Sharing","Resource Monitor"],a:0,e:"Snowpipe is designed for continuous micro-batch loading."}
+   ]},
+  {id:"dbx-dea",name:"Databricks Certified Data Engineer Associate",short:"Databricks DEA",provider:"Databricks",examCode:"Data Engineer Associate",status:"active",color:P.a4,priority:"P3",voucher:"Prerequisites/tasks remaining",examDate:"",
+   guide:"https://www.databricks.com/sites/default/files/2026-03/databricks-certified-data-engineer-associate-exam-guide-may-4-2026.pdf",resource:"https://www.databricks.com/learn/certification/data-engineer-associate",
+   summary:"Prepare on Lakeflow, Spark/PySpark, Delta Lake, Unity Catalog, jobs, pipelines, CI/CD and troubleshooting.",
+   modules:[
+    {id:"lakeflow",title:"Lakeflow & Ingestion",weight:"Core",topics:["Lakeflow Connect","Auto Loader","schema evolution","medallion"],lab:"Ingest changing JSON/CSV data into a medallion pipeline and document schema-evolution choices."},
+    {id:"spark",title:"Spark & PySpark",weight:"Core",topics:["DataFrames","select","filter","join","groupBy","window","Spark SQL"],lab:"Write a PySpark transformation that joins data, handles nulls and produces an aggregate."},
+    {id:"delta",title:"Delta Lake & Tables",weight:"Core",topics:["ACID","MERGE","OPTIMIZE","VACUUM","time travel","partitioning"],lab:"Build an incremental Delta MERGE and explain how you would troubleshoot slow reads."},
+    {id:"catalog",title:"Unity Catalog & Governance",weight:"Core",topics:["catalog/schema/table","grants","external locations","lineage"],lab:"Design Unity Catalog dev/test/prod access with least privilege."},
+    {id:"jobs",title:"Jobs, Pipelines & CI/CD",weight:"Core",topics:["Lakeflow Jobs","Declarative Pipelines","parameters","triggers","Git","deployment"],lab:"Create a job runbook with parameters, retries, alerts and a Git-based deployment flow."}
+   ],
+   questions:[
+    {q:"What is a main purpose of Delta Lake?",o:["ACID transactions and reliable data lakes","Replacing Python","Only storing images","Managing DNS"],a:0,e:"Delta Lake adds transactional reliability and table-management capabilities to data lakes."},
+    {q:"Which PySpark object represents distributed tabular data?",o:["DataFrame","String","List only","Boolean"],a:0,e:"A Spark DataFrame is a distributed collection organized into named columns."},
+    {q:"What does MERGE commonly enable?",o:["Upsert-style changes","DNS routing","UI rendering","Notebook authentication"],a:0,e:"MERGE can match source and target rows to insert, update or delete records."},
+    {q:"What is Unity Catalog primarily for?",o:["Centralized governance and access control","Replacing Spark","Sending email","GPU tuning"],a:0,e:"Unity Catalog provides governance, permissions, discovery and lineage."},
+    {q:"A production job intermittently fails. What should you inspect first?",o:["Logs, dependencies, inputs and runtime details","Only the UI theme","Only the notebook title","Delete the job"],a:0,e:"Troubleshooting starts with observable failure context."}
+   ]},
+  {id:"claude-foundations",name:"Claude Architect Foundations",short:"Claude Foundations",provider:"Anthropic",examCode:"Architect Foundations",status:"active",color:P.a5,priority:"P4",voucher:"Registered",examDate:"",
+   guide:"https://www.anthropic.com/learn",resource:"https://docs.anthropic.com/",
+   summary:"Learn production LLM architecture: prompting, context, tools, safety, evaluation and reliable application patterns.",
+   modules:[
+    {id:"llm",title:"LLM & Claude Fundamentals",weight:"Core",topics:["model capabilities","tokens","context","multimodal input","latency/cost"],lab:"For one task, write a model-selection rationale covering quality, latency, context and cost."},
+    {id:"prompt",title:"Prompt Engineering",weight:"Core",topics:["clear instructions","examples","structured output","system vs user"],lab:"Create a prompt with role, context, constraints, examples and a machine-readable output contract."},
+    {id:"context",title:"Context Management",weight:"Core",topics:["context windows","state","summarization","retrieval","caching"],lab:"Design a long-running assistant without blindly replaying the entire conversation."},
+    {id:"tools",title:"Tool Use & Agents",weight:"Core",topics:["tool schemas","validation","orchestration","approval","failure handling"],lab:"Design three safe tools for a data assistant with explicit inputs, outputs and approval boundaries."},
+    {id:"safety",title:"Safety & Evaluation",weight:"Core",topics:["guardrails","prompt injection","privacy","grounding","evaluation"],lab:"Create a small evaluation set with expected answers, safety cases and failure categories."}
+   ],
+   questions:[
+    {q:"Why use retrieval in an LLM application?",o:["Ground generation in relevant external information","Guarantee perfect answers","Remove all latency","Eliminate evaluation"],a:0,e:"Retrieval supplies relevant external context and reduces reliance on model memory."},
+    {q:"What should a tool schema communicate?",o:["Name, purpose and input structure","Only a logo","A password","Hidden API keys"],a:0,e:"A clear schema tells the runtime and model what the tool does and accepts."},
+    {q:"Why validate tool arguments server-side?",o:["Model output can be incorrect or unsafe","It makes tokens free","It removes authorization","It prevents every bug"],a:0,e:"Tool calls are model-generated and must be validated and authorized."},
+    {q:"What is prompt injection?",o:["Untrusted content attempting to override intended instructions","A database index","A GPU driver","A compression format"],a:0,e:"Prompt injection attempts to manipulate an AI system through untrusted input."},
+    {q:"A useful evaluation set should contain:",o:["Representative tasks and expected behaviors","Only easy examples","One prompt","No failure cases"],a:0,e:"Representative cases make regressions and failure modes measurable."}
+   ]},
+  {id:"claude-professional",name:"Claude Architect Professional",short:"Claude Professional",provider:"Anthropic",examCode:"Architect Professional",status:"active",color:P.a5,priority:"P5",voucher:"Registered",examDate:"",
+   guide:"https://www.anthropic.com/learn",resource:"https://docs.anthropic.com/",
+   summary:"Advanced architecture practice: agents, reliability, security, evaluation, observability and production trade-offs.",
+   modules:[
+    {id:"architecture",title:"Production Architecture",weight:"Advanced",topics:["service boundaries","state","queues","retrieval","caching","failure isolation"],lab:"Draw a production AI architecture with API, model gateway, retrieval, tools, audit log and observability."},
+    {id:"agents",title:"Agentic Workflows",weight:"Advanced",topics:["planning","orchestration","delegation","human-in-loop","termination"],lab:"Design an agent workflow with explicit permissions, stop conditions and approval for risky actions."},
+    {id:"reliability",title:"Reliability & Evaluation",weight:"Advanced",topics:["offline evals","online monitoring","regression sets","fallbacks","quality gates"],lab:"Define an evaluation matrix for accuracy, groundedness, safety, latency and cost."},
+    {id:"security",title:"Security & Governance",weight:"Advanced",topics:["secrets","authorization","tenant isolation","PII","auditability"],lab:"Threat-model a multi-tenant AI assistant and list preventive, detective and recovery controls."},
+    {id:"economics",title:"Cost, Latency & Operations",weight:"Advanced",topics:["token budgets","caching","batching","routing","SLOs","observability"],lab:"Optimize a hypothetical workload while preserving quality and a defined latency SLO."}
+   ],
+   questions:[
+    {q:"What is an important control for high-impact tool actions?",o:["Human approval or policy enforcement","Allow every call automatically","Hide logs","Use the largest model only"],a:0,e:"Sensitive actions should be constrained by authorization and appropriate approval."},
+    {q:"Why use model routing?",o:["Match workload needs to cost/quality/latency","Make all models identical","Remove monitoring","Avoid authentication"],a:0,e:"Routing can send tasks to different models based on workload requirements."},
+    {q:"What does tenant isolation protect?",o:["One customer's data and permissions from another's","Only UI colors","CPU temperature","Prompt length"],a:0,e:"Multi-tenant systems need data and permission isolation."},
+    {q:"Which is an online reliability signal?",o:["Production latency and error rate","A static README","A favorite prompt","A deleted log"],a:0,e:"Operational telemetry helps detect production regressions."},
+    {q:"What prevents runaway agent execution?",o:["Explicit budgets and termination conditions","Unlimited calls","More agents without limits","No tracing"],a:0,e:"Budgets, maximum steps and termination rules bound execution."}
+   ]},
+  {id:"dbx-genai",name:"Databricks Generative AI Engineer",short:"Databricks GenAI",provider:"Databricks",examCode:"GenAI Engineer",status:"active",color:P.a4,priority:"P6",voucher:"Learning track",examDate:"",
+   guide:"https://www.databricks.com/learn/certification",resource:"https://www.databricks.com/learn/training",
+   summary:"Build production GenAI systems with retrieval, vector search, model serving, evaluation and governance.",
+   modules:[
+    {id:"rag",title:"RAG & Retrieval",weight:"Core",topics:["chunking","embeddings","retrieval","reranking","grounding"],lab:"Build a document RAG pipeline and evaluate retrieval separately from generation."},
+    {id:"vector",title:"Vector Search & Data",weight:"Core",topics:["vector indexes","metadata filters","sync","document pipelines","Delta"],lab:"Design a governed vector index with tenant/domain metadata filters."},
+    {id:"serve",title:"Model Serving & Application",weight:"Core",topics:["serving endpoints","authentication","rate limits","latency","streaming"],lab:"Define a serving architecture with authentication, rate limits, observability and rollback."},
+    {id:"eval",title:"Evaluation & Quality",weight:"Core",topics:["groundedness","relevance","golden sets","LLM judges","human review"],lab:"Create a 20-case evaluation set and score retrieval relevance and answer groundedness."},
+    {id:"govern",title:"Governance & Production",weight:"Core",topics:["Unity Catalog","permissions","lineage","PII","monitoring","cost"],lab:"Threat-model a RAG app and document data access, audit, monitoring and cost controls."}
+   ],
+   questions:[
+    {q:"What is the main role of embeddings in RAG?",o:["Represent content as vectors for semantic retrieval","Generate passwords","Replace the database","Encrypt traffic"],a:0,e:"Embeddings represent content numerically so semantically similar items can be retrieved."},
+    {q:"Why evaluate retrieval separately from generation?",o:["A bad retriever can provide bad context","It makes prompts shorter","It removes test data","It guarantees factuality"],a:0,e:"Separating stages identifies whether failures originate in retrieval or generation."},
+    {q:"Why add metadata filters to vector search?",o:["Restrict retrieval to authorized or relevant subsets","Increase randomness","Disable governance","Remove embeddings"],a:0,e:"Filters can enforce scope such as tenant, department or document type."},
+    {q:"What is a golden evaluation set?",o:["Curated representative cases for repeatable evaluation","A password","A billing export","Random prompts"],a:0,e:"Curated cases provide a stable baseline for comparing changes."},
+    {q:"What should a production GenAI service monitor?",o:["Quality, latency, errors, usage and cost","Only CPU temperature","Only model name","Nothing"],a:0,e:"Production monitoring needs operational and quality signals."}
+   ]},
+  {id:"github-copilot",name:"Microsoft GitHub Copilot Certification",short:"GitHub Copilot",provider:"Microsoft",examCode:"Completed",status:"completed",color:P.a2,priority:"Done",voucher:"Completed",examDate:"",
+   guide:"https://learn.microsoft.com/credentials/certifications/",resource:"https://docs.github.com/en/copilot",summary:"Completed. Keep the credential visible and use it as evidence of AI-assisted development knowledge.",modules:[]}
+];
+
+const futureCertifications = [
+ {id:"aws-mla-c02",name:"AWS Certified Machine Learning Engineer – Associate",code:"MLA-C02",note:"Next cloud/ML option after the current DEA sprint. Verify the current exam guide and availability before scheduling.",url:"https://aws.amazon.com/certification/certified-machine-learning-engineer-associate/"},
+ {id:"aws-genai-pro",name:"AWS Certified Generative AI Developer – Professional",code:"AIP-C01",note:"Longer-term production GenAI certification covering RAG, agents, security, evaluation, monitoring and enterprise integration.",url:"https://aws.amazon.com/certification/certified-generative-ai-developer-professional/"},
+ {id:"dbx-de-pro",name:"Databricks Certified Data Engineer Professional",code:"Data Engineer Professional",note:"Progression after Associate once Spark, Lakeflow, Delta, governance and production troubleshooting are strong.",url:"https://www.databricks.com/learn/certification"},
+ {id:"snow-advanced",name:"SnowPro Advanced",code:"Advanced",note:"Consider after SnowPro Core and practical Snowflake project experience.",url:"https://learn.snowflake.com/en/certifications/"}
 ];
 
 const offlineQuestionBank = {
@@ -656,6 +759,12 @@ export default function App() {
   const [certStudyA, setCertStudyA]       = useState("");
   const [certStudyLoad, setCertStudyLoad] = useState(false);
   const [certTab, setCertTab]             = useState("roadmap");
+  const [certView, setCertView]             = useState("command");
+  const [selectedCertId, setSelectedCertId] = useState("aws-dea");
+  const [certProgress, setCertProgress]     = useState({});
+  const [certWrong, setCertWrong]           = useState([]);
+  const [mockState, setMockState]           = useState(null);
+  const [mockScore, setMockScore]           = useState(null);
 
   // Resume & ATS
   const [resumeTab, setResumeTab] = useState("builder");
@@ -697,6 +806,8 @@ export default function App() {
     setPhdTasks(storeJsonGet("phd-tasks", []));
     setAllPending(storeJsonGet("all-pending", []));
     setAppStatus(storeJsonGet("app-status", {}));
+    setCertProgress(storeJsonGet("cert-progress", {}));
+    setCertWrong(storeJsonGet("cert-wrong", []));
   },[]);
 
   useEffect(()=>{const e=entries[selDay]||{};setDNote(e.note||"");setDRem(e.reminder||"");setDMood(e.mood||"3");setJSaved(false);},[selDay,entries]);
@@ -759,7 +870,52 @@ export default function App() {
     const updated = {...learnProgress};
     if(updated[trackKey]) { delete updated[trackKey][itemKey]; }
     saveLearnProgress(updated);
+  };  const unmarkDone = (trackKey, itemKey) => {
+    const updated = {...learnProgress};
+    if(updated[trackKey]) { delete updated[trackKey][itemKey]; }
+    saveLearnProgress(updated);
   };
+  const certState = id => certProgress[id] || {modules:{},scores:{knowledge:0,handsOn:0,recall:0,application:0,examTechnique:0},studyMinutes:0,examDate:""};
+  const saveCertProgress = updated => { setCertProgress(updated); storeSet("cert-progress", JSON.stringify(updated)); };
+  const toggleCertModule = (certId,moduleId) => {
+    const s=certState(certId), modules={...(s.modules||{}),[moduleId]:!(s.modules||{})[moduleId]};
+    saveCertProgress({...certProgress,[certId]:{...s,modules}});
+  };
+  const setCertScore = (certId,key,value) => {
+    const s=certState(certId), scores={...(s.scores||{}),[key]:Math.max(0,Math.min(100,Number(value)||0))};
+    saveCertProgress({...certProgress,[certId]:{...s,scores}});
+  };
+  const setCertExamDate = (certId,value) => {
+    const s=certState(certId);
+    saveCertProgress({...certProgress,[certId]:{...s,examDate:value}});
+  };
+  const readiness = cert => {
+    const s=certState(cert.id), scores=s.scores||{};
+    const manual=["knowledge","handsOn","recall","application","examTechnique"].reduce((n,k)=>n+(Number(scores[k])||0),0)/5;
+    const mods=cert.modules?.length ? cert.modules.filter(m=>s.modules?.[m.id]).length/cert.modules.length*100 : (cert.status==="completed"?100:0);
+    return Math.round(manual*0.7+mods*0.3);
+  };
+  const addWrongAnswer = item => {
+    const next=[{...item,id:Date.now().toString(),ts:Date.now()},...certWrong.filter(w=>!(w.certId===item.certId&&w.q===item.q))].slice(0,100);
+    setCertWrong(next); storeSet("cert-wrong",JSON.stringify(next));
+  };
+  const startMock = cert => {
+    const qs=(cert.questions||[]).slice(0,5).map(q=>({...q,certId:cert.id}));
+    setMockScore(null); setMockState({certId:cert.id,index:0,answers:[],questions:qs}); setCertView("mock");
+  };
+  const answerMock = option => {
+    if(!mockState) return;
+    const q=mockState.questions[mockState.index], correct=option===q.a;
+    const answers=[...mockState.answers,{q:q.q,option,correct}];
+    if(!correct) addWrongAnswer({certId:mockState.certId,q:q.q,selected:q.o?.[option]||"",correct:q.o?.[q.a]||"",explanation:q.e||""});
+    if(mockState.index+1>=mockState.questions.length){setMockScore(Math.round(answers.filter(a=>a.correct).length/mockState.questions.length*100));setMockState({...mockState,answers});}
+    else setMockState({...mockState,index:mockState.index+1,answers});
+  };
+  const activeCerts = certificationTracks.filter(c=>c.status==="active");
+  const missionCert = activeCerts.slice().sort((a,b)=>readiness(a)-readiness(b))[0] || activeCerts[0];
+  const missionState = missionCert ? certState(missionCert.id) : {};
+  const missionModule = missionCert?.modules?.find(m=>!missionState.modules?.[m.id]) || missionCert?.modules?.[0];
+
 
   // PhD helpers
   const savePhdMeetings = (u) => { setPhdMeetings(u); storeSet("phd-meetings", JSON.stringify(u)); };
@@ -1676,7 +1832,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
           </div>}
 
                     {tab==="monthly"&&<div>
-            <div style={S.h2}>📅 Jul–Dec 2026 Monthly Plan</div>
+            <div style={S.h2}>📅 Sep–Dec 2026 Monthly Plan</div>
             <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",paddingBottom:4}}>
               {monthPlan.map((m,i)=><button key={i} style={S.mB(monthIdx===i,m.color)} onClick={()=>setMonth(i)}>{m.month.slice(0,3)}</button>)}
             </div>
@@ -1814,7 +1970,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
             {/* DASHBOARD */}
             {learnTab==="dashboard"&&<div>
               <div style={{...S.ib(P.a2),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:3}}>Your Learning Dashboard — July to December 2026</div>
+                <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:3}}>Your Learning Dashboard — September to December 2026</div>
                 <div style={{fontSize:12,color:P.muted}}>Tap any chip to mark done/undone. Progress saves automatically.</div>
               </div>
               <div style={{...S.CA(P.a4),marginBottom:12}}>
@@ -3362,190 +3518,128 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
             </div>
           </PinGate>}
 
-          {/* CERTS */}
+          {/* CERTIFICATION COMMAND CENTRE */}
           {tab==="certs"&&<div>
-            <div style={S.h2}>🏅 Certification Roadmap · 20-Day Sprint</div>
-
-            {/* CLAUDE CERT URGENT BANNER */}
-            {(()=>{
-              const deadline=deadlineStatus("2026-08-31");
-              const pct=Math.round((1-(deadline.days/42))*100);
-              return(
-                <div style={{...gl(P.a5),padding:16,marginBottom:14,borderRadius:14,border:`2px solid ${P.a5}88`,...glow(P.a5)}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-                    <span style={{fontSize:28}}>🚨</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:800,color:P.a5}}>Claude Architect Foundations (Claude Architect)</div>
-                      <div style={{fontSize:12,color:P.muted,marginTop:2}}>Anthropic Architect Foundations + Professional — Registered; exam dates not yet scheduled</div>
-                    </div>
-                    <div style={{textAlign:"center",minWidth:90}}><div style={{fontSize:12,fontWeight:800,color:P.a5,lineHeight:1.3}}>{deadline.label}</div></div>
-                  </div>
-                  {!deadline.expired&&<div style={{background:"rgba(255,255,255,0.06)",borderRadius:6,height:8,marginBottom:10,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:`linear-gradient(90deg,${P.a5},${P.a3})`,borderRadius:6,transition:"width 0.5s"}}/>
-                  </div>}
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {[["📚 Study Now","claude.ai/docs"],["🔧 API Docs","docs.anthropic.com"],["🎯 Prompt Guide","anthropic.com/research"],["💡 Practice","console.anthropic.com"]].map(([lb,url])=>(
-                      <a key={lb} href={`https://${url}`} target="_blank" rel="noreferrer" style={{...S.btn(P.a5),padding:"6px 12px",fontSize:11,textDecoration:"none",display:"inline-block"}}>{lb}</a>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Cert sub-tabs */}
-            <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-              {[["roadmap","📅 Roadmap"],["claude","🤖 Claude Claude Architect"],["study","📚 Study Coach"]].map(([id,lb])=>(
-                <button key={id} style={S.pill(certTab===id,P.a3)} onClick={()=>setCertTab(id)}>{lb}</button>
-              ))}
+            <div style={S.h2}>🏅 Certification Command Centre</div>
+            <div style={{...S.ib(P.a3),marginBottom:14}}>
+              <div style={{fontSize:13,color:P.a3,fontWeight:800,marginBottom:4}}>Study system first · live updates second</div>
+              <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>Certification knowledge, progress, wrong answers, labs and mock results are stored locally. Official links are provided for exam-version changes. Gemini is optional for explanations; the app does not need an API call to know what to study next.</div>
             </div>
 
-            {/* ROADMAP TAB */}
-            {certTab==="roadmap"&&<div>
-              <div style={{...S.ib(P.a1),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>20-day sprint: AWS DEA → SnowPro Core → Databricks DEA → Claude Architect Foundations → Claude Architect Professional → Databricks GenAI</div>
-                <div style={{fontSize:12,color:P.muted}}>Primary goal: complete or reach the next certification milestone for every active track by 11 October 2026.</div>
-              </div>
-              {certList.map((c,i)=>{
-                const deadline = c.deadline ? deadlineStatus(c.deadline) : null;
-                return(
-                  <div key={i} style={{...S.CA(c.color),marginBottom:10,...(c.urgent?glow(c.color):{})}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:6,marginBottom:6}}>
-                      <div style={{flex:1}}>
-                        <span style={{fontWeight:700,fontSize:14,color:c.urgent?c.color:P.text}}>{c.urgent?"🚨 ":""}{c.cert}</span>
-                        {deadline&&<span style={{marginLeft:8,...S.chip(deadline.expired?P.a5:deadline.days<=14?P.a5:deadline.days<=30?P.a3:P.a2),fontSize:10}}>{deadline.label}</span>}
-                      </div>
-                      <span style={S.chip(c.color)}>{c.when}</span>
-                    </div>
-                    <div style={{fontSize:12,color:c.color,marginBottom:6,fontWeight:600}}>{deadline ? deadline.label : c.status}</div>
-                    <div style={{fontSize:12,color:P.muted,lineHeight:1.55}}>{c.tip}</div>
-                  </div>
-                );
-              })}
-            </div>}
-
-            {/* CLAUDE Claude Architect STUDY GUIDE */}
-            {certTab==="claude"&&<div>
-              <div style={{...S.ib(P.a5),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a5,fontWeight:800,marginBottom:4}}>🚨 Claude Architect Foundations + Professional — Study Guide</div>
-                <div style={{fontSize:12,color:P.muted}}>Focus: architecture, Claude/API concepts, prompt design, tool use, safety, context management, evaluation and production system design. Use official Anthropic documentation as the source of truth.</div>
-              </div>
-
-              {[
-                {topic:"1. Claude Models & Capabilities",color:P.a1,items:[
-                  "Claude 3 family: Haiku (fast/cheap), Sonnet (balanced), Opus (most capable)",
-                  "Context windows: Haiku 200K, Sonnet 200K, Opus 200K tokens",
-                  "Multimodal: Claude can process images, PDFs, documents alongside text",
-                  "Claude's constitution: helpful, harmless, honest — the three H's",
-                  "When to use which model: Haiku for simple tasks, Sonnet for most use cases, Opus for complex reasoning",
-                ]},
-                {topic:"2. Anthropic API Fundamentals",color:P.a2,items:[
-                  "API endpoint: POST /api/gemini",
-                  "Required headers: x-api-key, anthropic-version, content-type",
-                  "Message structure: role (user/assistant), content (string or array)",
-                  "System prompts: set behaviour, persona, constraints before conversation",
-                  "Max tokens: controls response length (not input length)",
-                  "Temperature: 0=deterministic, 1=creative. Default 1.0",
-                  "Streaming: stream:true for real-time token-by-token output",
-                ]},
-                {topic:"3. Prompt Engineering",color:P.a3,items:[
-                  "Be specific and clear — Claude follows instructions literally",
-                  "System prompt vs user prompt — system sets context, user gives task",
-                  "Chain of thought: ask Claude to 'think step by step' for reasoning tasks",
-                  "Few-shot prompting: provide 2-3 examples before the actual request",
-                  "Role assignment: 'You are an expert in X' improves domain-specific output",
-                  "Output formatting: specify JSON, markdown, bullet points explicitly",
-                  "XML tags: use <instructions>, <context>, <output> for structure",
-                ]},
-                {topic:"4. Tool Use (Function Calling)",color:P.a4,items:[
-                  "Define tools as JSON schema with name, description, input_schema",
-                  "Claude decides when to call tools based on the conversation",
-                  "Tool result must be returned to Claude in next message",
-                  "Multiple tools can be defined — Claude picks the right one",
-                  "Use for: web search, calculators, databases, APIs, code execution",
-                  "Stop reason: 'tool_use' means Claude wants to call a function",
-                ]},
-                {topic:"5. Safety & Responsible AI",color:P.a5,items:[
-                  "Constitutional AI: Claude trained to be helpful, harmless, honest",
-                  "Refusal patterns: Claude may refuse harmful, illegal, or unethical requests",
-                  "Content policy: no CSAM, no weapons of mass destruction, no illegal activity",
-                  "Jailbreaking: attempting to bypass safety is against ToS and will be rejected",
-                  "Privacy: don't send PII unnecessarily; Claude doesn't store conversations",
-                  "Rate limits: understand token/request limits for production systems",
-                ]},
-                {topic:"6. Multi-turn Conversations",color:P.a2,items:[
-                  "Pass full message history in messages array for context continuity",
-                  "Alternating user/assistant turns — must start with user",
-                  "Claude has no memory between separate API calls — you manage history",
-                  "Summarisation strategy: compress old turns to save context window",
-                  "System prompt persists across all turns of a conversation",
-                  "Assistant prefill: pre-fill Claude's response to guide format",
-                ]},
-                {topic:"7. Vision & Document Processing",color:P.a1,items:[
-                  "Send images as base64 or URL in content array",
-                  "Image types: JPEG, PNG, GIF, WebP supported",
-                  "PDF support: send as base64 with media_type application/pdf",
-                  "Vision use cases: document parsing, chart analysis, UI feedback, OCR",
-                  "Max image size: 5MB per image",
-                  "Multiple images: supported in single request",
-                ]},
-                {topic:"8. Production Best Practices",color:P.a3,items:[
-                  "Error handling: handle rate limits (429), server errors (5xx), timeouts",
-                  "Retry logic with exponential backoff for reliability",
-                  "Prompt caching: use cache_control for frequently used system prompts",
-                  "Batch API: for large-scale async processing at 50% cost discount",
-                  "Cost optimisation: use Haiku for simple tasks, reserve Sonnet/Opus for complex",
-                  "Evaluation: test prompts on diverse inputs before production",
-                ]},
-              ].map((section,i)=>(
-                <div key={i} style={{...S.CA(section.color),marginBottom:10}}>
-                  <div style={{fontSize:13,fontWeight:700,color:section.color,marginBottom:10}}>{section.topic}</div>
-                  {section.items.map((item,j,arr)=>(
-                    <div key={j} style={{...S.li(j===arr.length-1),fontSize:12}}>
-                      <span style={{color:section.color,fontWeight:700,flexShrink:0}}>›</span>
-                      <span>{item}</span>
-                    </div>
-                  ))}
+            <div style={{...S.CA(P.a4),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:P.a4}}>🎯 Today's Study Mission</div>
+                  <div style={{fontSize:13,color:P.text,marginTop:5}}>{missionCert?.short||"Certification"} → {missionModule?.title||"Review your weakest readiness area"}</div>
+                  <div style={{fontSize:11,color:P.muted,marginTop:4}}>{missionModule?.topics?.slice(0,5).join(" · ")}</div>
                 </div>
-              ))}
+                <span style={S.chip(P.a4)}>Readiness {missionCert?readiness(missionCert):0}%</span>
+              </div>
+              <div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:10}}>
+                <button style={S.btn(P.a4)} onClick={()=>{setSelectedCertId(missionCert.id);setCertView("study");}}>Start mission →</button>
+                {missionModule?.lab&&<button style={S.pill(false,P.a2)} onClick={()=>{setSelectedCertId(missionCert.id);setCertView("labs");}}>Open lab</button>}
+              </div>
+            </div>
 
-              {/* Study schedule */}
-              <div style={{...S.ib(P.a2),marginTop:4}}>
-                <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:8}}>📅 20-Day Architect Certification Sprint</div>
-                {[
-                  ["Week 1 (Days 1-7)","Read Anthropic docs: Models, API basics, Messages API. Build a simple chatbot using the API. Test streaming."],
-                  ["Week 2 (Days 8-14)","Study prompt engineering deeply. Practice few-shot, CoT, XML tags. Build a tool-use example. Study vision API."],
-                  ["Week 3 (Days 15-21)","Focus on safety, multi-turn conversations, production practices. Study batch API and caching. Practice exam questions."],
-                  ["Week 4 (Days 22-30)","Full revision of all 8 topics. Take practice tests. Use the Study Coach below for weak areas. Book the appropriate exam slots after preparation and registration requirements are confirmed."],
-                ].map(([w,t],i,arr)=>(
-                  <div key={i} style={{...S.li(i===arr.length-1),flexDirection:"column",gap:3}}>
-                    <span style={{color:P.a2,fontWeight:700,fontSize:12}}>{w}</span>
-                    <span style={{fontSize:12,color:P.muted}}>{t}</span>
+            <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",flexWrap:"wrap"}}>
+              {[["command","🏆 Command Centre"],["study","📚 Study Plan"],["topics","🧩 Topics"],["questions","📝 Questions"],["wrong","❌ Wrong Answers"],["labs","🧪 Labs"],["mock","🎯 Mock Exam"],["readiness","📈 Readiness"],["future","🚀 Future Certs"]].map(([id,lb])=>
+                <button key={id} style={S.pill(certView===id,P.a3)} onClick={()=>setCertView(id)}>{lb}</button>
+              )}
+            </div>
+
+            {(certView!=="future"&&certView!=="mock")&&<div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto"}}>
+              {activeCerts.map(c=><button key={c.id} style={S.pill(selectedCertId===c.id,c.color)} onClick={()=>setSelectedCertId(c.id)}>{c.short}</button>)}
+            </div>}
+
+            {certView==="command"&&<div>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:14}}>
+                {activeCerts.map(c=>{const s=certState(c.id),done=c.modules.filter(m=>s.modules?.[m.id]).length,r=readiness(c);return(
+                  <div key={c.id} style={{...S.CA(c.color),marginBottom:0}}>
+                    <div style={{fontSize:13,fontWeight:800,color:c.color}}>{c.short}</div>
+                    <div style={{fontSize:10,color:P.muted,marginTop:3}}>{c.provider} · {c.examCode}</div>
+                    <div style={{fontSize:28,fontWeight:900,color:c.color,marginTop:8}}>{r}%</div>
+                    <div style={{fontSize:10,color:P.muted}}>readiness · {done}/{c.modules.length} modules</div>
+                    <div style={{height:7,background:P.bg,borderRadius:6,overflow:"hidden",marginTop:8}}><div style={{width:r+"%",height:"100%",background:c.color}}/></div>
+                    <button style={{...S.pill(false,c.color),marginTop:10}} onClick={()=>{setSelectedCertId(c.id);setCertView("study");}}>Study →</button>
                   </div>
-                ))}
+                );})}
+              </div>
+              <div style={S.C()}>
+                <div style={S.L}>📌 Portfolio rule</div>
+                <div style={{fontSize:12,color:P.sub,lineHeight:1.6}}>Keep no more than 2–3 certifications in intensive preparation at once. The rest can remain in learning/maintenance mode. The centre tracks all active tracks without forcing every certificate into today's workload.</div>
               </div>
             </div>}
 
-            {/* AI STUDY COACH */}
-            {certTab==="study"&&<div>
-              <div style={S.h2}>📚 Claude Architect Study Coach</div>
-              <div style={{...S.ib(P.a4),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>Ask anything about the Claude certification</div>
-                <div style={{fontSize:12,color:P.muted}}>Powered by Claude itself — the best way to learn Claude is to use Claude.</div>
+            {certView==="study"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);const s=certState(c.id);return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}>
+                <div style={{fontSize:15,fontWeight:800,color:c.color}}>{c.name}</div>
+                <div style={{fontSize:11,color:P.muted,marginTop:3}}>{c.provider} · {c.examCode} · {c.voucher}</div>
+                <div style={{fontSize:12,color:P.sub,lineHeight:1.6,marginTop:8}}>{c.summary}</div>
               </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                {["Explain tool use with a code example","What is the difference between system prompt and user prompt?","How does prompt caching work and when should I use it?","What are Claude's safety guidelines I need to know for the exam?","Explain multi-turn conversation structure with an example","What is constitutional AI and how does it affect Claude's behaviour?","How do I send an image to Claude in the API?","What are the token limits for each Claude model?"].map(q=>(
-                  <button key={q} onClick={()=>setCertStudyQ(q)} style={{background:P.card3,border:`1px solid ${P.border}`,borderRadius:7,padding:"6px 11px",color:P.sub,fontSize:11,cursor:"pointer",textAlign:"left"}}>{q}</button>
-                ))}
+              {c.modules.map((m,i)=><div key={m.id} style={{...S.C(),marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <div style={{fontSize:13,fontWeight:800,color:c.color}}>{i+1}. {m.title}</div>
+                  <button style={S.pill(!!s.modules?.[m.id],c.color)} onClick={()=>toggleCertModule(c.id,m.id)}>{s.modules?.[m.id]?"✓ Completed":"Mark complete"}</button>
+                </div>
+                <div style={{fontSize:10,color:P.muted,marginTop:4}}>{m.weight} · {m.topics.join(" · ")}</div>
+                <div style={{...S.ib(c.color),marginTop:8,marginBottom:0}}>
+                  <div style={{fontSize:11,fontWeight:700,color:c.color}}>🧪 Hands-on checkpoint</div>
+                  <div style={{fontSize:11,color:P.muted,lineHeight:1.5}}>{m.lab}</div>
+                </div>
+              </div>)}
+              <div style={{...S.CA(P.a2),marginTop:12}}>
+                <div style={{fontSize:12,fontWeight:800,color:P.a2,marginBottom:7}}>🗓 Exam planning</div>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:8}}>
+                  <div><div style={S.L}>Exam date (optional)</div><input type="date" style={S.inp} value={s.examDate||""} onChange={e=>setCertExamDate(c.id,e.target.value)}/></div>
+                  <div><div style={S.L}>Official guide</div><a href={c.guide} target="_blank" rel="noreferrer" style={{...S.pill(false,c.color),display:"inline-flex",textDecoration:"none"}}>Open official guide ↗</a></div>
+                </div>
               </div>
-              <textarea style={{...S.ta,minHeight:70,marginBottom:10}} placeholder="Ask any question about Claude, the API, prompt engineering, tool use, safety..." value={certStudyQ} onChange={e=>setCertStudyQ(e.target.value)}/>
-              <button style={{...S.btn(certStudyLoad?P.muted:P.a5),opacity:certStudyLoad?0.7:1,width:"100%",marginBottom:14,...(certStudyLoad?{}:glow(P.a5))}} onClick={askCertStudy} disabled={certStudyLoad}>
-                {certStudyLoad?"⏳ Thinking...":"🤖 Ask Claude (your study coach)"}
-              </button>
-              {certStudyA&&<div style={{...S.CA(P.a4)}}><div style={{fontSize:11,color:P.a4,fontWeight:700,marginBottom:10}}>Study Coach says:</div><div style={{fontSize:13,color:P.sub,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{certStudyA}</div></div>}
+            </div>})()}
+
+            {certView==="topics"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);const s=certState(c.id);return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}><div style={{fontSize:13,fontWeight:800,color:c.color}}>🧩 {c.name} — topic map</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Study the modules in order, then use Readiness to record mastery.</div></div>
+              {c.modules.map((m,i)=><div key={m.id} style={{...S.CA(s.modules?.[m.id]?P.a2:c.color),marginBottom:9}}>
+                <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12,fontWeight:800,color:P.text}}>{i+1}. {m.title}</span><span style={S.chip(s.modules?.[m.id]?P.a2:c.color)}>{s.modules?.[m.id]?"DONE":"NEXT"}</span></div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:8}}>{m.topics.map(t=><span key={t} style={S.chip(c.color)}>{t}</span>)}</div>
+              </div>)}
+            </div>})()}
+
+            {certView==="questions"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}><div style={{fontSize:13,fontWeight:800,color:c.color}}>📝 Offline Question Bank — {c.short}</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Practice is embedded in the app, so it works when Gemini/API quota is unavailable.</div></div>
+              {c.questions.map((q,i)=><div key={i} style={S.C()}>
+                <div style={{fontSize:13,fontWeight:700,color:P.text,lineHeight:1.5}}>{i+1}. {q.q}</div>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:6,marginTop:9}}>
+                  {q.o.map((opt,j)=><button key={j} onClick={()=>{if(j!==q.a)addWrongAnswer({certId:c.id,q:q.q,selected:opt,correct:q.o[q.a],explanation:q.e});}} style={{background:j===q.a?P.a2+"12":P.card3,border:"1px solid "+(j===q.a?P.a2:P.border),borderRadius:8,padding:"8px 10px",color:j===q.a?P.a2:P.sub,textAlign:"left",cursor:"pointer",fontSize:11}}>{String.fromCharCode(65+j)}. {opt}{j===q.a?" ✓":""}</button>)}
+                </div>
+                <div style={{fontSize:10,color:P.muted,marginTop:7}}>Answer: {q.o[q.a]} · {q.e}</div>
+              </div>)}
+            </div>})()}
+
+            {certView==="wrong"&&<div>
+              <div style={{...S.ib(P.a5),marginBottom:12}}><div style={{fontSize:12,fontWeight:800,color:P.a5}}>❌ Wrong Answer Bank</div><div style={{fontSize:11,color:P.muted}}>Incorrect answers are saved locally so revision targets actual weak points.</div></div>
+              {certWrong.length===0?<div style={S.C()}><div style={{fontSize:13,color:P.muted}}>No wrong answers yet. Start a question set or mock.</div></div>:certWrong.map((w,i)=><div key={w.id||i} style={{...S.CA(P.a5),marginBottom:8}}><div style={{fontSize:12,fontWeight:800,color:P.text}}>{w.q}</div><div style={{fontSize:11,color:P.a5,marginTop:5}}>Your answer: {w.selected}</div><div style={{fontSize:11,color:P.a2,marginTop:3}}>Correct: {w.correct}</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>{w.explanation}</div></div>)}
+            </div>}
+
+            {certView==="labs"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);return <div>
+              <div style={{...S.CA(P.a2),marginBottom:12}}><div style={{fontSize:13,fontWeight:800,color:P.a2}}>🧪 Hands-on Lab Plan — {c.short}</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Do the lab, record the result in your own notes, then mark the module complete. Hands-on readiness stays separate from knowledge.</div></div>
+              {c.modules.map((m,i)=><div key={m.id} style={S.C()}><div style={{fontSize:13,fontWeight:800,color:c.color}}>{i+1}. {m.title}</div><div style={{fontSize:11,color:P.sub,lineHeight:1.6,marginTop:6}}>{m.lab}</div><button style={{...S.pill(false,P.a2),marginTop:8}} onClick={()=>toggleCertModule(c.id,m.id)}>✓ Mark module complete after lab</button></div>)}
+            </div>})()}
+
+            {certView==="mock"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);if(!mockState)return <div style={S.C()}><div style={{fontSize:13,color:P.muted,marginBottom:10}}>Start a 5-question mock for {c?.short||"this certification"}.</div><button style={S.btn(c?.color||P.a3)} onClick={()=>startMock(c)}>Start mock exam</button></div>;if(mockScore!==null)return <div style={{...S.CA(mockScore>=80?P.a2:P.a5)}}><div style={{fontSize:28,fontWeight:900,color:mockScore>=80?P.a2:P.a5}}>{mockScore}%</div><div style={{fontSize:13,color:P.text,marginTop:4}}>Mock complete · {mockState.answers.filter(a=>a.correct).length}/{mockState.questions.length} correct</div><button style={{...S.pill(false,P.a3),marginTop:10}} onClick={()=>startMock(c)}>Retake mock</button></div>;const q=mockState.questions[mockState.index];return <div style={S.CA(c.color)}><div style={{fontSize:11,color:P.muted}}>Question {mockState.index+1} of {mockState.questions.length}</div><div style={{fontSize:14,fontWeight:800,color:P.text,lineHeight:1.5,margin:"8px 0 12px"}}>{q.q}</div>{q.o.map((opt,j)=><button key={j} onClick={()=>answerMock(j)} style={{display:"block",width:"100%",textAlign:"left",background:P.card3,border:"1px solid "+P.border,borderRadius:8,padding:"9px 11px",color:P.sub,marginBottom:6,cursor:"pointer"}}>{String.fromCharCode(65+j)}. {opt}</button>)}</div>})()}
+
+            {certView==="readiness"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);const s=certState(c.id);const dims=[["knowledge","📖 Knowledge"],["handsOn","🧪 Hands-on"],["recall","🧠 Recall"],["application","🏗️ Application"],["examTechnique","🎯 Exam Technique"]];return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}><div style={{fontSize:14,fontWeight:800,color:c.color}}>📈 {c.name} — readiness engine</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Readiness combines five self-assessed dimensions with module completion.</div><div style={{fontSize:38,fontWeight:900,color:c.color,marginTop:8}}>{readiness(c)}%</div></div>
+              {dims.map(([k,label])=><div key={k} style={S.C()}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,fontWeight:700,color:P.text}}>{label}</span><span style={S.chip(c.color)}>{s.scores?.[k]||0}%</span></div><input type="range" min="0" max="100" step="5" value={s.scores?.[k]||0} onChange={e=>setCertScore(c.id,k,e.target.value)} style={{width:"100%",marginTop:8,accentColor:c.color}}/></div>)}
+              <div style={S.CA(P.a1)}><div style={{fontSize:12,fontWeight:800,color:P.a1}}>Next action</div><div style={{fontSize:12,color:P.sub,marginTop:5}}>{c.modules.find(m=>!s.modules?.[m.id])?.title||"All modules complete"} → then take a 5-question mock and record weak areas.</div></div>
+            </div>})()}
+
+            {certView==="future"&&<div>
+              <div style={{...S.ib(P.a4),marginBottom:12}}><div style={{fontSize:12,color:P.a4,fontWeight:800}}>🚀 Future certification queue</div><div style={{fontSize:11,color:P.muted}}>Future certificates stay separate from active preparation.</div></div>
+              {futureCertifications.map(c=><div key={c.id} style={{...S.CA(P.a4),marginBottom:10}}><div style={{fontSize:13,fontWeight:800,color:P.text}}>{c.name}</div><div style={{fontSize:10,color:P.a4,marginTop:3}}>{c.code}</div><div style={{fontSize:11,color:P.muted,lineHeight:1.55,marginTop:6}}>{c.note}</div><a href={c.url} target="_blank" rel="noreferrer" style={{...S.pill(false,P.a4),display:"inline-flex",textDecoration:"none",marginTop:8}}>Official page ↗</a></div>)}
             </div>}
           </div>}
 
-                    {tab==="govt"&&<div>
+          {tab==="govt"&&<div>
             <div style={S.h2}>🏛️ Government Tech Jobs 2026</div>
             <div style={{...S.ib(P.a2),marginBottom:14}}>
               <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:3}}>Your eligibility: B.E ECE + M.Tech DS + 4.3yr exp + PhD SSN ongoing = strong govt profile</div>
@@ -3576,8 +3670,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
             {/* Situation summary */}
             {(()=>{
               const today_=todayKey();
-              const certDeadline="2026-08-31";
-              const certStatus=deadlineStatus(certDeadline);
+              const certStatus={label:"Registered · exam date not scheduled",expired:false,days:999};
               const odPending=allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today_).length;
               const odPhd=phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today_).length;
               return(

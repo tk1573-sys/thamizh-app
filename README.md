@@ -3,8 +3,8 @@
 A comprehensive personal productivity PWA for:
 - 🎓 PhD Research at Shiv Nadar University (SNU)
 - 🏛️ Government Career Radar (DRDO/ISRO/NIC/TNPSC)
-- 🚨 Claude CCDV-F Certification (Aug 31, 2026)
-- 📋 UGC NET CS December 2026
+- 🏅 Claude Architect Foundations + Professional certification track
+- 📋 UGC NET CS — current NTA cycle tracking
 - 💼 TCS Office Tracker with Follow-Up Board
 - ❤️ Health & Medicine Tracker (PIN-protected)
 - 📓 Daily Journal (PIN-protected)

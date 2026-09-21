@@ -840,7 +840,7 @@ export default function App() {
 
       const d = await callAI({
         model:"gemini-3.8-flash", max_tokens:700,
-        system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. URGENT: Claude Architect certification deadline Aug 31 2026. Also: Databricks DEA, GCP DE, health management (Bipolar I, T2 Diabetes). Analyse the context and return EXACTLY 5 specific, actionable recommendations ranked by urgency. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
+        system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. Claude Architect Foundations + Professional are registered; exam dates are not scheduled. Also: Databricks Data Engineer Associate prerequisites are in progress; AWS Data Engineer Associate and SnowPro Core preparation are active. Analyse the context and return EXACTLY 5 specific, actionable recommendations. Do not invent deadlines; use current dates supplied in the context and advise verification of official sources. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
         messages:[{role:"user",content:`Analyse my situation and give 5 smart recommendations: ${context}`}]
       });
       const raw = readAIText(d) || "[]";
@@ -914,7 +914,7 @@ LIFE CONTEXT (September 2026):
 - Works full-time at TCS as Data Engineer (4.3 years): SQL/Teradata/DataStage/Unix/ServiceNow
 - Part-time PhD at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan
 - Research: Human-Centered Multimodal Explainable AI with Wearables for Special Kids
-- Health: Bipolar I (stable), Type 2 Diabetes (FBS managed), Obesity (140kg) — energy varies
+- Health details are private and are not included in the AI planning context unless the user explicitly provides them in the question
 - Claude Claude Architect certification status: ${claudeCertStatus}
 - Databricks DEA exam: September 2026
 - UGC NET CS: December 2026
@@ -929,7 +929,7 @@ RESEARCH DETAILS:
 - Key ideas: Personalized distress prediction, XAI for caregivers, federated learning, digital twin
 - Supervisor instructions: Ideology of many, 15-20 keywords, 7-10 PS, minimal dataset, 4-year timeline
 
-PERSONALITY: Tends to take on too much. Needs reminders to pace himself. Health must come first. Responds well to structured practical advice. Bipolar — never push on bad days. Tamil background.
+PERSONALITY: Tends to take on too much. Needs structured, practical advice, realistic pacing, and clear next actions. Tamil background.
 
 Give warm, honest, practical advice. Acknowledge the challenges of managing everything. Suggest specific actions. Be a friend who happens to be an expert.`,messages:[{role:"user",content:adviceQ}]});
       setAdviceA(readAIText(d) || "No response.");
@@ -953,7 +953,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askJobAI = async () => {
     if(!jobAiQ.trim()) return; setJobAiLoad(true); setJobAiA("");
     try {
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude Architect Foundations + Professional (registered), Databricks Data Engineer Associate (prerequisites in progress), AWS Data Engineer Associate and SnowPro Core (preparation underway). UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
       setJobAiA(readAIText(d) || "No response.");
     } catch(err){setJobAiA(err.message || "Connection error. Please try again.");}
     setJobAiLoad(false);
@@ -986,7 +986,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askH = async()=>{
     if(!hAiQ.trim())return; setHAiLoad(true); setHAiA("");
     try{
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Use only information the user explicitly includes in the question. Do not infer a diagnosis, medication, lab result, weight, or mental-health condition from hidden app data. Do not change or prescribe medication. For medication, hypoglycemia, severe symptoms, or other high-risk situations, advise contacting a qualified clinician or urgent care as appropriate. Keep advice practical, gradual, and respectful.`,messages:[{role:"user",content:hAiQ}]});
       setHAiA(readAIText(d) || "No response.");
     }catch(err){setHAiA(err.message || "Error connecting. Please try again.");}
     setHAiLoad(false);
@@ -994,7 +994,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askC = async()=>{
     if(!cQ.trim())return; setCLoad(true); setCA("");
     try{
-      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: September 2026. PhD is ongoing at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, AWS/Snowflake/Databricks/Claude certification tracks, and government technical/research opportunities. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
       setCA(readAIText(d) || "No response.");
     }catch(err){setCA(err.message || "Error connecting. Please try again.");}
     setCLoad(false);

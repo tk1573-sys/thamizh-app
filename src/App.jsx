@@ -1117,7 +1117,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
                 ["IBPS BOB HR","Registration closes 1 Oct 2026","https://ibpsreg.ibps.in/bonwejul26/index.php","1 OCT"],
                 ["ISRO SAC","JRF / Research Associate / Project Scientist-I; applications close 30 Sep 2026","https://www.isro.gov.in/ViewAllOpportunities.html","30 SEP"],
                 ["DRDO","Current vacancies include JRF/RA opportunities with September/October closing dates","https://www.drdo.gov.in/drdo/offerings/vacancies","LIVE"],
-                ["C-DAC Chennai","Project Engineer, Senior Project Engineer and other project roles; September interview cycle","https://www.cdac.in/index.aspx?id=print_page&print=ca_cdac_chennai_recruitment_2026","LIVE"],
+                ["C-DAC Chennai","Project Engineer, Senior Project Engineer and other project roles; registration closes 22 Sep 2026 at 17:00","https://www.cdac.in/index.aspx?id=print_page&print=ca_cdac_chennai_recruitment_2026","22 SEP"],
                 ["TNPSC Group IV","Notification planned 6 Oct 2026; exam planned 20 Dec 2026 (confirm from final notification)","https://www.tnpsc.gov.in/","6 OCT"],
                 ["SSC","2026-27 calendar includes CHSL, Stenographer, MTS/Havaldar, SI/CAPF and other exams","https://ssc.gov.in/","CALENDAR"],
                 ["UPSC","Active examinations page includes Civil Services Main 2026 and Engineering Services Preliminary 2027 among others","https://www.upsc.gov.in/examinations/active-exams","ACTIVE"]
@@ -1147,7 +1147,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
                   {id:"boi-officers-2026",org:"Bank of India",post:"Officers in various streams up to Scale IV",deadline:"25 Sep 2026",note:"Official registration window closes 25 Sep 2026.",link:"ibpsreg.ibps.in/boiaug26/"},
                   {id:"isro-sac-2026",org:"ISRO SAC",post:"JRF / Research Associate / Project Scientist-I",deadline:"30 Sep 2026",note:"Current ISRO opportunity listed on the official Current Opportunities page.",link:"isro.gov.in"},
                   {id:"drdo-research-2026",org:"DRDO",post:"JRF / RA and research opportunities",deadline:"Sep–Oct 2026",note:"DRDO vacancy page currently lists multiple research openings; each post has its own eligibility and deadline.",link:"drdo.gov.in"},
-                  {id:"cdac-chennai-2026",org:"C-DAC Chennai",post:"Project Engineer / Senior Project Engineer / Project Manager / Project Associate",deadline:"Sep 2026 interview cycle",note:"Official Chennai recruitment page lists experienced and fresher project roles; interview timing is communicated to eligible candidates.",link:"cdac.in"},
+                  {id:"cdac-chennai-2026",org:"C-DAC Chennai",post:"Project Engineer / Senior Project Engineer / Project Manager / Project Associate",deadline:"Registration closes 22 Sep 2026 at 17:00",note:"Official Chennai recruitment page lists experienced and fresher project roles; interview timing is communicated to eligible candidates.",link:"cdac.in"},
                   {id:"tnpsc-group4-2026",org:"TNPSC",post:"Group IV",deadline:"Notification planned 6 Oct · exam planned 20 Dec 2026",note:"Annual planner dates are tentative until the final notification. Confirm vacancies and eligibility when the notification is released.",link:"tnpsc.gov.in"},
                   {id:"ssc-2026",org:"SSC",post:"CHSL / Stenographer / MTS-Havaldar / SI-CAPF and other 2026-27 exams",deadline:"See SSC calendar",note:"Use the official calendar and individual notices for the latest dates.",link:"ssc.gov.in"}
                 ].map(job=>
@@ -1386,7 +1386,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
                 {id:"tnpsc-cts-ni-2026",org:"TNPSC CTS Non-Interview (Computer Programmer)",deadline:"Exam window completed — historical tracker item",priority:"⚪ CLOSED"},
                 {id:"tnpsc-cts-int-2026",org:"TNPSC CTS Interview Posts",deadline:"Use final TNPSC notification/planner; dates are notification-specific",priority:"🔵 VERIFY"},
                 {id:"nic-sci-b-2026",org:"NIC Scientist B (DS&AI discipline)",deadline:"Closed Apr 24, watch revised list",priority:"🟢 HIGH"},
-                {id:"cdac-jit-next",org:"C-DAC Chennai current project recruitment",deadline:"Sep 2026 interview cycle",priority:"🟢 VERIFY"},
+                {id:"cdac-jit-next",org:"C-DAC Chennai current project recruitment",deadline:"Registration closes 22 Sep 2026 at 17:00",priority:"🔵 VERIFY"},
                 {id:"drdo-sci-b-next",org:"DRDO Scientist B via GATE",deadline:"No current application date asserted; monitor official DRDO/RAC notices",priority:"🔵 VERIFY"},
                 {id:"drdo-sci-c-next",org:"DRDO Scientist C Lateral (next advt)",deadline:"Watch rac.gov.in",priority:"🟡 GOOD"},
                 {id:"nielit-next",org:"NIELIT Scientist B (next cycle)",deadline:"Expected late 2026",priority:"🟡 GOOD"},

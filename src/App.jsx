@@ -406,6 +406,28 @@ const certList = [
   { cert:"Databricks Generative AI Engineer", status:"🟡 Active learning / certification track", when:"Continue sprint", color:P.a4, tip:"Continue the GenAI Engineer learning track alongside DEA preparation: RAG, vector search, model serving, evaluation, governance and production GenAI workflows." },
 ];
 
+const offlineQuestionBank = {
+  ugc: [
+    {question:"Which normal form removes partial dependency on a composite candidate key?",options:{A:"1NF",B:"2NF",C:"3NF",D:"BCNF"},correct:"B",explanation:"2NF removes partial functional dependencies of non-prime attributes on a proper subset of a candidate key.",tip:"Remember: 2NF = no partial dependency."},
+    {question:"Which protocol is primarily used to translate domain names into IP addresses?",options:{A:"HTTP",B:"SMTP",C:"DNS",D:"FTP"},correct:"C",explanation:"DNS maps human-readable domain names to IP addresses and related records.",tip:"DNS = Domain Name System."},
+    {question:"In a preemptive CPU scheduling algorithm, which can interrupt a running process?",options:{A:"Only the process itself",B:"The scheduler",C:"A compiler",D:"The linker"},correct:"B",explanation:"A preemptive scheduler can interrupt a running process and assign the CPU to another ready process.",tip:"Preemptive means the OS can take the CPU back."},
+    {question:"Which traversal of a binary search tree visits keys in sorted order?",options:{A:"Preorder",B:"Postorder",C:"Inorder",D:"Level order"},correct:"C",explanation:"Inorder traversal of a BST visits left subtree, root, then right subtree, producing sorted keys.",tip:"BST + inorder = sorted order."},
+    {question:"Which ACID property ensures that a committed transaction survives a system failure?",options:{A:"Atomicity",B:"Consistency",C:"Isolation",D:"Durability"},correct:"D",explanation:"Durability means committed changes persist despite crashes or failures.",tip:"D in ACID = Durable after commit."}
+  ],
+  python: [
+    {question:"What does a Python list comprehension primarily provide?",options:{A:"A way to create lists concisely",B:"Database transactions",C:"Thread synchronization",D:"Memory allocation control"},correct:"A",explanation:"List comprehensions create lists from iterable expressions using compact syntax.",tip:"Practice filtering and transforming data with comprehensions."},
+    {question:"Which Python object is immutable?",options:{A:"list",B:"dict",C:"set",D:"tuple"},correct:"D",explanation:"Tuples are immutable sequences, unlike lists, dictionaries and sets.",tip:"Use tuples when the sequence should not change."}
+  ],
+  sql: [
+    {question:"Which SQL window function assigns a rank without gaps after ties?",options:{A:"RANK()",B:"DENSE_RANK()",C:"ROW_NUMBER()",D:"NTILE()"},correct:"B",explanation:"DENSE_RANK assigns equal values the same rank and does not leave gaps after ties.",tip:"RANK has gaps; DENSE_RANK does not."},
+    {question:"Which clause filters rows after GROUP BY aggregation?",options:{A:"WHERE",B:"HAVING",C:"ORDER BY",D:"FROM"},correct:"B",explanation:"HAVING filters grouped results after aggregation, whereas WHERE filters rows before grouping.",tip:"WHERE before GROUP BY; HAVING after GROUP BY."}
+  ],
+  genai: [
+    {question:"In a RAG system, what is the main purpose of retrieval?",options:{A:"Replace the language model",B:"Provide relevant external context to generation",C:"Compress every prompt",D:"Remove embeddings"},correct:"B",explanation:"Retrieval finds relevant documents or chunks that are supplied as context to the generation model.",tip:"RAG = retrieve relevant context, then generate."},
+    {question:"What does a vector database primarily store for semantic search?",options:{A:"Only SQL tables",B:"Embedding vectors and associated metadata",C:"Only images",D:"Operating-system processes"},correct:"B",explanation:"Vector databases index embedding vectors and commonly store metadata used for filtering and retrieval.",tip:"Think embeddings + metadata + nearest-neighbor search."}
+  ]
+};
+
 const weeklyTemplate = [
   { day:"Mon", type:"work", blocks:[{time:"9AM–6PM",task:"TCS Work + commute",color:P.a1},{time:"7–8PM",task:"Python – current chapter + 1 coding exercise",color:P.a3},{time:"8–9PM",task:"UGC NET – 20 MCQs (DBMS/OS/DSA)",color:P.a2}] },
   { day:"Tue", type:"work", blocks:[{time:"9AM–6PM",task:"TCS Work + commute",color:P.a1},{time:"7–8PM",task:"SQL – LeetCode 2 problems or dbt practice",color:P.a2},{time:"8–9PM",task:"Databricks DEA course modules",color:P.a3}] },
@@ -1124,6 +1146,31 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={{fontSize:11,color:P.muted}}>Eligibility is calculated per actual notification. GATE required for many posts. Verify before applying.</div>
             </div>
 
+            <div style={{...S.CA(P.a1),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:8}}>
+                <div style={{fontSize:13,fontWeight:800,color:P.a1}}>🟢 Latest verified government/exam snapshot</div>
+                <span style={S.chip(P.a1)}>Checked 21 Sep 2026</span>
+              </div>
+              {[
+                ["IBPS RRB XV","Officer Scale I/II/III + Office Assistant applications close 21 Sep 2026","https://www.ibps.in/index.php/rural-bank-xv/","TODAY"],
+                ["IBPS PFRDA Officer Grade A","Registration closes 24 Sep 2026","https://ibpsreg.ibps.in/pfrdajul26/index.php","24 SEP"],
+                ["IBPS BOI Officers","Registration closes 25 Sep 2026","https://ibpsreg.ibps.in/boiaug26/","25 SEP"],
+                ["IBPS UIICL AO","Registration closes 28 Sep 2026","https://ibpsreg.ibps.in/uiicljul26/index.php","28 SEP"],
+                ["IBPS BOB HR","Registration closes 1 Oct 2026","https://ibpsreg.ibps.in/bonwejul26/index.php","1 OCT"],
+                ["ISRO SAC","JRF / Research Associate / Project Scientist-I; applications close 30 Sep 2026","https://www.isro.gov.in/ViewAllOpportunities.html","30 SEP"],
+                ["DRDO","Current vacancies include JRF/RA opportunities with September/October closing dates","https://www.drdo.gov.in/drdo/offerings/vacancies","LIVE"],
+                ["C-DAC Chennai","Project Engineer, Senior Project Engineer and other project roles; September interview cycle","https://www.cdac.in/index.aspx?id=print_page&print=ca_cdac_chennai_recruitment_2026","LIVE"],
+                ["TNPSC Group IV","Notification planned 6 Oct 2026; exam planned 20 Dec 2026 (confirm from final notification)","https://www.tnpsc.gov.in/","6 OCT"],
+                ["SSC","2026-27 calendar includes CHSL, Stenographer, MTS/Havaldar, SI/CAPF and other exams","https://ssc.gov.in/","CALENDAR"],
+                ["UPSC","Active examinations page includes Civil Services Main 2026 and Engineering Services Preliminary 2027 among others","https://www.upsc.gov.in/examinations/active-exams","ACTIVE"]
+              ].map(([name,detail,url,badge])=>
+                <a key={name} href={url} target="_blank" rel="noreferrer" style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${P.border}20`,textDecoration:"none"}}>
+                  <span style={{minWidth:0}}><span style={{fontSize:12,fontWeight:700,color:P.text}}>{name}</span><span style={{display:"block",fontSize:10,color:P.muted,marginTop:2,lineHeight:1.4}}>{detail}</span></span>
+                  <span style={{...S.chip(badge==="TODAY"?P.a5:P.a2),fontSize:9,flexShrink:0}}>{badge}</span>
+                </a>
+              )}
+            </div>
+
             {/* Sub tabs */}
             <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",flexWrap:"wrap"}}>
               {[["radar","📡 Radar Dashboard"],["scientist","🔬 Scientist/Research"],["ai","🤖 AI/Data/CS"],["defence","🛡️ Defence/Intel"],["tn","🏛️ Tamil Nadu"],["psu","🏢 PSU"],["academic","🎓 Academic"],["tracker","📋 Application Tracker"],["ask","💬 Eligibility Advisor"]].map(([id,lb])=>(
@@ -1133,38 +1180,28 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* RADAR DASHBOARD */}
             {radarTab==="radar"&&<div>
-              {/* APPLY NOW */}
+              {/* CURRENT / UPCOMING VERIFIED */}
               <div style={{...S.CA(P.a5),marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:800,color:P.a5,marginBottom:10}}>🔥 APPLY NOW — Currently Open (August 2026)</div>
+                <div style={{fontSize:13,fontWeight:800,color:P.a5,marginBottom:8}}>🔎 CURRENT & UPCOMING — VERIFIED 21 SEP 2026</div>
                 {[
-                  {id:"isro-sc-2026",org:"ISRO",post:"Scientist/Engineer SC",deadline:"Aug 17, 2026 🚨",phy:"GREEN — Medical only",phd:"B — Verify posting",score:78,deg:"B.E ECE ✅ (EC stream) | B.E CS ✅ (CS stream)",gate:"GATE CS/EC 2024/2025/2026 required",sal:"₹56,100/month (Level 10)",note:"SC fee waived ₹250. 92 vacancies. GATE required — check if you have valid score.",link:"isro.gov.in"},
-                  {id:"tnpsc-cts-2026",org:"TNPSC",post:"Computer Programmer / Systems Manager (CTS Non-Interview)",deadline:"Aug 15, 2026 (Exam: Aug 16–Sep 9)",phy:"GREEN — No PET",phd:"A — Compatible",score:82,deg:"B.E CS/IT/ECE ✅ | MCA ✅ | M.Tech DS ✅",gate:"No GATE required",sal:"₹28,480–₹56,900 (State govt scale)",note:"Exam already started Aug 16. Check if you applied under Advt 04/2026. CTS interview posts (Advt 06/2026) notification expected Aug 31.",link:"tnpsc.gov.in"},
-                ].map(job=>(
-                  <div key={job.id} style={{background:P.card3,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${P.a5}33`,borderLeft:`3px solid ${P.a5}`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:6}}>
-                      <div style={{fontSize:13,fontWeight:700,color:P.text}}>{job.org} — {job.post}</div>
-                      <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{...S.chip(P.a5),fontSize:10}}>Score: {job.score}/100</span>
-                        <span style={{...S.chip(job.score>=75?P.a2:job.score>=60?P.a3:P.muted),fontSize:10}}>{job.score>=90?"🔥 MUST APPLY":job.score>=75?"🟢 HIGH PRIORITY":job.score>=60?"🟡 BACKUP":"⚪ LOW"}</span>
-                      </div>
+                  {id:"ibps-rrb-xv",org:"IBPS RRB XV",post:"Officers Scale I/II/III + Office Assistant",deadline:"21 Sep 2026",note:"Official registration window closes today. Verify the exact post/eligibility before submitting.",link:"ibps.in"},
+                  {id:"pfrda-a-2026",org:"PFRDA",post:"Officer Grade A (Assistant Manager)",deadline:"24 Sep 2026",note:"Official registration window closes 24 Sep 2026.",link:"ibpsreg.ibps.in/pfrdajul26/index.php"},
+                  {id:"boi-officers-2026",org:"Bank of India",post:"Officers in various streams up to Scale IV",deadline:"25 Sep 2026",note:"Official registration window closes 25 Sep 2026.",link:"ibpsreg.ibps.in/boiaug26/"},
+                  {id:"isro-sac-2026",org:"ISRO SAC",post:"JRF / Research Associate / Project Scientist-I",deadline:"30 Sep 2026",note:"Current ISRO opportunity listed on the official Current Opportunities page.",link:"isro.gov.in"},
+                  {id:"drdo-research-2026",org:"DRDO",post:"JRF / RA and research opportunities",deadline:"Sep–Oct 2026",note:"DRDO vacancy page currently lists multiple research openings; each post has its own eligibility and deadline.",link:"drdo.gov.in"},
+                  {id:"cdac-chennai-2026",org:"C-DAC Chennai",post:"Project Engineer / Senior Project Engineer / Project Manager / Project Associate",deadline:"Sep 2026 interview cycle",note:"Official Chennai recruitment page lists experienced and fresher project roles; interview timing is communicated to eligible candidates.",link:"cdac.in"},
+                  {id:"tnpsc-group4-2026",org:"TNPSC",post:"Group IV",deadline:"Notification planned 6 Oct · exam planned 20 Dec 2026",note:"Annual planner dates are tentative until the final notification. Confirm vacancies and eligibility when the notification is released.",link:"tnpsc.gov.in"},
+                  {id:"ssc-2026",org:"SSC",post:"CHSL / Stenographer / MTS-Havaldar / SI-CAPF and other 2026-27 exams",deadline:"See SSC calendar",note:"Use the official calendar and individual notices for the latest dates.",link:"ssc.gov.in"}
+                ].map(job=>
+                  <div key={job.id} style={{background:P.card3,borderRadius:10,padding:"11px 13px",marginBottom:8,border:`1px solid ${P.border}`,borderLeft:`3px solid ${P.a5}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
+                      <div style={{fontSize:12,fontWeight:700,color:P.text}}>{job.org} — {job.post}</div>
+                      <span style={S.chip(P.a5)}>{job.deadline}</span>
                     </div>
-                    <div style={{fontSize:11,color:P.a5,fontWeight:700,marginBottom:6}}>📅 Deadline: {job.deadline}</div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:6,fontSize:11}}>
-                      <div style={{color:P.muted}}>Degree: <span style={{color:P.sub}}>{job.deg}</span></div>
-                      <div style={{color:P.muted}}>GATE: <span style={{color:job.gate.includes("required")?P.a3:P.a2}}>{job.gate}</span></div>
-                      <div style={{color:P.muted}}>Physical: <span style={{color:P.a2}}>{job.phy}</span></div>
-                      <div style={{color:P.muted}}>PhD: <span style={{color:P.a2}}>{job.phd}</span></div>
-                      <div style={{color:P.muted}}>Salary: <span style={{color:P.sub}}>{job.sal}</span></div>
-                    </div>
-                    <div style={{fontSize:11,color:P.muted,marginBottom:8,lineHeight:1.5,background:`${P.bg}88`,padding:"6px 8px",borderRadius:6}}>{job.note}</div>
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                      <a href={`https://www.${job.link}`} target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none",cursor:"pointer"}}>🔗 {job.link}</a>
-                      <select value={appStatus[job.id]||"🔴 Not Researched"} onChange={e=>saveAppStatus(job.id,e.target.value)} style={{...S.sel,flex:1,padding:"4px 8px",fontSize:11}}>
-                        {["🔴 Not Researched","🔵 Upcoming","🟢 Applications Open","🟡 Applied","🟣 Exam Scheduled","🟠 Interview Scheduled","🔷 Result Pending","🟢 Selected","⚫ Not Selected","⚪ Closed"].map(s=><option key={s}>{s}</option>)}
-                      </select>
-                    </div>
+                    <div style={{fontSize:11,color:P.muted,margin:"5px 0 7px",lineHeight:1.45}}>{job.note}</div>
+                    <a href={job.link.startsWith("http")?job.link:`https://www.${job.link}`} target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none"}}>🔗 Official source</a>
                   </div>
-                ))}
+                )}
               </div>
 
               {/* UPCOMING 90 DAYS */}
@@ -1194,29 +1231,21 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 ))}
               </div>
 
-              {/* TOP 5 BEST FIT */}
               <div style={{...S.CA(P.a1),marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:800,color:P.a1,marginBottom:10}}>🏆 TOP MATCHES FOR YOUR PROFILE</div>
+                <div style={{fontSize:13,fontWeight:800,color:P.a1,marginBottom:8}}>📌 PROFILE-RELEVANT OPTIONS — VERIFY EACH NOTIFICATION</div>
                 {[
-                  {rank:1,org:"NIC Scientist B",role:"Data Science & AI discipline",score:88,why:"M.Tech DS + PhD GenAI + TCS experience = perfect match for 50 DS&AI posts",gate:"GATE DA/CS needed",action:"Watch nic.gov.in for revised shortlist / next cycle"},
-                  {rank:2,org:"C-DAC Senior Project Engineer",role:"AI/ML or Data Science",score:83,why:"4.5yr experience qualifies you directly. No GATE. C-DAC Chennai available. PhD-compatible contractual posting.",gate:"No GATE",action:"Watch careers.cdac.in for Sep-Oct JIT cycle"},
-                  {rank:3,org:"DRDO Scientist B/C",role:"Computer Science / AI labs",score:82,why:"PhD in GenAI + CS background + defence AI research = high alignment. Scientist C needs 3yr experience (you have 4.5yr).",gate:"GATE CS needed for Sci B; experience for Sci C",action:"Watch rac.gov.in — Sci B via GATE; Sci C lateral"},
-                  {rank:4,org:"TNPSC CTS — Computer Programmer",role:"Tamil Nadu Govt Technical",score:80,why:"No GATE. SC advantage. Tamil Nadu domicile. PhD-compatible desk role. B.E ECE/CS eligible.",gate:"No GATE",action:"CTS Interview posts notification Aug 31 — watch tnpsc.gov.in"},
-                  {rank:5,org:"NIELIT Scientist B",role:"CS/IT/Electronics",score:79,why:"No GATE required (written exam instead). MeitY organisation. Good salary. PhD-compatible.",gate:"Written exam only",action:"Watch nielit.gov.in for next recruitment cycle"},
-                ].map(job=>(
-                  <div key={job.rank} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:job.rank===5?"none":`1px solid ${P.border}20`,alignItems:"flex-start"}}>
-                    <div style={{background:P.a1,color:"#000",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,flexShrink:0,marginTop:2}}>{job.rank}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:P.text,marginBottom:2}}>{job.org} — {job.role}</div>
-                      <div style={{fontSize:11,color:P.muted,marginBottom:2}}>{job.why}</div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                        <span style={S.chip(P.a1)}>{job.score}/100</span>
-                        <span style={S.chip(job.gate.includes("No GATE")?P.a2:P.a3)}>{job.gate}</span>
-                      </div>
-                      <div style={{fontSize:11,color:P.a3,marginTop:4}}>→ {job.action}</div>
-                    </div>
+                  ["NIC","Scientist/technical recruitment can include CS/IT/DS/AI disciplines; current eligibility and dates must be checked in the notification.","https://www.nic.gov.in/"],
+                  ["C-DAC","Current Chennai project recruitment includes experienced Project Engineer and Senior Project Engineer roles.","https://www.cdac.in/"],
+                  ["DRDO","Current vacancy page lists research and technical opportunities; each advertisement has separate criteria.","https://www.drdo.gov.in/drdo/offerings/vacancies"],
+                  ["TNPSC","Use the annual planner and each notification for technical services and Group examinations.","https://www.tnpsc.gov.in/"],
+                  ["NIELIT","Monitor scientist/technical recruitment and examination notices.","https://www.nielit.gov.in/"]
+                ].map(([name,detail,url])=>
+                  <div key={name} style={{padding:"8px 0",borderBottom:`1px solid ${P.border}20`}}>
+                    <div style={{fontSize:12,fontWeight:700,color:P.text}}>{name}</div>
+                    <div style={{fontSize:11,color:P.muted,margin:"3px 0 5px"}}>{detail}</div>
+                    <a href={url} target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none"}}>Official source ↗</a>
                   </div>
-                ))}
+                )}
               </div>
             </div>}
 
@@ -1228,7 +1257,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               {[
                 {org:"DRDO RAC — Scientist C (Lateral)",advt:"Advt 157 (CLOSED June 19, 2026)",status:"⚪ Closed",score:82,elig:{deg:"B.E CS/ECE ✅ (First class, 60%+)",exp:"3yr post-qualification needed ✅ (you have 4.5yr)",age:"Up to 35 (SC: +5 = 40 ✅)",gate:"No GATE for lateral Sci C",phys:"GREEN",phd:"B — verify service rules for external PhD"},overall:"POTENTIALLY ELIGIBLE",note:"Advt 157 had 33 posts (Sci C/D/E). All posts were Unreserved — SC category quota does NOT apply to Scientist C and above at DRDO. This is important. GATE not required for lateral Sci C. 3yr experience required — you qualify with 4.5yr. Watch rac.gov.in for Advt 158.",track:"Defence/Research"},
                 {org:"DRDO RAC — Scientist B (via GATE)",advt:"Advt 156 (GATE-based, ongoing process)",status:"🔷 Result/Selection in progress",score:85,elig:{deg:"B.E CS/ECE ✅ (First class)",exp:"No experience required (fresh + experienced eligible)",age:"Up to 28 (SC: +5 = 33 ✅)",gate:"GATE CS or EC required — CRITICAL",phys:"GREEN",phd:"B — verify"},overall:"POTENTIALLY ELIGIBLE — GATE score is critical",note:"DRDO Sci B via GATE is the main entry route. Advt 156 process was underway. New Sci B recruitment expected. PRIMARY blocker: Do you have a valid GATE 2024/2025/2026 CS or EC score? If yes — HIGH PRIORITY. If no — prepare for GATE 2027.",track:"Defence/Research"},
-                {org:"ISRO Scientist/Engineer SC",advt:"ICRB 2026 — Deadline Aug 17, 2026",status:"🟢 CLOSING TODAY",score:78,elig:{deg:"B.E ECE ✅ (EC stream) | B.E CS ✅ (CS stream)",exp:"Fresher to experienced (GATE-based shortlisting)",age:"Up to 28 (SC: +5 = 33 ✅)",gate:"GATE EC/CS 2024/2025/2026 required",phys:"GREEN — Medical + interview",phd:"B — Verify ISRO rules on external PhD"},overall:"POTENTIALLY ELIGIBLE — GATE required",note:"92 vacancies. CS stream: GATE CS. EC stream: GATE EC. 50% GATE + 50% interview for merit. No separate written exam. SC fee waived. Multiple centres including VSSC (Thiruvananthapuram, near TN).",track:"Space/Research"},
+                {org:"ISRO Scientist/Engineer SC",advt:"ICRB 2026 — previous application window closed 16 Sep 2026",status:"⚪ CLOSED",score:78,elig:{deg:"B.E ECE ✅ (EC stream) | B.E CS ✅ (CS stream)",exp:"Fresher to experienced (GATE-based shortlisting)",age:"Up to 28 (SC: +5 = 33 ✅)",gate:"GATE EC/CS 2024/2025/2026 required",phys:"GREEN — Medical + interview",phd:"B — Verify ISRO rules on external PhD"},overall:"POTENTIALLY ELIGIBLE — GATE required",note:"The 2026 ICRB EMC application window closed 16 Sep 2026. The official ISRO opportunities page currently lists SAC research openings closing 30 Sep 2026; monitor it for the next Scientist/Engineer cycle.",track:"Space/Research"},
                 {org:"CSIR Laboratories — Project Scientist/RA",advt:"Various rolling notifications",status:"🔵 Monitor continuously",score:75,elig:{deg:"M.Tech DS ✅ | PhD CS (ongoing) ✅ (for Project Scientist)",exp:"Varies by position",age:"Varies — typically 35–45",gate:"No GATE — merit/interview based",phys:"GREEN",phd:"A — Project Scientist posts typically allow external PhD continuation"},overall:"POTENTIALLY ELIGIBLE",note:"CSIR labs (CEERI, CMC, CDRI, etc.) recruit Project Scientists and RAs for AI/Data/CS. Contractual initially. PhD ongoing is often acceptable. Good research experience for your CV. Watch csir.res.in and individual lab websites.",track:"Research"},
                 {org:"DST/DBT Funded Projects — JRF/SRF/RA",advt:"Rolling basis, various IITs/research labs",status:"🔵 Ongoing opportunities",score:70,elig:{deg:"M.Tech DS ✅ | PhD ongoing ✅",exp:"Research experience preferred",age:"Typically up to 28-35",gate:"NET/GATE preferred for JRF",phys:"GREEN",phd:"A — Explicitly designed for PhD scholars"},overall:"ELIGIBLE for SRF/RA positions",note:"Post-M.Tech with ongoing PhD: eligible for SRF or Research Associate positions at IITs/NITs working on AI/healthcare/data projects. Search on DST portals, IIT research labs, and academia job portals (academicjobs.in, naturalsciences.in).",track:"Research"},
               ].map((job,i)=>(
@@ -1453,9 +1482,22 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
                     {tab==="jobs"&&<div>
             <div style={S.h2}>💡 Job Opportunities</div>
-            <div style={{...S.ib(P.a5),marginBottom:14}}>
-              <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>⏱️ Historical opportunity — ISRO Scientist SC deadline was August 17, 2026</div>
-              <div style={{fontSize:12,color:P.muted}}>92 vacancies across CS, Electronics, and other disciplines. SC category — application fee WAIVED. Salary ₹56,100/month. isro.gov.in</div>
+            <div style={{...S.CA(P.a1),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:7}}>
+                <div style={{fontSize:13,color:P.a1,fontWeight:800}}>🟢 Latest Government & Technical Jobs</div>
+                <span style={S.chip(P.a1)}>Verified 21 Sep 2026</span>
+              </div>
+              <div style={{fontSize:11,color:P.muted,lineHeight:1.55}}>Current opportunities are linked to official recruiting authorities. Closed opportunities are not presented as open applications.</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                {[["C-DAC Chennai","27 Project Engineer + 10 Senior Project Engineer vacancies in the current walk-in/online interview cycle","https://www.cdac.in/index.aspx?id=print_page&print=ca_cdac_chennai_recruitment_2026"],
+                  ["ISRO SAC","JRF / RA / Project Scientist-I · last date 30 Sep 2026","https://www.isro.gov.in/ViewAllOpportunities.html"],
+                  ["DRDO","Current JRF/RA and research vacancies","https://www.drdo.gov.in/drdo/offerings/vacancies"],
+                  ["IBPS","RRB, PFRDA, BOI, UIICL and other current recruitments","https://www.ibps.in/"],
+                  ["UPSC","Active examinations and notifications","https://www.upsc.gov.in/examinations/active-exams"]].map(([n,d,u])=>
+                    <a key={n} href={u} target="_blank" rel="noreferrer" style={{...S.CA(P.a1),flex:"1 1 240px",textDecoration:"none",padding:9}}>
+                      <div style={{fontSize:12,fontWeight:800,color:P.text}}>{n}</div><div style={{fontSize:10,color:P.muted,marginTop:3}}>{d}</div>
+                    </a>)}
+              </div>
             </div>
 
             {/* Sub tabs */}
@@ -1761,6 +1803,17 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Exam: December 2026 · SC cutoff ~56% = ~84/150 · Your target: 100+/150</div>
               <div style={{fontSize:12,color:P.muted}}>Registration: September–October 2026 window · Watch ugcnet.nta.ac.in · Set calendar reminder NOW</div>
             </div>
+            <div style={{...S.CA(P.a2),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:6}}>
+                <div style={{fontSize:13,fontWeight:800,color:P.a2}}>📰 Latest UGC NET / NTA study update</div>
+                <span style={S.chip(P.a2)}>21 Sep 2026</span>
+              </div>
+              <div style={{fontSize:11,color:P.muted,lineHeight:1.55,marginBottom:7}}>
+                NTA's current notice board lists UGC-NET June 2026 results for the English, Commerce and Sociology papers conducted on 9–10 September, category-wise cut-offs, final answer keys, and the NTA examination calendar through March 2027.
+              </div>
+              <a href="https://www.nta.ac.in/NoticeBoardArchive" target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none"}}>🔗 Open NTA latest notices</a>
+            </div>
+
             <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
               {[["schedule","📅 Schedule"],["p2","📚 Paper 2"],["p1","📝 Paper 1"],["res","🔗 Resources"]].map(([id,lb])=><button key={id} style={S.pill(ugcView===id,P.a2)} onClick={()=>setUgcView(id)}>{lb}</button>)}
             </div>
@@ -1898,7 +1951,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             {/* UNIFIED QUIZ ENGINE — UGC/Python/SQL/GenAI */}
             {(learnTab==="ugc"||learnTab==="python"||learnTab==="sql"||learnTab==="genai")&&(()=>{
               const configs={
-                ugc:{color:P.a2,label:"UGC NET CS Trainer — December 2026",desc:"AI-generated MCQs at UGC NET difficulty. Pick topic, think, reveal answer + explanation.",
+                ugc:{color:P.a2,label:"UGC NET CS Trainer — December 2026",desc:"Practice MCQs with an offline question bank. Gemini can add fresh questions when quota is available.",
                   topics:["DBMS","Operating Systems","DSA & Algorithms","Computer Networks","Theory of Computation","Programming C Java Python","Software Engineering","Paper 1 Teaching & Research"]},
                 python:{color:P.a1,label:"Python Trainer — Data Engineering focus",desc:"Practice questions from basics to PySpark. Tailored to your DE background.",
                   topics:["Week 1-2 Absolute Basics","Intermediate Python","Data Python Pandas NumPy","PySpark and DE Python","AI Python LangChain RAG"]},
@@ -1949,7 +2002,12 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                           const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
                           if(si>=0&&ei>=0){setQuizQ(JSON.parse(raw.slice(si,ei+1)));}
                           else{setQuizQ({question:"Error parsing response. Please try again.",options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"",tip:""});}
-                        }catch(err){setQuizQ({question:"Connection error: "+err.message,options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"Check your internet connection.",tip:""});}
+                        }catch(err){
+                          const bankKey=learnTab;
+                          const bank=offlineQuestionBank[bankKey]||offlineQuestionBank.ugc;
+                          const fallback=bank[Math.floor(Math.random()*bank.length)];
+                          setQuizQ({...fallback,offline:true});
+                        }
                         setQuizLoad(false);
                       }}
                       disabled={quizLoad}>
@@ -1957,6 +2015,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     </button>
 
                     {quizQ&&quizQ.question&&<div style={{...S.CA(cfg.color)}}>
+                      {quizQ.offline&&<div style={{fontSize:10,color:P.a2,fontWeight:700,marginBottom:8}}>🆓 Offline question bank — no Gemini quota used</div>}
                       <pre style={{fontSize:13,fontWeight:600,color:P.text,marginBottom:16,lineHeight:1.65,whiteSpace:"pre-wrap",fontFamily:"inherit"}}>{quizQ.question}</pre>
                       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
                         {Object.entries(quizQ.options||{}).map(([k,v])=>{

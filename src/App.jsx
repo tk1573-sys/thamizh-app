@@ -3356,7 +3356,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
               {hTab==="ask"&&<div>
                 <div style={S.h2}>🤖 Health Coach</div>
-                <div style={{...S.ib(P.a2),marginBottom:14}}><div style={{fontSize:12,color:P.a2,fontWeight:600,marginBottom:3}}>Judgment-free zone. Ask anything.</div><div style={{fontSize:12,color:P.muted}}>Your full medical profile is loaded. No question is too personal.</div></div>
+                <div style={{...S.ib(P.a2),marginBottom:14}}><div style={{fontSize:12,color:P.a2,fontWeight:600,marginBottom:3}}>Judgment-free zone. Ask anything.</div><div style={{fontSize:12,color:P.muted}}>Your saved Health log is not sent to the AI coach. Only the question you submit is sent.</div></div>
                 <div style={{marginBottom:14}}>
                   <div style={S.L}>Quick questions</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>

@@ -51,7 +51,7 @@ const checks = [
   ["C — unified long-term memory exists", app.includes('"life-memory-v2"') && app.includes("memoryHydrated"), "missing unified memory store"],
   ["C — Office/Health/Journal mirror into unified memory", app.includes('office: {data:offData}') && app.includes('health: {log:healthLog}') && app.includes('journal: {entries, dailyPlans}'), "missing durable tab mirrors"],
   ["C — PhD research hub is canonical and shared with SNU", app.includes("const phdResearchHub = {") && app.includes("phdResearchHub.snuScope") && app.includes("Overall PhD → SNU Research Map"), "missing PhD/SNU research linkage"],
-  ["C — SNU advisor uses canonical PhD research context", app.includes("OVERALL PHD RESEARCH: \\${phdResearchHub.workingTitle}") && app.includes("PROBLEM STATEMENTS: \\${phdResearchHub.problemStatements.join"), "SNU AI context is disconnected from canonical research hub"]
+  ["C — SNU advisor uses canonical PhD research context", app.includes("OVERALL PHD RESEARCH: ${phdResearchHub.workingTitle}") && app.includes("PROBLEM STATEMENTS: ${phdResearchHub.problemStatements.join"), "SNU AI context is disconnected from canonical research hub"]
 ];
 
 let failed = 0;

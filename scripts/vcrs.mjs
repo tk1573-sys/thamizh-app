@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import process from "node:process";
 const app=fs.readFileSync("src/App.jsx","utf8");
-const vercel=fs.readFileSync("vercel.json","utf8");
 const vite=fs.readFileSync("vite.config.js","utf8");
 const requiredTabs=["now","jobs","radar","monthly","career","skills","learn","ugc","phd","snu","office","health","journal","resume","certs","govt","buddy","coach"];
 const tabMatches=[...app.matchAll(/\{tab===["']([^"']+)["']&&/g)].map(m=>m[1]);
@@ -14,7 +13,7 @@ const checks=[
   ["all 18 tabs rendered",missingTabs.length===0,missingTabs],
   ["Health + Journal PIN gates present",missingPins.length===0,missingPins],
   ["Gemini proxy used",app.includes('fetch("/api/gemini"'),"missing /api/gemini"],
-  ["API rewrites configured",vercel.includes('"/api/health"')&&vercel.includes('"/api/gemini"'),"missing explicit API rewrites"],
+  ["API handlers present",fs.existsSync("api/health.js")&&fs.existsSync("api/gemini.js"),"missing /api handlers"],
   ["PWA denies API navigation fallback",vite.includes("/^\\/api(?:\\/|$)/"),"missing Workbox API denylist"],
   ["obvious stale strings removed",staleHits.length===0,staleHits]
 ];

@@ -1822,6 +1822,29 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 )}
               </div>
 
+              <div style={{...S.C(),marginBottom:12}}>
+                <div style={S.L}>🆓 Official Study & Exam Sources</div>
+                <div style={{fontSize:11,color:P.muted,marginBottom:9,lineHeight:1.5}}>Use these first for current syllabus, exam rules, documentation and notifications. AI is an optional tutor, not the source of truth.</div>
+                {[
+                  ["AWS DEA","AWS Skill Builder / DEA exam guide","https://aws.amazon.com/certification/certified-data-engineer-associate/"],
+                  ["SnowPro Core","Snowflake certification + documentation","https://www.snowflake.com/en/certifications/"],
+                  ["Databricks DEA","Databricks certification + Academy","https://www.databricks.com/learn/certification"],
+                  ["Claude Architect","Anthropic documentation","https://docs.anthropic.com/"],
+                  ["UGC NET","NTA official portal","https://ugcnet.nta.ac.in/"],
+                  ["UPSC","UPSC official examinations","https://www.upsc.gov.in/"],
+                  ["SSC","SSC official portal","https://ssc.gov.in/"],
+                  ["TNPSC","TNPSC official notifications","https://www.tnpsc.gov.in/"],
+                  ["IBPS","IBPS official portal","https://www.ibps.in/"],
+                  ["Employment News","Government recruitment listings","https://employmentnews.gov.in/"],
+                  ["PIB","Government current affairs","https://www.pib.gov.in/"]
+                ].map(([name,label,url])=>
+                  <a key={name} href={url} target="_blank" rel="noreferrer" style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${P.border}20`,textDecoration:"none"}}>
+                    <span style={{fontSize:12,color:P.text,fontWeight:700}}>{name}</span>
+                    <span style={{fontSize:10,color:P.a1,textAlign:"right"}}>{label} ↗</span>
+                  </a>
+                )}
+              </div>
+
               {[
                 {track:"ugc-dbms",label:"UGC NET — DBMS",color:P.a2,items:["ER model EER diagrams","Normalisation 1NF-BCNF","SQL JOINs subqueries triggers","Transactions ACID 2PL","Indexing B+ tree hashing","Concurrency control","Query optimisation","Relational algebra"]},
                 {track:"ugc-os",label:"UGC NET — OS",color:P.a2,items:["Process scheduling FCFS SJF RR","Deadlock Banker algorithm","Paging segmentation","Virtual memory TLB","File systems disk scheduling","Semaphores mutex","IPC mechanisms"]},

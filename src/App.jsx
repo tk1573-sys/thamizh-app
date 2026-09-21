@@ -870,10 +870,6 @@ export default function App() {
     const updated = {...learnProgress};
     if(updated[trackKey]) { delete updated[trackKey][itemKey]; }
     saveLearnProgress(updated);
-  };  const unmarkDone = (trackKey, itemKey) => {
-    const updated = {...learnProgress};
-    if(updated[trackKey]) { delete updated[trackKey][itemKey]; }
-    saveLearnProgress(updated);
   };
   const certState = id => certProgress[id] || {modules:{},scores:{knowledge:0,handsOn:0,recall:0,application:0,examTechnique:0},studyMinutes:0,examDate:""};
   const saveCertProgress = updated => { setCertProgress(updated); storeSet("cert-progress", JSON.stringify(updated)); };

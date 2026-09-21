@@ -113,6 +113,10 @@ function PinGate({ label, color, icon, storeKey, children }) {
   // Unlock: check entry against stored hash
   useEffect(() => {
     if (phase !== "locked" || entry.length < 4) return;
+    let requiredLength = 4;
+    try { requiredLength = Number(sessionStorage.getItem(SK_LEN) || "4"); } catch(_) {}
+    if (!Number.isInteger(requiredLength) || requiredLength < 4 || requiredLength > 6) requiredLength = 4;
+    if (entry.length !== requiredLength) return;
     const t = setTimeout(() => {
       try {
         const stored = sessionStorage.getItem(SK);
@@ -125,7 +129,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
       } catch(_) { setEntry(""); }
     }, 200);
     return () => clearTimeout(t);
-  }, [entry, phase, SK]);
+  }, [entry, phase, SK, SK_LEN]);
 
   const addDigit = (d) => {
     if (phase === "setup1" && pin1.length < 6) setPin1(p => p+d);

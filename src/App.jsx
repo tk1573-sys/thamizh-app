@@ -1142,9 +1142,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               </div>
             </div>
 
-            <div style={{...S.ib(P.a5),marginBottom:10}}>
-              <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>⚠️ ISRO Scientist/Engineer SC — Deadline TODAY August 17, 2026 (Last few hours!)</div>
-              <div style={{fontSize:11,color:P.muted}}>92 vacancies. Computer Science stream available. GATE required. SC fee waived. Apply at isro.gov.in before midnight.</div>
+            <div style={{...S.ib(P.a1),marginBottom:10}}>
+              <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>ℹ️ Government vacancy data is date-sensitive</div>
+              <div style={{fontSize:11,color:P.muted}}>Closed recruitment cycles are kept as history only. For current applications, use the verified 21 Sep 2026 snapshot and the official source links shown below.</div>
             </div>
             <div style={{...S.ib(P.a3),marginBottom:14}}>
               <div style={{fontSize:11,color:P.a3,fontWeight:700,marginBottom:2}}>Profile: B.E ECE + M.Tech DS + PhD CS/GenAI (ongoing, SNU) + 4.5yr TCS DE experience + SC category</div>
@@ -1429,12 +1429,12 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:11,color:P.muted}}>Update status for each opportunity. Data saved automatically.</div>
               </div>
               {[
-                {id:"isro-sc-2026",org:"ISRO Scientist/Engineer SC",deadline:"Aug 17, 2026",priority:"🔥 MUST APPLY"},
-                {id:"tnpsc-cts-ni-2026",org:"TNPSC CTS Non-Interview (Computer Programmer)",deadline:"Exam Aug 16–Sep 9",priority:"🟢 HIGH"},
-                {id:"tnpsc-cts-int-2026",org:"TNPSC CTS Interview Posts",deadline:"Notif Aug 31, Exam Nov 14",priority:"🟢 HIGH"},
+                {id:"isro-sc-2026",org:"ISRO Scientist/Engineer SC",deadline:"Closed 16 Sep 2026 — historical tracker item",priority:"⚪ CLOSED"},
+                {id:"tnpsc-cts-ni-2026",org:"TNPSC CTS Non-Interview (Computer Programmer)",deadline:"Exam window completed — historical tracker item",priority:"⚪ CLOSED"},
+                {id:"tnpsc-cts-int-2026",org:"TNPSC CTS Interview Posts",deadline:"Use final TNPSC notification/planner; dates are notification-specific",priority:"🔵 VERIFY"},
                 {id:"nic-sci-b-2026",org:"NIC Scientist B (DS&AI discipline)",deadline:"Closed Apr 24, watch revised list",priority:"🟢 HIGH"},
-                {id:"cdac-jit-next",org:"C-DAC JIT Sep-Oct 2026 (Senior PE — AI/ML)",deadline:"Expected Sep-Oct 2026",priority:"🟢 HIGH"},
-                {id:"drdo-sci-b-next",org:"DRDO Scientist B via GATE (next cycle)",deadline:"Expected Sep-Oct 2026",priority:"🟢 HIGH"},
+                {id:"cdac-jit-next",org:"C-DAC Chennai current project recruitment",deadline:"Sep 2026 interview cycle",priority:"🟢 VERIFY"},
+                {id:"drdo-sci-b-next",org:"DRDO Scientist B via GATE",deadline:"No current application date asserted; monitor official DRDO/RAC notices",priority:"🔵 VERIFY"},
                 {id:"drdo-sci-c-next",org:"DRDO Scientist C Lateral (next advt)",deadline:"Watch rac.gov.in",priority:"🟡 GOOD"},
                 {id:"nielit-next",org:"NIELIT Scientist B (next cycle)",deadline:"Expected late 2026",priority:"🟡 GOOD"},
                 {id:"ugc-net-dec-2026",org:"UGC NET CS December 2026",deadline:"Dec 2026 — registration date to be confirmed by NTA",priority:"🟢 HIGH — Academic gateway"},
@@ -1702,11 +1702,11 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
                 {[
-                  "ISRO Scientist SC deadline is Aug 17 — should I apply today? What do I need?",
+                  "What government technical/research openings are current today, and which official notice should I verify first?",
                   "How do I negotiate a 50% hike when switching from TCS?",
                   "Which is better right now — ISRO Scientist or NIC Scientist B for my profile?",
                   "What is the exact GATE CS score I need for ISRO shortlisting?",
-                  "Should I apply to private companies now or wait for Databricks cert in Sep?",
+                  "How should I sequence private job applications with my current certification preparation?",
                   "What walking professor salary can I expect with my profile at SSN/VIT?",
                   "How do I write a cold LinkedIn message to a Zoho DE recruiter?",
                   "C-DAC Chennai next JIT cycle — am I eligible for Senior Project Engineer?",
@@ -2184,7 +2184,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   onClick={async()=>{
                     if(!switchGuideQ.trim())return;
                     setSwitchGuideLoad(true);setSwitchGuideA("");
-                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude Architect Foundations + Professional, Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
+                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer with 4+ years of experience. Skills: SQL/Teradata, IBM DataStage, Unix Shell, Python/PySpark and GenAI learning. PhD CS/GenAI at Shiv Nadar University (ongoing). Current certification tracks: Claude Architect Foundations + Professional, Databricks Data Engineer Associate, AWS Data Engineer Associate and SnowPro Core. Goal: Senior DE/AI-DE transition. UGC NET CS December 2026. Chennai based. Give specific, practical, actionable advice without inventing current deadlines.";
                     try{
                       const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
                       setSwitchGuideA(readAIText(d) || "No response.");

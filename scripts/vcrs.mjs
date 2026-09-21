@@ -43,7 +43,11 @@ const checks = [
   ["R — current UGC guidance does not invent a registration date", !app.includes("registration window typically opens"), "stale UGC window claim"],
   ["S — obvious stale live-job prompts removed", staleHits.length === 0, staleHits],
   ["S — private medical details are not embedded in AI system prompts", aiPrivateHealthHits.length === 0, aiPrivateHealthHits],
-  ["S — Gemini API key is not exposed in client source", !app.includes("GEMINI_API_KEY"), "GEMINI_API_KEY found in App.jsx"]
+  ["S — Gemini API key is not exposed in client source", !app.includes("GEMINI_API_KEY"), "GEMINI_API_KEY found in App.jsx"],
+  ["C — certification command centre data exists", app.includes("const certificationTracks = [") && app.includes("const futureCertifications = ["), "certification data missing"],
+  ["C — all active certification tracks have modules", ["aws-dea","snowpro-core","dbx-dea","claude-foundations","claude-professional","dbx-genai"].every(id => app.includes('id:"'+id+'"') && app.includes("modules:[")), "missing certification modules"],
+  ["C — certification progress and wrong-answer persistence wired", app.includes('"cert-progress"') && app.includes('"cert-wrong"') && app.includes("saveCertProgress"), "missing certification persistence"],
+  ["C — certification system works without Gemini", app.includes("Offline Question Bank") && app.includes("Today's Study Mission"), "missing offline study path"]
 ];
 
 let failed = 0;

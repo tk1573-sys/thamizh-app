@@ -397,13 +397,13 @@ const govtJobs = [
 ];
 
 const certList = [
-  { cert:"Claude Certified Developer Foundations (CCDV-F)", deadline:"2026-08-31", when:"Aug 31, 2026", color:P.a5, urgent:true, tip:"Anthropic's official Claude developer certification. Study: claude.ai/docs, Anthropic API docs, prompt engineering guide. Topics: API usage, prompt design, safety, tool use, multi-turn conversations. Free to attempt via Anthropic's certification portal. Add to LinkedIn immediately after passing — high market signal in 2026." },
-  { cert:"Databricks Certified Data Engineer Associate", status:"🔥 Priority 2 – target Sep/Oct 2026", when:"Sep–Oct 2026", color:P.a3, tip:"You already started. 45 MCQs, 90 min. Use community.databricks.com free + Databricks Academy prep materials. Exam voucher ~$200 USD." },
-  { cert:"Google Gemini Enterprise Developer", status:"TCS Talent Pool – complete all modules", when:"Aug 2026", color:P.a4, tip:"Complete all Google Cloud Skills Boost modules via TCS Talent Pool. Already partially done – finish every module and claim the badge." },
-  { cert:"GCP Professional Data Engineer", status:"High value – Nov 2026 target", when:"Nov 2026", color:P.a1, tip:"Builds on Gemini Talent Pool knowledge. Exam $200 USD. Use Skills Boost + ExamPro free YouTube. Salary impact: +₹5–10 LPA immediately." },
-  { cert:"AWS Data Engineer Associate", status:"Jan 2027 target", when:"Jan 2027", color:P.a2, tip:"Stephane Maarek Udemy course (₹499 on sale). After GCP, this becomes much easier – 60% overlapping concepts. High market demand in India." },
-  { cert:"dbt Certified Developer", status:"Feb 2027 target", when:"Feb 2027", color:P.a3, tip:"Free learning at courses.getdbt.com. Exam ~$200 USD. Strong differentiator for Analytics Engineer roles. Pairs well with BigQuery + Snowflake." },
-  { cert:"Python PCEP or PCAP", status:"Optional – validates Python formally", when:"Sep 2026", color:P.muted, tip:"Python Institute exams. PCEP is entry level (~$59), quick prep. Good for resume validation while you build Python projects." },
+  { cert:"Microsoft GitHub Copilot Certification", status:"✅ Completed", when:"Completed", color:P.a2, tip:"Completed. Keep the credential visible on LinkedIn and use it as supporting evidence for AI-assisted development skills." },
+  { cert:"AWS Certified Data Engineer – Associate", status:"🟡 Coupon received · exam not scheduled", when:"20-day sprint", color:P.a2, tip:"Priority exam. Prepare with the official AWS DEA exam guide, data engineering services, ETL/data pipelines, storage, analytics, security and practice questions. Schedule within the 20-day sprint when mock performance is ready." },
+  { cert:"Snowflake SnowPro Core", status:"🟡 Coupon received · preparation underway", when:"20-day sprint", color:P.a3, tip:"Finish Snowflake fundamentals, architecture, virtual warehouses, storage, data loading, security, performance and practice tests. Complete required bootcamp/practice work and schedule the exam." },
+  { cert:"Databricks Certified Data Engineer Associate", status:"🟡 ILT attended · prerequisites/tasks remaining", when:"20-day sprint", color:P.a4, tip:"Complete Databricks Fundamentals and all required learning/tasks first. Then obtain the voucher and schedule the Data Engineer Associate exam." },
+  { cert:"Claude Architect Foundations", status:"🟡 Registered · exam not scheduled", when:"20-day sprint", color:P.a5, tip:"Prepare around architecture fundamentals, Claude/API concepts, prompt design, tool use, safety, context management, evaluation and production patterns. Use Anthropic's official documentation as the source of truth." },
+  { cert:"Claude Architect Professional", status:"🟡 Registered · exam not scheduled", when:"20-day sprint", color:P.a5, tip:"Advanced architecture preparation: production system design, agentic workflows, tool orchestration, reliability, security, evaluation, cost/latency trade-offs and deployment patterns. Schedule after Foundations preparation is solid." },
+  { cert:"Databricks Generative AI Engineer", status:"🟡 Active learning / certification track", when:"Continue sprint", color:P.a4, tip:"Continue the GenAI Engineer learning track alongside DEA preparation: RAG, vector search, model serving, evaluation, governance and production GenAI workflows." },
 ];
 
 const weeklyTemplate = [
@@ -492,6 +492,9 @@ async function callAI(payload) {
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) {
+    if (r.status === 429) {
+      throw new Error("Gemini quota/rate limit reached. Study content and saved data remain available; try AI again later.");
+    }
     const msg = d?.message || d?.error || `Request failed (${r.status})`;
     throw new Error(msg);
   }
@@ -1028,9 +1031,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           <div style={{position:"relative"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div>
-                <div style={S.badge}>✦ LIFE COMMAND CENTRE · JUL 2026 – DEC 2026</div>
+                <div style={S.badge}>✦ LIFE COMMAND CENTRE · SEP 2026 – DEC 2026</div>
                 <h1 style={S.h1}>Thamizh's Life Plan 🚀</h1>
-                <p style={S.sub}>PhD SSN · CCDV-F Aug 31 · UGC NET Dec 2026 · TCS · Career · Health</p>
+                <p style={S.sub}>PhD SSN · 20-Day Certification Sprint · UGC NET Dec 2026 · TCS · Career · Health</p>
               </div>
               <button onClick={()=>{setShowAgent(true);runLifeAgent();}}
                 style={{background:`linear-gradient(135deg,${P.a4},${P.a1})`,border:"none",borderRadius:12,padding:"10px 16px",color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",flexShrink:0,boxShadow:`0 4px 20px ${P.a4}44`,marginTop:4}}>
@@ -1047,23 +1050,19 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           {tab==="now"&&<div>
             <div style={S.h2}>🔥 Today — {fmtDate(today, {weekday:"long",day:"numeric",month:"long",year:"numeric"})} IST</div>
 
-            {/* Live countdown for CCDV-F */}
-            {(()=>{
-              return(
-                <div style={{...gl(P.a5),padding:14,marginBottom:14,borderRadius:12,border:`2px solid ${P.a5}66`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:800,color:P.a5}}>🚨 Claude CCDV-F Certification Deadline</div>
-                      <div style={{fontSize:12,color:P.muted}}>Deadline: Aug 31, 2026</div>
-                    </div>
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:13,fontWeight:800,color:P.a5,lineHeight:1.3}}>{claudeDeadline.label}</div>
-                    </div>
-                  </div>
-                  {!claudeDeadline.expired&&<div style={{background:"rgba(255,255,255,0.06)",borderRadius:5,height:6,marginTop:10,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.max(5,100-Math.round((claudeDeadline.days/42)*100))}%`,background:`linear-gradient(90deg,${P.a5},${P.a3})`,borderRadius:5}}/></div>}
+            {/* 20-DAY CERTIFICATION SPRINT */}
+            <div style={{...gl(P.a4),padding:14,marginBottom:14,borderRadius:12,border:`2px solid ${P.a4}66`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800,color:P.a4}}>🏆 20-Day Certification Sprint</div>
+                  <div style={{fontSize:12,color:P.muted}}>21 Sep → 11 Oct 2026 · AWS · Snowflake · Databricks · Claude</div>
                 </div>
-              );
-            })()}
+                <span style={S.chip(P.a4)}>7 certification tracks</span>
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+                {[["AWS DEA","🟡",P.a2],["SnowPro Core","🟡",P.a3],["Databricks DEA","🟡",P.a4],["Claude Foundations","🟡",P.a5],["Claude Professional","🟡",P.a5],["Databricks GenAI","🟡",P.a4],["GitHub Copilot","✅",P.a2]].map(([n,s,col])=><span key={n} style={S.chip(col)}>{s} {n}</span>)}
+              </div>
+            </div>
 
             {/* Only saved plans are presented as today's schedule. */}
             <div style={{...S.CA(P.a1),marginBottom:14}}>
@@ -1798,6 +1797,31 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:3}}>Your Learning Dashboard — July to December 2026</div>
                 <div style={{fontSize:12,color:P.muted}}>Tap any chip to mark done/undone. Progress saves automatically.</div>
               </div>
+              <div style={{...S.CA(P.a4),marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
+                  <div style={{fontSize:13,fontWeight:800,color:P.a4}}>🏆 20-Day Certification Sprint</div>
+                  <span style={S.chip(P.a4)}>21 Sep → 11 Oct 2026</span>
+                </div>
+                <div style={{fontSize:11,color:P.muted,lineHeight:1.55,marginBottom:9}}>
+                  Official documentation remains the source of truth. Saved/free study content stays available even when Gemini quota is unavailable. Gemini is optional for explanations, quizzes and analysis.
+                </div>
+                {[
+                  ["AWS Data Engineer – Associate","🟡","Coupon received · prepare → schedule",P.a2],
+                  ["SnowPro Core","🟡","Coupon received · preparation → schedule",P.a3],
+                  ["Databricks Data Engineer Associate","🟡","Fundamentals + required tasks → voucher",P.a4],
+                  ["Claude Architect Foundations","🟡","Registered · prepare → schedule",P.a5],
+                  ["Claude Architect Professional","🟡","Registered · advanced preparation",P.a5],
+                  ["Databricks Generative AI Engineer","🟡","Active learning track",P.a4],
+                  ["Microsoft GitHub Copilot","✅","Completed",P.a2]
+                ].map(([name,status,next,color])=>
+                  <div key={name} style={{...S.li(name==="Microsoft GitHub Copilot"),display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{color,fontWeight:800}}>{status}</span>
+                    <span style={{flex:1,color:P.text,fontWeight:600}}>{name}</span>
+                    <span style={{fontSize:10,color:P.muted,textAlign:"right"}}>{next}</span>
+                  </div>
+                )}
+              </div>
+
               {[
                 {track:"ugc-dbms",label:"UGC NET — DBMS",color:P.a2,items:["ER model EER diagrams","Normalisation 1NF-BCNF","SQL JOINs subqueries triggers","Transactions ACID 2PL","Indexing B+ tree hashing","Concurrency control","Query optimisation","Relational algebra"]},
                 {track:"ugc-os",label:"UGC NET — OS",color:P.a2,items:["Process scheduling FCFS SJF RR","Deadlock Banker algorithm","Paging segmentation","Virtual memory TLB","File systems disk scheduling","Semaphores mutex","IPC mechanisms"]},
@@ -3291,7 +3315,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
           {/* CERTS */}
           {tab==="certs"&&<div>
-            <div style={S.h2}>🏅 Certification Roadmap 2026</div>
+            <div style={S.h2}>🏅 Certification Roadmap · 20-Day Sprint</div>
 
             {/* CLAUDE CERT URGENT BANNER */}
             {(()=>{
@@ -3329,8 +3353,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             {/* ROADMAP TAB */}
             {certTab==="roadmap"&&<div>
               <div style={{...S.ib(P.a1),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>Your cert stack: CCDV-F → Databricks DEA → Gemini → GCP → AWS → dbt</div>
-                <div style={{fontSize:12,color:P.muted}}>Each cert adds ₹3–10 LPA to market value. CCDV-F is the most urgent — deadline Aug 31.</div>
+                <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>20-day sprint: AWS DEA → SnowPro Core → Databricks DEA → Claude Architect Foundations → Claude Architect Professional → Databricks GenAI</div>
+                <div style={{fontSize:12,color:P.muted}}>Primary goal: complete or reach the next certification milestone for every active track by 11 October 2026.</div>
               </div>
               {certList.map((c,i)=>{
                 const deadline = c.deadline ? deadlineStatus(c.deadline) : null;

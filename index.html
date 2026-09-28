@@ -2,23 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/icons/icon-192x192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
     <meta name="theme-color" content="#0D1117" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="LifeCMD" />
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <meta name="description" content="Thamizh's Life Command Centre — PhD, Career, Health, Govt Jobs" />
+    <meta name="description" content="Thamizh's Life Command Centre — PhD, Career, Health, Govt Jobs, Certifications" />
     <title>Thamizh's Life Command Centre</title>
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { background: #0D1117; color: #E2E8F0; font-family: 'Segoe UI', system-ui, sans-serif; }
-      #root { min-height: 100vh; min-height: 100dvh; }
+      *,*::before,*::after { box-sizing:border-box; }
+      html { width:100%; min-height:100%; background:#0D1117; overflow-x:hidden; }
+      body { margin:0; padding:0; width:100%; min-width:0; min-height:100%; overflow-x:hidden; background:#0D1117; color:#E2E8F0; font-family:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif; -webkit-text-size-adjust:100%; text-rendering:optimizeLegibility; }
+      button,input,textarea,select { font:inherit; }
+      button,a { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+      a { overflow-wrap:anywhere; }
+      #root { width:100%; min-height:100vh; min-height:100dvh; overflow-x:hidden; }
+      @media (max-width:600px) {
+        body { font-size:14px; }
+        #root { min-height:100dvh; }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>This application needs JavaScript enabled. Open the Vercel URL in Chrome and use Add to Home screen for the full mobile app.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

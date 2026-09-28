@@ -5,6 +5,9 @@ const app = fs.readFileSync("src/App.jsx", "utf8");
 const sync = fs.readFileSync("api/sync.js", "utf8");
 const vite = fs.readFileSync("vite.config.js", "utf8");
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+const careerHub = fs.readFileSync("src/career-hub.js", "utf8");
+const index = fs.readFileSync("index.html", "utf8");
+const main = fs.readFileSync("src/main.jsx", "utf8");
 
 const requiredTabs = ["now","jobs","radar","monthly","career","skills","learn","ugc","phd","snu","office","health","journal","resume","certs","govt","buddy","coach"];
 const tabMatches = [...app.matchAll(/\{tab===["']([^"']+)["']&&/g)].map(m => m[1]);
@@ -40,7 +43,11 @@ const checks = [
   ["C — Gemini proxy used", app.includes('fetch("/api/gemini"'), "missing /api/gemini"],
   ["C — API handlers present", fs.existsSync("api/health.js") && fs.existsSync("api/gemini.js"), "missing /api handlers"],
   ["R — PWA denies API navigation fallback", vite.includes("/^\\/api(?:\\/|$)/"), "missing Workbox API denylist"],
-  ["R — production build script exists", pkg.scripts?.build === "vite build", pkg.scripts?.build],
+  ["R — production build script runs smoke tests then Vite", typeof pkg.scripts?.build === "string" && pkg.scripts.build.includes("vite build") && pkg.scripts.build.includes("npm run test"), pkg.scripts?.build],
+  ["R — mobile viewport hardened", index.includes("viewport-fit=cover") && index.includes("overflow-x:hidden"), "mobile viewport settings missing"],
+  ["R — PWA service worker registered", main.includes("virtual:pwa-register") && main.includes("registerSW"), "PWA registration missing"],
+  ["R — mobile career hub included", main.includes("career-hub.js") && fs.existsSync("src/career-hub.js"), "career hub not loaded"],
+  ["R — certification/job links are present", careerHub.includes("AWS Certified Data Engineer") && careerHub.includes("SnowPro Core") && careerHub.includes("tnpsc.gov.in") && careerHub.includes("upsc.gov.in"), "career hub data missing"],
   ["R — current UGC guidance does not invent a registration date", !app.includes("registration window typically opens"), "stale UGC window claim"],
   ["S — obvious stale live-job prompts removed", staleHits.length === 0, staleHits],
   ["S — private medical details are not embedded in AI system prompts", aiPrivateHealthHits.length === 0, aiPrivateHealthHits],
@@ -54,7 +61,7 @@ const checks = [
   ["C — PhD research hub is canonical and shared with SNU", app.includes("const phdResearchHub = {") && app.includes("phdResearchHub.snuScope") && app.includes("Overall PhD → SNU Research Map"), "missing PhD/SNU research linkage"],
   ["C — SNU advisor uses canonical PhD research context", app.includes("OVERALL PHD RESEARCH: ${phdResearchHub.workingTitle}") && app.includes("PROBLEM STATEMENTS: ${phdResearchHub.problemStatements.join"), "SNU AI context is disconnected from canonical research hub"],
   ["C — encrypted cross-device sync client exists", app.includes("encryptSyncSnapshot") && app.includes("decryptSyncSnapshot") && app.includes("/api/sync?id="), "missing encrypted cloud sync client"],
-  ["C — encrypted sync API exists", sync.includes("from \"@vercel/blob\"") && sync.includes('access:"private"') && sync.includes("allowOverwrite:true"), "missing private Vercel Blob sync API"]
+  ["C — encrypted sync API exists", sync.includes("from \"@vercel/blob\"") && sync.includes('access:"private"') && sync.includes("allowOverwrite:true") && sync.includes("storeId"), "missing private Vercel Blob sync API"]
 ];
 
 let failed = 0;

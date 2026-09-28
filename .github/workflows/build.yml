@@ -15,5 +15,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm install --no-audit --no-fund
+      - run: node --check src/career-coach.js
       - run: npm run build
       - run: node scripts/vcrs.mjs

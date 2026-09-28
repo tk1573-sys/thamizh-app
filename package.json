@@ -1,10 +1,11 @@
 {
   "name": "thamizh-life-command-centre",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "test": "node scripts/smoke-test.mjs",
+    "build": "npm run test && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

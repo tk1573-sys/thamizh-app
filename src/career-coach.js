@@ -1,112 +1,105 @@
-const today=new Date().toISOString().slice(0,10);
-const tasks=[
- ['Daily Core','45 min SQL/Python: one problem + one production-style ETL improvement'],
- ['Certification','60 min on the current priority cert; rotate SnowPro, Databricks, AWS and Claude'],
- ['PhD Coursework','60 min on one CS8015/CS8044/CS8051/UM8001 module + 5-line notes'],
- ['Research','30 min: one paper, Mendeley record, dataset/experiment note or supervisor action'],
- ['Career','20 min: one application, resume bullet, GitHub improvement or interview question'],
- ['UGC NET','30 min: one CS topic + 15 MCQs; log weak areas'],
- ['Journal','10 min: record completed work, blocker and tomorrow Top 3'],
+/*
+ * Career Coach — mobile-safe career / learning hub.
+ * No API keys and no private health details are embedded here.
+ * Progress is mirrored into the app's unified life-memory-v2 local store.
+ */
+const today = new Date().toISOString().slice(0, 10);
+const tasks = [
+  ['Daily Core', '45 min SQL/Python: one problem + one production-style ETL improvement'],
+  ['Certification', '60 min on the current priority certification; rotate SnowPro, Databricks, AWS and Claude'],
+  ['PhD Coursework', '60 min on one CS8015/CS8044/CS8051/UM8001 module + 5-line notes'],
+  ['Research', '30 min: one paper, Mendeley record, dataset/experiment note or supervisor action'],
+  ['Career', '20 min: one application, resume bullet, GitHub improvement or interview question'],
+  ['UGC NET', '30 min: one Computer Science topic + 15 MCQs; log weak areas'],
+  ['Journal', '10 min: record completed work, blocker and tomorrow Top 3'],
 ];
-const courses=[
- ['CS8015','Deep Learning for Computer Vision',['Visual Features and Matching','Neural Networks Overview','Convolutional Neural Networks','Recurrent Neural Networks','Deep Generative Models']],
- ['CS8044','Biomedical Signal Processing',['Biomedical Signal Origin and Dynamics','Event Detection','Waveform Analysis','Frequency-Domain Analysis','Modelling of Biomedical Systems']],
- ['CS8051','Generative AI with Large Language Models',['Foundations of Generative AI and LLMs','Transformer Models and Text Generation','Advanced Training and Computational Considerations','Model Fine-Tuning, Evaluation and Adaptation','Ethical Considerations, Human Alignment and Deployment']],
- ['UM8001','Research Methodology',['Fundamentals of Research','Literature Survey','Data Collection and Analysis','Technical Writing and Presentation','Research Indicators']]
+const courses = [
+  ['CS8015', 'Deep Learning for Computer Vision', ['Visual Features and Matching', 'Neural Networks Overview', 'Convolutional Neural Networks', 'Recurrent Neural Networks', 'Deep Generative Models']],
+  ['CS8044', 'Biomedical Signal Processing', ['Biomedical Signal Origin and Dynamics', 'Event Detection', 'Waveform Analysis', 'Frequency-Domain Analysis', 'Modelling of Biomedical Systems']],
+  ['CS8051', 'Generative AI with Large Language Models', ['Foundations of Generative AI and LLMs', 'Transformer Models and Text Generation', 'Advanced Training and Computational Considerations', 'Model Fine-Tuning, Evaluation and Adaptation', 'Ethical Considerations, Human Alignment and Deployment']],
+  ['UM8001', 'Research Methodology', ['Fundamentals of Research', 'Literature Survey', 'Data Collection and Analysis', 'Technical Writing and Presentation', 'Research Indicators']],
 ];
-const certs=[
- {name:'AWS Certified Data Engineer – Associate (DEA-C01)',status:'Preparing / priority',url:'https://aws.amazon.com/certification/certified-data-engineer-associate/',pre:'2–3 years DE background is the target profile; 1–2 years AWS hands-on is recommended.',skills:'ETL/ELT, Python/SQL, S3, Glue, Athena, Redshift, EMR, Kinesis, MWAA/Step Functions, IAM/KMS, data quality, monitoring, governance, cost/performance, Git, IaC.'},
- {name:'SnowPro Core (COF-C03)',status:'Preparing now',url:'https://learn.snowflake.com/en/certifications/snowpro-core/',pre:'Snowflake recommends practical experience; current SnowPro Core track is COF-C03.',skills:'Snowflake architecture, warehouses, RBAC, SQL, loading/unloading, stages, file formats, semi-structured data, Time Travel, Fail-safe, cloning, sharing, performance and cost optimization.'},
- {name:'Databricks Certified Data Engineer Associate',status:'Preparing now',url:'https://www.databricks.com/learn/certification/data-engineer-associate',pre:'No formal degree prerequisite; Databricks Fundamentals plus hands-on Lakehouse practice is the practical starting point.',skills:'Lakehouse architecture, Delta Lake, Unity Catalog, SQL/PySpark, batch/streaming ingestion, Auto Loader, Lakeflow Connect/Jobs, Spark Declarative Pipelines, data modeling, governance, performance and DevOps.'},
- {name:'Databricks Certified Generative AI Engineer Associate',status:'Preparing',url:'https://www.databricks.com/learn/certification/generative-ai-engineer-associate',pre:'No formal prerequisite; hands-on Databricks experience is strongly useful.',skills:'LLM application design, RAG, Vector Search, model serving, MLflow, Unity Catalog, evaluation, prompt/chain design, agents/MCP and production security.'},
- {name:'AWS Certified Machine Learning Engineer – Associate (MLA-C02)',status:'Current beta / investigate',url:'https://aws.amazon.com/certification/certified-machine-learning-engineer-associate/',pre:'Updated MLA-C02 beta is the current English path after MLA-C01 ended in English on Sep 28, 2026.',skills:'ML data preparation, traditional ML + foundation models, SageMaker/Bedrock, deployment/orchestration, CI/CD, monitoring, security, agents and responsible operations.'},
- {name:'AWS Certified Generative AI Developer – Professional (AIP-C01)',status:'Later target',url:'https://aws.amazon.com/certification/certified-generative-ai-developer-professional/',pre:'AWS targets production-grade experience; 2+ years cloud/production development and 1 year hands-on GenAI are recommended.',skills:'Bedrock, foundation models, RAG/agents, application architecture, APIs, security/IAM, networking, observability, deployment/IaC, cost and production operations.'},
- {name:'AWS Certified Solutions Architect – Professional (SAP-C02/SAP-C03 transition)',status:'Later target',url:'https://aws.amazon.com/certification/certified-solutions-architect-professional/',pre:'Build strong AWS architecture experience first; current exam is transitioning to SAP-C03.',skills:'Multi-account architecture, networking, security, resilience, storage, compute, databases, migration, observability, cost optimization, Well-Architected and IaC.'},
- {name:'Claude Architect Professional',status:'Registered / preparing',url:'https://www.anthropic.com/learn/certification',pre:'Follow the current Anthropic certification portal and your registered exam path.',skills:'LLM architecture, Claude/Claude Code, prompting, tool use, agents, context management, evaluation, safety, privacy and production integration.'},
- {name:'Claude Associate Foundations → Architect Foundations',status:'Roadmap / foundation refresh',url:'https://www.anthropic.com/learn/certification',pre:'Use Anthropic Academy/current certification requirements.',skills:'AI fluency, Claude fundamentals, effective prompting, responsible AI, context, tool use and basic solution architecture.'},
- {name:'GitHub Copilot Certification',status:'Completed',url:'https://learn.github.com/certifications',pre:'Completed; retain practical GitHub/Copilot skills.',skills:'Responsible AI, Copilot features, prompt engineering, developer use cases, testing, privacy and exclusions.'}
+const certs = [
+  { name: 'AWS Certified Data Engineer – Associate (DEA-C01)', status: 'Preparing / priority', url: 'https://aws.amazon.com/certification/certified-data-engineer-associate/', pre: 'AWS targets candidates with data-engineering experience; hands-on AWS practice is strongly recommended.', skills: 'Advanced SQL, Python, ETL/ELT, S3, Glue, Athena, Redshift, EMR, Kinesis, MWAA/Step Functions, IAM/KMS, data quality, monitoring, governance, cost and performance, Git and IaC.' },
+  { name: 'SnowPro Core (COF-C03)', status: 'Preparing now', url: 'https://learn.snowflake.com/en/certifications/snowpro-core/', pre: 'Practical Snowflake experience is recommended; follow the current COF-C03 exam guide.', skills: 'Snowflake architecture, virtual warehouses, SQL, loading/unloading, stages, file formats, semi-structured data, RBAC, Time Travel, cloning, sharing, performance and cost optimization.' },
+  { name: 'Databricks Certified Data Engineer Associate', status: 'Preparing now', url: 'https://www.databricks.com/learn/certification/data-engineer-associate', pre: 'No formal degree prerequisite; Databricks Fundamentals and hands-on Lakehouse practice are useful preparation.', skills: 'Lakehouse architecture, Delta Lake, Unity Catalog, SQL/PySpark, ingestion, Auto Loader, Lakeflow, Spark Declarative Pipelines, Jobs, data modeling, governance, performance and DevOps.' },
+  { name: 'Databricks Certified Generative AI Engineer Associate', status: 'Preparing', url: 'https://www.databricks.com/learn/certification/generative-ai-engineer-associate', pre: 'No formal degree prerequisite; hands-on Databricks GenAI work is strongly useful.', skills: 'LLM application design, RAG, Vector Search, model serving, MLflow, Unity Catalog, evaluation, prompting, agents/MCP and production security.' },
+  { name: 'AWS Certified Machine Learning Engineer – Associate (MLA-C02)', status: 'Current beta / investigate', url: 'https://aws.amazon.com/certification/certified-machine-learning-engineer-associate/', pre: 'MLA-C02 is the current English transition path after MLA-C01 ended in English on 28 September 2026; verify beta eligibility before committing.', skills: 'ML data preparation, traditional ML and foundation models, SageMaker/Bedrock, deployment, orchestration, CI/CD, monitoring, security, agents and responsible operations.' },
+  { name: 'AWS Certified Generative AI Developer – Professional (AIP-C01)', status: 'Later target', url: 'https://aws.amazon.com/certification/certified-generative-ai-developer-professional/', pre: 'Treat as a later professional-level target after stronger cloud and production GenAI experience.', skills: 'Bedrock, foundation models, RAG/agents, application architecture, APIs, IAM/security, networking, observability, deployment/IaC, cost and production operations.' },
+  { name: 'AWS Certified Solutions Architect – Professional', status: 'Later target', url: 'https://aws.amazon.com/certification/certified-solutions-architect-professional/', pre: 'Build substantial AWS architecture experience before prioritising this professional certification.', skills: 'Multi-account architecture, networking, security, resilience, storage, compute, databases, migration, observability, cost optimization, Well-Architected and IaC.' },
+  { name: 'Claude Architect Professional', status: 'Registered / preparing', url: 'https://www.anthropic.com/learn/certification', pre: 'Follow the current Anthropic certification portal and your registered exam instructions.', skills: 'LLM architecture, Claude/Claude Code, prompting, tool use, agents, context management, evaluation, safety, privacy and production integration.' },
+  { name: 'Claude Associate Foundations → Architect Foundations', status: 'Foundation roadmap', url: 'https://www.anthropic.com/learn/certification', pre: 'Use the current Anthropic Academy/certification requirements for the exact exam path.', skills: 'AI fluency, Claude fundamentals, effective prompting, responsible AI, context, tool use and solution architecture.' },
+  { name: 'GitHub Copilot Certification', status: 'Completed', url: 'https://learn.github.com/certifications', pre: 'Completed; retain practical Git/Copilot skills through real development work.', skills: 'Responsible AI, Copilot features, prompt/context crafting, developer workflows, testing, privacy and safeguards.' },
 ];
-const government=[
- {group:'OPEN / CURRENTLY ACTIONABLE',items:[
-  ['ISRO LPSC Scientist/Engineer SC — deadline 13 Oct 2026','Scientist/Engineer technical recruitment; verify the exact discipline in the advertisement before applying.','https://www.isro.gov.in/ISRO_EN/LPSCRecruitment14.html'],
-  ['CSIR-TKDL Project Personnel — IT and related project roles — deadline 12 Oct 2026','Central research/project recruitment; inspect the IT post qualification and experience in the advertisement.','https://www.csir.res.in/en/career-opportunities/recruitment/engagement-project-personnel-it-ayurveda-unani-sowa-rigpa-siddha'],
-  ['DRDO current vacancies — JRF/RA/research and technical openings','Track current laboratory-level JRF/RA/project roles; discipline and age vary by notice.','https://www.drdo.gov.in/drdo/offerings/vacancies'],
-  ['DRDO RCI apprenticeship 2027 — 1 Oct to 1 Nov 2026','Open notice exists, but apprenticeship is generally less aligned with your experienced DE profile; verify eligibility before spending time.','https://www.drdo.gov.in/drdo/offerings/vacancies'],
- ]},
- {group:'RESEARCH / SCIENTIST WATCHLIST',items:[
-  ['ISRO Scientist/Engineer and PhD Scientist/Engineer-SD','Monitor ICRB and centre-specific recruitment; ISRO lists Computer Science among scientific/technical opportunities and maintains a PhD scientist pathway.','https://www.isro.gov.in/CareerOpportunities.html'],
-  ['DRDO RAC Scientist B / Scientist posts','Monitor RAC for Scientist B and higher scientist recruitment. Scientist B is an entry-level scientist route; exact discipline, GATE and advertisement conditions must be checked for each cycle.','https://rac.gov.in/'],
-  ['CSIR labs / Project Scientist / Project Associate / IT research','Monitor CSIR recruitment and individual laboratory notices; useful for research + AI/data experience.','https://www.csir.res.in/en/career-opportunities/recruitment'],
-  ['C-DAC technical/project/research roles','Monitor AI, data, software, HPC and research project openings.','https://www.cdac.in/index.aspx?id=ca_careers'],
- ]},
- {group:'TEACHING / ACADEMIC WATCHLIST',items:[
-  ['TN TRB / Government Arts & Science College Assistant Professor','For Computer Science, government-college recruitment follows relevant PG + NET/SET/SLET or PhD conditions under the applicable UGC/TN rules. Check the live notification.','https://www.trb.tn.gov.in/'],
-  ['UGC-NET Computer Science & Applications (087)','Continue NET preparation; use the official NTA cycle page for the live application/exam window.','https://ugcnet.nta.ac.in/'],
-  ['University Assistant Professor / Project Faculty / Research roles','Monitor university recruitment portals plus NCS; eligibility varies by institution and UGC rules.','https://www.ncs.gov.in/'],
- ]},
- {group:'TNPSC / STATE GOVERNMENT',items:[
-  ['TNPSC Group I / II / IIA / IV','Track each notification rather than assuming an old cycle remains open. TNPSC publishes annual planners and exam dashboards; technical services are particularly relevant to your degree profile.','https://www.tnpsc.gov.in/'],
-  ['TNPSC Combined Technical Services — Degree/PG level','Monitor interview and non-interview technical-service notifications for degree/PG-specific posts.','https://www.tnpsc.gov.in/English/Examdashboard.aspx'],
-  ['Tamil Nadu Government recruitment portal','Use the state recruitment portal for department/project vacancies and current openings.','https://ima4recruitments.tn.gov.in/'],
-  ['Tamil Nadu Career Services','Additional state employment/job-fair and recruitment information.','https://tamilnaducareerservices.tn.gov.in/Vle/vle_home/'],
- ]},
- {group:'ARMY / NAVY — TECHNICAL, BUT NOT “NO PHYSICAL”',items:[
-  ['Indian Navy SSC Executive (IT) / technical officer entries','Your CS/Data/AI education can overlap with IT entries in some cycles, but officer entries still require SSB and military medical/fitness standards and can involve service duties. They are not guaranteed desk-only jobs.','https://www.joinindiannavy.gov.in/'],
-  ['Indian Army technical/IT officer entries','Monitor official officer-entry notifications for eligible CS/IT technical streams. Military officer roles cannot be treated as zero-physical-duty careers; medical/SSB/service requirements apply.','https://joinindianarmy.nic.in/'],
- ]},
- {group:'CENTRAL GENERAL WATCHLIST',items:[
-  ['UPSC recruitment / direct specialist posts','Check current Recruitment Advertisements for technical, scientific and academic posts.','https://www.upsc.gov.in/recruitment/recruitment-advertisement'],
-  ['SSC','Track CGL/technical/scientific/computer-related posts when your education and age fit the notice.','https://ssc.gov.in/'],
-  ['NCS','Central employment portal and government vacancy aggregation.','https://www.ncs.gov.in/latest-update'],
- ]}
+const government = [
+  { group: 'CENTRAL GOVERNMENT', items: [
+    ['UPSC Recruitment', 'Specialist, technical, scientific and academic recruitment advertisements.', 'https://www.upsc.gov.in/recruitment/recruitment-advertisement'],
+    ['SSC', 'CGL and other central recruitment; inspect each notice for degree, age and post-specific eligibility.', 'https://ssc.gov.in/'],
+    ['National Career Service', 'Central employment portal and vacancy search; also provides state employment portal links.', 'https://www.ncs.gov.in/latest-update'],
+    ['All-State Employment Portals', 'State employment portal directory for recurring state-level searches.', 'https://www.ncs.gov.in/devPortalList'],
+  ]},
+  { group: 'RESEARCH / SCIENTIST / TECHNICAL', items: [
+    ['ISRO Careers', 'Scientist/Engineer, technical and research opportunities; check the exact centre and discipline notice.', 'https://www.isro.gov.in/Careers.html'],
+    ['DRDO Vacancies', 'JRF, RA, project, apprenticeship and technical/scientist notices; eligibility varies by laboratory and advertisement.', 'https://www.drdo.gov.in/drdo/offerings/vacancies'],
+    ['DRDO RAC', 'Scientist recruitment and research/technical scientist pathways.', 'https://rac.gov.in/'],
+    ['CSIR Careers', 'Project Scientist, Project Associate and research/IT opportunities across CSIR laboratories.', 'https://www.csir.res.in/en/career-opportunities/recruitment'],
+    ['C-DAC Careers', 'AI, data, software, HPC, cybersecurity and project/research opportunities.', 'https://www.cdac.in/index.aspx?id=ca_careers'],
+    ['ANRF', 'Research funding and research ecosystem information for long-term PhD/research planning.', 'https://www.anrfonline.in/'],
+  ]},
+  { group: 'TEACHING / ACADEMIC', items: [
+    ['UGC-NET / NTA', 'Computer Science & Applications (087) preparation and official cycle notices.', 'https://ugcnet.nta.ac.in/'],
+    ['Tamil Nadu TRB', 'Assistant Professor, school and other teaching recruitment; inspect the live notification for exact qualification rules.', 'https://www.trb.tn.gov.in/'],
+    ['University academic recruitment', 'Assistant Professor, project faculty, research assistant and research staff openings; eligibility varies by institution.', 'https://www.ncs.gov.in/'],
+  ]},
+  { group: 'TAMIL NADU GOVERNMENT', items: [
+    ['TNPSC', 'Group I/II/IIA/IV and technical-service recruitment; use the live dashboard and notification.', 'https://www.tnpsc.gov.in/'],
+    ['TNPSC Exam Dashboard', 'Current examination and notification status.', 'https://www.tnpsc.gov.in/English/Examdashboard.aspx'],
+    ['TN Government Recruitment Portal', 'Department and state recruitment notices.', 'https://ima4recruitments.tn.gov.in/'],
+    ['Tamil Nadu Career Services', 'State employment and career-service information.', 'https://tamilnaducareerservices.tn.gov.in/Vle/vle_home/'],
+  ]},
+  { group: 'ARMY / NAVY TECHNICAL', items: [
+    ['Indian Navy IT / technical officer entries', 'Some cycles accept CS/IT/data/AI-related qualifications, but officer entry includes SSB, medical and service requirements. It is not a guaranteed desk-only/no-physical-work career.', 'https://www.joinindiannavy.gov.in/'],
+    ['Indian Army IT / technical entries', 'Monitor official technical/officer notifications. Medical, SSB and military-service requirements apply.', 'https://joinindianarmy.nic.in/'],
+  ]},
 ];
-const modernSkills=[
- ['Core Data Engineering','Advanced SQL, Python, Unix/Bash, Git, ETL/ELT, data structures, APIs, file formats, debugging, testing, documentation'],
- ['Data Architecture','Dimensional modeling, star/snowflake schemas, OLTP vs OLAP, partitioning, indexing, CDC, SCD, schema evolution, lake/lakehouse/warehouse patterns'],
- ['Cloud','One cloud deeply first (AWS for you): S3, IAM, VPC basics, Glue, Athena, Redshift, EMR, Lambda, Step Functions/MWAA, CloudWatch, KMS, Secrets Manager'],
- ['Modern Lakehouse','Databricks, Spark/PySpark, Delta Lake, Unity Catalog, Auto Loader, Lakeflow, streaming, workload/cost tuning'],
- ['Cloud Warehouse','Snowflake SQL, warehouses, stages, file formats, semi-structured data, RBAC, Time Travel, cloning, sharing, performance/cost'],
- ['Transformation / ELT','dbt models, tests, documentation, snapshots, incremental models, lineage; understand where dbt complements Spark/Snowflake'],
- ['Orchestration / Integration','Airflow concepts, cloud orchestrators, Fivetran/connectors, REST/JDBC/ODBC, event-driven pipelines'],
- ['Streaming','Kafka concepts, partitions, consumer groups, offsets, schema registry; Spark Structured Streaming/Kinesis basics'],
- ['Data Quality & Governance','Great Expectations/dbt tests, profiling, lineage, catalogs, RBAC, PII, encryption, retention, auditability'],
- ['DevOps for Data','CI/CD, GitHub Actions, Docker basics, IaC (Terraform/CloudFormation/CDK), environments, secrets, rollback and observability'],
- ['GenAI for Data Engineers','Embeddings, vector stores, RAG, evaluation, agents, MCP, LLM APIs, prompt/context engineering, Bedrock/Databricks Mosaic AI'],
- ['Production Engineering','SLAs/SLOs, idempotency, retries, backfills, incident response, cost optimization, monitoring, logging, alerting and capacity planning']
+const modernSkills = [
+  ['Core Data Engineering', 'Advanced SQL, Python, Unix/Bash, Git, ETL/ELT, data structures, APIs, file formats, debugging, testing and documentation.'],
+  ['Data Architecture', 'Dimensional modelling, star/snowflake schemas, OLTP vs OLAP, partitioning, indexing, CDC, SCD, schema evolution and lake/lakehouse/warehouse patterns.'],
+  ['AWS Cloud', 'S3, IAM, VPC basics, Glue, Athena, Redshift, EMR, Lambda, Step Functions/MWAA, CloudWatch, KMS and Secrets Manager.'],
+  ['Modern Lakehouse', 'Databricks, Spark/PySpark, Delta Lake, Unity Catalog, Auto Loader, Lakeflow, streaming and workload/cost tuning.'],
+  ['Cloud Warehouse', 'Snowflake SQL, warehouses, stages, file formats, semi-structured data, RBAC, Time Travel, cloning, sharing and performance/cost.'],
+  ['Transformation / ELT', 'dbt models, tests, documentation, snapshots, incremental models and lineage; understand where dbt complements Spark/Snowflake.'],
+  ['Orchestration / Integration', 'Airflow concepts, cloud orchestrators, Fivetran/connectors, REST/JDBC/ODBC and event-driven pipelines.'],
+  ['Streaming', 'Kafka concepts, partitions, consumer groups, offsets, schema registry and Spark Structured Streaming/Kinesis basics.'],
+  ['Data Quality & Governance', 'Testing, profiling, lineage, catalogs, RBAC, PII handling, encryption, retention and auditability.'],
+  ['DevOps for Data', 'CI/CD, GitHub Actions, Docker basics, Terraform/CloudFormation/CDK, environments, secrets, rollback and observability.'],
+  ['GenAI for Data Engineers', 'Embeddings, vector stores, RAG, evaluation, agents, MCP, LLM APIs, prompt/context engineering, Bedrock and Databricks GenAI.'],
+  ['Production Engineering', 'SLAs/SLOs, idempotency, retries, backfills, incident response, cost optimization, monitoring, logging, alerting and capacity planning.'],
 ];
-const planner=[
- ['Week 1 — Foundation','SQL advanced + Python ETL + Git + one small production-style pipeline; finish SnowPro weak topics.'],
- ['Week 2 — Modern DE','Databricks Spark/PySpark + Delta + Unity Catalog + Lakeflow; build one bronze→silver→gold pipeline.'],
- ['Week 3 — Cloud DE','AWS S3 + Glue + Athena + Redshift + IAM + CloudWatch; map the same pipeline to AWS.'],
- ['Week 4 — Engineering maturity','dbt + data quality + orchestration + CI/CD + Docker/IaC basics; document architecture and tests.'],
- ['Ongoing — GenAI edge','Databricks GenAI/RAG + Bedrock + evaluation/agents; connect it to your PhD research rather than learning isolated demos.']
+const planner = [
+  ['Week 1 — Foundation', 'Advanced SQL + Python ETL + Git + one production-style pipeline; finish SnowPro weak areas.'],
+  ['Week 2 — Modern DE', 'Spark/PySpark + Delta + Unity Catalog + Lakeflow; build a bronze → silver → gold pipeline.'],
+  ['Week 3 — Cloud DE', 'AWS S3 + Glue + Athena + Redshift + IAM + CloudWatch; map the same pipeline to AWS.'],
+  ['Week 4 — Engineering maturity', 'dbt + data quality + orchestration + CI/CD + Docker/IaC basics; document architecture and tests.'],
+  ['Ongoing — GenAI edge', 'Databricks GenAI/RAG + Bedrock + evaluation/agents; connect learning to your PhD research rather than isolated demos.'],
 ];
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function readMemory(){try{return JSON.parse(localStorage.getItem('life-memory-v2')||'{}')}catch(_){return {}}}
-function saveMemory(patch){try{const m=readMemory();const next={...m,...patch,updatedAt:new Date().toISOString()};localStorage.setItem('life-memory-v2',JSON.stringify(next));return next}catch(_){return null}}
-function install(){
- if(document.getElementById('career-coach'))return;
- const s=document.createElement('style');s.textContent='#career-coach{position:fixed;right:10px;bottom:10px;z-index:99999;font-family:system-ui}.cc-open{padding:11px 15px;border-radius:999px;border:1px solid #4f9eff;background:#101827;color:#fff;font-weight:800;box-shadow:0 4px 20px #0008}.cc-panel{display:none;position:fixed;right:10px;bottom:65px;width:min(900px,calc(100vw - 20px));max-height:88vh;overflow:auto;background:#0b111c;color:#e2e8f0;border:1px solid #29405f;border-radius:18px;padding:15px}.open .cc-panel{display:block}.cc-tabs{display:flex;gap:6px;overflow:auto;margin:10px 0}.cc-tabs button{white-space:nowrap;border:1px solid #29405f;background:#101827;color:#cbd5e1;border-radius:999px;padding:7px 10px}.cc-card,.cc-row,.cc-task{background:#101827;border:1px solid #223550;border-radius:10px;padding:10px;margin:6px 0;font-size:11px;line-height:1.55}.cc-task{display:flex;gap:8px}.cc-check{width:28px;height:28px}.cc-link{color:#7db7ff;margin-right:8px;text-decoration:none}.cc-note{color:#94a3b8;font-size:11px}.cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cc-badge{display:inline-block;padding:3px 7px;border-radius:999px;border:1px solid #29405f;margin:2px;font-size:10px}@media(max-width:600px){.cc-grid{grid-template-columns:1fr}.cc-panel{bottom:58px;max-height:90vh}}
-';document.head.appendChild(s);
- const r=document.createElement('div');r.id='career-coach';document.body.appendChild(r);
- function render(active='today'){
-  let done={};try{done=JSON.parse(localStorage.getItem('coach_done')||'{}')}catch(_){}
-  const mem=readMemory();
-  const section=(id,title,body)=>'<section id="v-'+id+'" '+(active===id?'':'hidden')+'><h3>'+title+'</h3>'+body+'</section>';
-  const taskHtml=tasks.map((x,i)=>'<div class="cc-task"><button class="cc-check" data-i="'+i+'">'+(done[today+'-'+i]?'✓':'○')+'</button><div><b>'+esc(x[0])+'</b><br>'+esc(x[1])+'</div></div>').join('');
-  const courseHtml=courses.map(c=>'<details class="cc-card"><summary><b>'+esc(c[0]+' · '+c[1])+'</b></summary>'+c[2].map((m,i)=>'<div class="cc-row">Module '+(i+1)+': '+esc(m)+'</div>').join('')+'</details>').join('');
-  const certHtml=certs.map(c=>'<div class="cc-card"><b>'+esc(c.name)+'</b> <span class="cc-badge">'+esc(c.status)+'</span><br><span class="cc-note">Pre-req: '+esc(c.pre)+'</span><br><span>'+esc(c.skills)+'</span><br><a class="cc-link" target="_blank" rel="noopener" href="'+c.url+'">Official page ↗</a></div>').join('');
-  const govHtml=government.map(g=>'<details class="cc-card"><summary><b>'+esc(g.group)+'</b></summary>'+g.items.map(x=>'<div class="cc-row"><b>'+esc(x[0])+'</b><br>'+esc(x[1])+'<br><a class="cc-link" target="_blank" rel="noopener" href="'+x[2]+'">Official source ↗</a></div>').join('')+'</details>').join('');
-  const skillsHtml=modernSkills.map(x=>'<div class="cc-row"><b>'+esc(x[0])+'</b><br>'+esc(x[1])+'</div>').join('');
-  const plannerHtml=planner.map(x=>'<div class="cc-row"><b>'+esc(x[0])+'</b><br>'+esc(x[1])+'</div>').join('');
-  const memKeys=Object.keys(mem||{}).filter(k=>!['updatedAt'].includes(k)).slice(0,20);
-  const memHtml='<div class="cc-row"><b>Unified progress memory</b><br>'+((memKeys.length?memKeys.map(k=>'<span class="cc-badge">'+esc(k)+'</span>').join(''):'No shared memory snapshot found yet.'))+'<br><span class="cc-note">Office, Health, Journal, PhD, learning and other tabs can continue to write to the shared life-memory-v2 store. Coach progress is saved there as well as in its local checklist.</span></div><button id="save-snapshot" class="cc-open">Save progress snapshot</button>';
-  r.innerHTML='<button class="cc-open">🤖 Career Coach</button><div class="cc-panel"><button class="cc-close" style="float:right">×</button><h2>Career Coach · '+today+'</h2><div class="cc-note">9–5 TCS + PhD + certifications + UGC NET + career transition</div><div class="cc-tabs"><button data-t="today">Today</button><button data-t="learn">Learn</button><button data-t="cert">Certifications</button><button data-t="govt">Govt / Research</button><button data-t="skills">Modern DE</button><button data-t="memory">Progress Memory</button></div>'+section('today','Today · Daily tasks',taskHtml)+section('learn','PhD Coursework + Learning Planner',courseHtml+plannerHtml)+section('cert','Certification roadmap · prerequisites + skills',certHtml)+section('govt','Government / teaching / research watchlist',govHtml+'<div class="cc-note">Snapshot verified against official sources on 1 Oct 2026. Vacancy windows change; always open the official notice before applying. “Technical” Army/Navy officer roles are not zero-physical jobs because SSB, medical and service requirements still apply.</div>')+section('skills','Modern Data Engineer skill map',skillsHtml)+section('memory','Unified progress memory',memHtml)+'</div>';
-  r.querySelector('.cc-open').onclick=()=>r.classList.add('open');r.querySelector('.cc-close').onclick=()=>r.classList.remove('open');
-  r.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{done[today+'-'+b.dataset.i]=!done[today+'-'+b.dataset.i];try{localStorage.setItem('coach_done',JSON.stringify(done))}catch(_){};saveMemory({coach:{date:today,done}});render('today');r.classList.add('open')});
-  r.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>render(b.dataset.t));
-  const snap=r.querySelector('#save-snapshot');if(snap)snap.onclick=()=>{saveMemory({coach:{date:today,done,certifications:certs.map(c=>({name:c.name,status:c.status})),learning:planner,governmentSnapshot:'2026-10-01'}});snap.textContent='✓ Snapshot saved';setTimeout(()=>render('memory'),400)};
- }
- render();
+function esc(value) { return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function readMemory() { try { return JSON.parse(localStorage.getItem('life-memory-v2') || '{}'); } catch (_) { return {}; } }
+function saveMemory(patch) { try { const current = readMemory(); const next = { ...current, ...patch, updatedAt: new Date().toISOString() }; localStorage.setItem('life-memory-v2', JSON.stringify(next)); return next; } catch (_) { return null; } }
+function install() {
+  if (document.getElementById('career-coach')) return;
+  const style = document.createElement('style');
+  style.textContent = `#career-coach{position:fixed;right:12px;bottom:12px;z-index:99999;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.cc-open{padding:12px 16px;border-radius:999px;border:1px solid #4f9eff;background:#101827;color:#fff;font-weight:800;box-shadow:0 4px 20px #0008;cursor:pointer}.cc-panel{display:none;position:fixed;right:12px;bottom:68px;width:min(920px,calc(100vw - 24px));max-height:88vh;overflow:auto;background:#0b111c;color:#e2e8f0;border:1px solid #29405f;border-radius:18px;padding:15px;box-shadow:0 16px 60px #000b}.open .cc-panel{display:block}.cc-header{display:flex;justify-content:space-between;gap:12px;align-items:center}.cc-close{border:1px solid #29405f;background:#101827;color:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}.cc-tabs{display:flex;gap:6px;overflow:auto;margin:10px 0}.cc-tabs button{white-space:nowrap;border:1px solid #29405f;background:#101827;color:#cbd5e1;border-radius:999px;padding:8px 11px;cursor:pointer}.cc-section{display:none}.cc-section.active{display:block}.cc-card,.cc-row,.cc-task{background:#101827;border:1px solid #223550;border-radius:10px;padding:10px;margin:7px 0;font-size:12px;line-height:1.55}.cc-task{display:flex;gap:10px;align-items:flex-start}.cc-check{width:24px;height:24px;flex:0 0 auto}.cc-link{color:#7db7ff;margin-right:10px;text-decoration:none}.cc-note{color:#94a3b8;font-size:11px}.cc-badge{display:inline-block;padding:3px 7px;border-radius:999px;border:1px solid #29405f;margin-left:5px;font-size:10px;color:#a8c7ff}@media(max-width:600px){.cc-panel{right:6px;bottom:60px;width:calc(100vw - 12px);max-height:91vh;padding:11px}}`;
+  document.head.appendChild(style);
+  const root = document.createElement('div'); root.id = 'career-coach';
+  root.innerHTML = `<button class="cc-open" type="button">🤖 Career Coach</button><div class="cc-panel" role="dialog" aria-label="Career Coach"><div class="cc-header"><div><h2 style="margin:0">Career Coach</h2><div class="cc-note">Daily execution · learning planner · certifications · PhD coursework · jobs</div></div><button class="cc-close" type="button">Close</button></div><div class="cc-tabs"><button data-section="today">Today</button><button data-section="planner">Planner</button><button data-section="certs">Certifications</button><button data-section="coursework">Coursework</button><button data-section="jobs">Jobs</button><button data-section="skills">Modern DE</button><button data-section="memory">Progress</button></div><section class="cc-section" id="cc-today"><h3>Today's tasks · ${today}</h3><div id="cc-tasks"></div><p class="cc-note">Task completion is saved locally and mirrored to life-memory-v2.</p></section><section class="cc-section" id="cc-planner"><h3>5-week learning planner</h3>${planner.map(([a,b]) => `<div class="cc-card"><b>${esc(a)}</b><p>${esc(b)}</p></div>`).join('')}</section><section class="cc-section" id="cc-certs"><h3>Certification roadmap</h3>${certs.map(c => `<article class="cc-card"><b>${esc(c.name)}</b> <span class="cc-badge">${esc(c.status)}</span><p><b>Prerequisite:</b> ${esc(c.pre)}</p><p><b>Skills:</b> ${esc(c.skills)}</p><a class="cc-link" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Official page ↗</a></article>`).join('')}</section><section class="cc-section" id="cc-coursework"><h3>PhD coursework</h3>${courses.map(c => `<details class="cc-card"><summary><b>${esc(c[0])} · ${esc(c[1])}</b></summary>${c[2].map((m,i) => `<div class="cc-row">Module ${i+1}: ${esc(m)}</div>`).join('')}</details>`).join('')}</section><section class="cc-section" id="cc-jobs"><h3>Teaching · Research · Government</h3><p class="cc-note">Recruitment changes frequently. Always open the official notification and verify age, qualification, discipline, reservation and deadline before applying.</p>${government.map(g => `<h4>${esc(g.group)}</h4>${g.items.map(([a,b,u]) => `<article class="cc-card"><b>${esc(a)}</b><p>${esc(b)}</p><a class="cc-link" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Official source ↗</a></article>`).join('')}`).join('')}</section><section class="cc-section" id="cc-skills"><h3>Modern Data Engineer skill map</h3>${modernSkills.map(([a,b]) => `<div class="cc-card"><b>${esc(a)}</b><p>${esc(b)}</p></div>`).join('')}</section><section class="cc-section" id="cc-memory"><h3>Progress memory</h3><div class="cc-card"><b>Unified memory status</b><p id="cc-memory-summary"></p><button id="cc-save-memory" type="button">Save Coach progress</button></div><div class="cc-card"><b>Career context</b><p>TCS Data Engineer / Finance BI · DataStage · Teradata · SQL · Python · Unix · ETL · M.Tech Data Science · part-time PhD in CSE · Generative AI research · UGC NET CS · certification roadmap.</p></div></section></div>`;
+  document.body.appendChild(root);
+  const renderTasks = () => { let done = {}; try { done = JSON.parse(localStorage.getItem('coach_done') || '{}'); } catch (_) {} const box = root.querySelector('#cc-tasks'); box.innerHTML = tasks.map((t,i) => `<label class="cc-task"><input class="cc-check" type="checkbox" data-task="${i}" ${done[`${today}-${i}`] ? 'checked' : ''}><span><b>${esc(t[0])}</b><br>${esc(t[1])}</span></label>`).join(''); box.querySelectorAll('[data-task]').forEach(el => el.addEventListener('change', e => { let d={}; try{d=JSON.parse(localStorage.getItem('coach_done')||'{}')}catch(_){} d[`${today}-${e.target.dataset.task}`]=e.target.checked; localStorage.setItem('coach_done',JSON.stringify(d)); saveMemory({coach:{date:today,completedTasks:Object.keys(d).filter(k=>k.startsWith(`${today}-`)).length}}); updateMemory(); })); };
+  const updateMemory = () => { const m=readMemory(); const c=m.coach||{}; const el=root.querySelector('#cc-memory-summary'); if(el) el.textContent=`Last saved: ${m.updatedAt||'not yet'} · Today completed: ${c.completedTasks||0}`; };
+  const setSection = id => { root.querySelectorAll('.cc-section').forEach(el=>el.classList.toggle('active',el.id===`cc-${id}`)); };
+  root.querySelector('.cc-open').addEventListener('click',()=>{root.classList.add('open');setSection('today');}); root.querySelector('.cc-close').addEventListener('click',()=>root.classList.remove('open')); root.querySelectorAll('.cc-tabs button').forEach(b=>b.addEventListener('click',()=>setSection(b.dataset.section)));
+  root.querySelector('#cc-save-memory').addEventListener('click',()=>{saveMemory({coach:{date:today,completedTasks:root.querySelectorAll('[data-task]:checked').length,plannerVersion:'2026-10',coursework:courses.map(c=>c[0])}});updateMemory();});
+  renderTasks(); updateMemory(); setSection('today');
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+if (typeof window !== 'undefined') { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true }); else install(); }
+export { tasks, courses, certs, government, modernSkills, planner };

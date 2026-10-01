@@ -22,7 +22,7 @@ assert.match(sync, /storeId/);
 assert.match(coach, /AWS Certified Data Engineer/);
 assert.match(coach, /SnowPro Core/);
 assert.match(coach, /Databricks Certified Data Engineer/);
-assert.match(coach, /Claude Certified Architect/);
+assert.match(coach, /Claude Architect Professional/);
 assert.match(coach, /GitHub Copilot/);
 assert.match(coach, /tnpsc\.gov\.in/);
 assert.match(coach, /trb\.tn\.gov\.in/);

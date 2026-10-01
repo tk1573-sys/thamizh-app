@@ -75,6 +75,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
   const [msg, setMsg]       = useState("");
 
   const SK = "pin_hash_" + storeKey;
+  const SK_LEN = SK + "_length";
 
   useEffect(() => {
     try {
@@ -100,7 +101,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
     if (phase !== "setup2" || pin2.length < pin1.length) return;
     const t = setTimeout(() => {
       if (pin2 === pin1) {
-        try { sessionStorage.setItem(SK, hashPin(pin1)); } catch(_) {}
+        try { sessionStorage.setItem(SK, hashPin(pin1)); sessionStorage.setItem(SK_LEN, String(pin1.length)); } catch(_) {}
         setMsg(""); setPhase("open");
       } else {
         doShake("PINs don't match — try again");
@@ -113,6 +114,10 @@ function PinGate({ label, color, icon, storeKey, children }) {
   // Unlock: check entry against stored hash
   useEffect(() => {
     if (phase !== "locked" || entry.length < 4) return;
+    let requiredLength = 4;
+    try { requiredLength = Number(sessionStorage.getItem(SK_LEN) || "4"); } catch(_) {}
+    if (!Number.isInteger(requiredLength) || requiredLength < 4 || requiredLength > 6) requiredLength = 4;
+    if (entry.length !== requiredLength) return;
     const t = setTimeout(() => {
       try {
         const stored = sessionStorage.getItem(SK);
@@ -125,7 +130,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
       } catch(_) { setEntry(""); }
     }, 200);
     return () => clearTimeout(t);
-  }, [entry, phase, SK]);
+  }, [entry, phase, SK, SK_LEN]);
 
   const addDigit = (d) => {
     if (phase === "setup1" && pin1.length < 6) setPin1(p => p+d);
@@ -138,7 +143,7 @@ function PinGate({ label, color, icon, storeKey, children }) {
     if (phase === "locked") setEntry(p => p.slice(0,-1));
   };
   const resetPin = () => {
-    try { sessionStorage.removeItem(SK); } catch(_) {}
+    try { sessionStorage.removeItem(SK); sessionStorage.removeItem(SK_LEN); } catch(_) {}
     setPin1(""); setPin2(""); setEntry(""); setPhase("setup1"); setMsg("");
   };
 
@@ -396,15 +401,210 @@ const govtJobs = [
   { org:"TNPSC", role:"Group 1/2 Technical / AE", physical:"None for technical posts", timing:"tnpsc.gov.in – watch state-level notifications", color:P.a5, icon:"🏛️" },
 ];
 
-const certList = [
-  { cert:"Claude Certified Developer Foundations (CCDV-F)", status:"🚨 DEADLINE: August 31, 2026 — 6 weeks away!", when:"Aug 31, 2026", color:P.a5, urgent:true, daysLeft:()=>Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24))), tip:"Anthropic's official Claude developer certification. Study: claude.ai/docs, Anthropic API docs, prompt engineering guide. Topics: API usage, prompt design, safety, tool use, multi-turn conversations. Free to attempt via Anthropic's certification portal. Add to LinkedIn immediately after passing — high market signal in 2026." },
-  { cert:"Databricks Certified Data Engineer Associate", status:"🔥 Priority 2 – target Sep/Oct 2026", when:"Sep–Oct 2026", color:P.a3, tip:"You already started. 45 MCQs, 90 min. Use community.databricks.com free + Databricks Academy prep materials. Exam voucher ~$200 USD." },
-  { cert:"Google Gemini Enterprise Developer", status:"TCS Talent Pool – complete all modules", when:"Aug 2026", color:P.a4, tip:"Complete all Google Cloud Skills Boost modules via TCS Talent Pool. Already partially done – finish every module and claim the badge." },
-  { cert:"GCP Professional Data Engineer", status:"High value – Nov 2026 target", when:"Nov 2026", color:P.a1, tip:"Builds on Gemini Talent Pool knowledge. Exam $200 USD. Use Skills Boost + ExamPro free YouTube. Salary impact: +₹5–10 LPA immediately." },
-  { cert:"AWS Data Engineer Associate", status:"Jan 2027 target", when:"Jan 2027", color:P.a2, tip:"Stephane Maarek Udemy course (₹499 on sale). After GCP, this becomes much easier – 60% overlapping concepts. High market demand in India." },
-  { cert:"dbt Certified Developer", status:"Feb 2027 target", when:"Feb 2027", color:P.a3, tip:"Free learning at courses.getdbt.com. Exam ~$200 USD. Strong differentiator for Analytics Engineer roles. Pairs well with BigQuery + Snowflake." },
-  { cert:"Python PCEP or PCAP", status:"Optional – validates Python formally", when:"Sep 2026", color:P.muted, tip:"Python Institute exams. PCEP is entry level (~$59), quick prep. Good for resume validation while you build Python projects." },
+const certificationTracks = [
+  {id:"aws-dea",name:"AWS Certified Data Engineer – Associate",short:"AWS DEA",provider:"AWS",examCode:"DEA-C01",status:"active",color:P.a2,priority:"P1",voucher:"Coupon received",examDate:"",
+   guide:"https://docs.aws.amazon.com/pdfs/aws-certification/latest/data-engineer-associate-01/data-engineer-associate-01.pdf",resource:"https://aws.amazon.com/certification/certified-data-engineer-associate/",
+   summary:"Prepare across ingestion, transformation, data stores, operations, security and governance.",
+   modules:[
+    {id:"ingest",title:"Data Ingestion & Transformation",weight:"34%",topics:["Kinesis","Glue","Lambda","EMR","DMS","Step Functions","ETL patterns"],lab:"Build an ETL pipeline: ingest CSV/JSON, transform with Spark/Python, and write partitioned Parquet."},
+    {id:"stores",title:"Data Store Management",weight:"26%",topics:["S3","Redshift","DynamoDB","RDS","OpenSearch","partitioning","formats"],lab:"Design an S3 + Glue Catalog + Athena lake and explain when Redshift or DynamoDB fits."},
+    {id:"ops",title:"Data Operations & Support",weight:"22%",topics:["CloudWatch","EventBridge","orchestration","monitoring","quality","retries","cost"],lab:"Create a failed-pipeline runbook covering retry, alerting, replay and data-quality checks."},
+    {id:"security",title:"Security & Governance",weight:"18%",topics:["IAM","KMS","Lake Formation","VPC","least privilege","audit"],lab:"Write a least-privilege IAM design for a pipeline that reads S3 and writes analytics data."}
+   ],
+   questions:[
+    {q:"Which S3 design best supports analytics over large historical datasets?",o:["One giant CSV","Partitioned columnar files such as Parquet","Only DynamoDB","Only Lambda logs"],a:1,e:"Partitioned columnar data reduces scanned data and improves analytical query efficiency."},
+    {q:"Which service provides serverless SQL querying of data in S3?",o:["Athena","SQS","Route 53","SNS"],a:0,e:"Athena runs SQL directly against supported data in S3."},
+    {q:"What is the core least-privilege principle?",o:["AdministratorAccess everywhere","Only required actions on required resources","Disable encryption","Share one IAM user"],a:1,e:"Least privilege limits permissions to what the workload actually needs."},
+    {q:"Which service commonly orchestrates multi-step AWS workflows?",o:["Step Functions","CloudFront","Route 53","WAF"],a:0,e:"Step Functions coordinates stateful workflows and service integrations."},
+    {q:"A pipeline partially writes output before failing. What should you design for?",o:["No retries","Idempotency and safe replay","Manual editing only","No monitoring"],a:1,e:"Idempotent stages and replay-safe writes help recover without corrupting data."}
+   ]},
+  {id:"snowpro-core",name:"SnowPro Core",short:"SnowPro Core",provider:"Snowflake",examCode:"COF-C03",status:"active",color:P.a3,priority:"P2",voucher:"Coupon received",examDate:"",
+   guide:"https://learn.snowflake.com/en/certifications/snowpro-core-kor-C03",resource:"https://learn.snowflake.com/",
+   summary:"Master Snowflake architecture, virtual warehouses, loading, security, performance and account concepts.",
+   modules:[
+    {id:"arch",title:"Architecture & Storage",weight:"Core",topics:["micro-partitions","metadata","clustering","storage/compute","Time Travel"],lab:"Explain a query path from SQL to virtual warehouse to micro-partitions and metadata pruning."},
+    {id:"compute",title:"Virtual Warehouses & Performance",weight:"Core",topics:["warehouse sizing","auto-suspend","multi-cluster","caching","query profile"],lab:"Compare warehouse sizing and auto-suspend for ETL versus interactive BI."},
+    {id:"load",title:"Data Loading & Transformation",weight:"Core",topics:["stages","COPY INTO","Snowpipe","file formats","streams","tasks","dynamic tables"],lab:"Design an incremental cloud-storage ingestion flow and explain transformation choices."},
+    {id:"security",title:"Security & Governance",weight:"Core",topics:["RBAC","roles","grants","network policies","masking","row access"],lab:"Create least-privilege role hierarchy for analyst, engineer and data-admin access."},
+    {id:"share",title:"Data Sharing & Operations",weight:"Core",topics:["Secure Data Sharing","Marketplace","replication","monitoring","resource monitors"],lab:"Design governed data sharing without copying provider data into a consumer account."}
+   ],
+   questions:[
+    {q:"What does Snowflake's architecture separate?",o:["Storage and compute","Users and SQL","Tables and columns","Indexes and keys"],a:0,e:"Snowflake separates storage from compute so virtual warehouses can scale independently."},
+    {q:"What is a virtual warehouse?",o:["A logical compute cluster","A file format","A database role","A storage bucket"],a:0,e:"A virtual warehouse supplies compute resources for queries and DML."},
+    {q:"What is RBAC primarily used for?",o:["Role-based access control","Row-based backup copies","Randomized compression","Resource billing allocation"],a:0,e:"RBAC assigns privileges to roles and roles to users."},
+    {q:"What helps Snowflake skip irrelevant micro-partitions?",o:["Metadata pruning","Disabling statistics","Using only CSV","Removing clustering information"],a:0,e:"Micro-partition metadata enables pruning."},
+    {q:"Which feature supports continuous loading from cloud storage?",o:["Snowpipe","Time Travel","Secure Data Sharing","Resource Monitor"],a:0,e:"Snowpipe is designed for continuous micro-batch loading."}
+   ]},
+  {id:"dbx-dea",name:"Databricks Certified Data Engineer Associate",short:"Databricks DEA",provider:"Databricks",examCode:"Data Engineer Associate",status:"active",color:P.a4,priority:"P3",voucher:"Prerequisites/tasks remaining",examDate:"",
+   guide:"https://www.databricks.com/sites/default/files/2026-03/databricks-certified-data-engineer-associate-exam-guide-may-4-2026.pdf",resource:"https://www.databricks.com/learn/certification/data-engineer-associate",
+   summary:"Prepare on Lakeflow, Spark/PySpark, Delta Lake, Unity Catalog, jobs, pipelines, CI/CD and troubleshooting.",
+   modules:[
+    {id:"lakeflow",title:"Lakeflow & Ingestion",weight:"Core",topics:["Lakeflow Connect","Auto Loader","schema evolution","medallion"],lab:"Ingest changing JSON/CSV data into a medallion pipeline and document schema-evolution choices."},
+    {id:"spark",title:"Spark & PySpark",weight:"Core",topics:["DataFrames","select","filter","join","groupBy","window","Spark SQL"],lab:"Write a PySpark transformation that joins data, handles nulls and produces an aggregate."},
+    {id:"delta",title:"Delta Lake & Tables",weight:"Core",topics:["ACID","MERGE","OPTIMIZE","VACUUM","time travel","partitioning"],lab:"Build an incremental Delta MERGE and explain how you would troubleshoot slow reads."},
+    {id:"catalog",title:"Unity Catalog & Governance",weight:"Core",topics:["catalog/schema/table","grants","external locations","lineage"],lab:"Design Unity Catalog dev/test/prod access with least privilege."},
+    {id:"jobs",title:"Jobs, Pipelines & CI/CD",weight:"Core",topics:["Lakeflow Jobs","Declarative Pipelines","parameters","triggers","Git","deployment"],lab:"Create a job runbook with parameters, retries, alerts and a Git-based deployment flow."}
+   ],
+   questions:[
+    {q:"What is a main purpose of Delta Lake?",o:["ACID transactions and reliable data lakes","Replacing Python","Only storing images","Managing DNS"],a:0,e:"Delta Lake adds transactional reliability and table-management capabilities to data lakes."},
+    {q:"Which PySpark object represents distributed tabular data?",o:["DataFrame","String","List only","Boolean"],a:0,e:"A Spark DataFrame is a distributed collection organized into named columns."},
+    {q:"What does MERGE commonly enable?",o:["Upsert-style changes","DNS routing","UI rendering","Notebook authentication"],a:0,e:"MERGE can match source and target rows to insert, update or delete records."},
+    {q:"What is Unity Catalog primarily for?",o:["Centralized governance and access control","Replacing Spark","Sending email","GPU tuning"],a:0,e:"Unity Catalog provides governance, permissions, discovery and lineage."},
+    {q:"A production job intermittently fails. What should you inspect first?",o:["Logs, dependencies, inputs and runtime details","Only the UI theme","Only the notebook title","Delete the job"],a:0,e:"Troubleshooting starts with observable failure context."}
+   ]},
+  {id:"claude-foundations",name:"Claude Architect Foundations",short:"Claude Foundations",provider:"Anthropic",examCode:"Architect Foundations",status:"active",color:P.a5,priority:"P4",voucher:"Registered",examDate:"",
+   guide:"https://www.anthropic.com/learn",resource:"https://docs.anthropic.com/",
+   summary:"Learn production LLM architecture: prompting, context, tools, safety, evaluation and reliable application patterns.",
+   modules:[
+    {id:"llm",title:"LLM & Claude Fundamentals",weight:"Core",topics:["model capabilities","tokens","context","multimodal input","latency/cost"],lab:"For one task, write a model-selection rationale covering quality, latency, context and cost."},
+    {id:"prompt",title:"Prompt Engineering",weight:"Core",topics:["clear instructions","examples","structured output","system vs user"],lab:"Create a prompt with role, context, constraints, examples and a machine-readable output contract."},
+    {id:"context",title:"Context Management",weight:"Core",topics:["context windows","state","summarization","retrieval","caching"],lab:"Design a long-running assistant without blindly replaying the entire conversation."},
+    {id:"tools",title:"Tool Use & Agents",weight:"Core",topics:["tool schemas","validation","orchestration","approval","failure handling"],lab:"Design three safe tools for a data assistant with explicit inputs, outputs and approval boundaries."},
+    {id:"safety",title:"Safety & Evaluation",weight:"Core",topics:["guardrails","prompt injection","privacy","grounding","evaluation"],lab:"Create a small evaluation set with expected answers, safety cases and failure categories."}
+   ],
+   questions:[
+    {q:"Why use retrieval in an LLM application?",o:["Ground generation in relevant external information","Guarantee perfect answers","Remove all latency","Eliminate evaluation"],a:0,e:"Retrieval supplies relevant external context and reduces reliance on model memory."},
+    {q:"What should a tool schema communicate?",o:["Name, purpose and input structure","Only a logo","A password","Hidden API keys"],a:0,e:"A clear schema tells the runtime and model what the tool does and accepts."},
+    {q:"Why validate tool arguments server-side?",o:["Model output can be incorrect or unsafe","It makes tokens free","It removes authorization","It prevents every bug"],a:0,e:"Tool calls are model-generated and must be validated and authorized."},
+    {q:"What is prompt injection?",o:["Untrusted content attempting to override intended instructions","A database index","A GPU driver","A compression format"],a:0,e:"Prompt injection attempts to manipulate an AI system through untrusted input."},
+    {q:"A useful evaluation set should contain:",o:["Representative tasks and expected behaviors","Only easy examples","One prompt","No failure cases"],a:0,e:"Representative cases make regressions and failure modes measurable."}
+   ]},
+  {id:"claude-professional",name:"Claude Architect Professional",short:"Claude Professional",provider:"Anthropic",examCode:"Architect Professional",status:"active",color:P.a5,priority:"P5",voucher:"Registered",examDate:"",
+   guide:"https://www.anthropic.com/learn",resource:"https://docs.anthropic.com/",
+   summary:"Advanced architecture practice: agents, reliability, security, evaluation, observability and production trade-offs.",
+   modules:[
+    {id:"architecture",title:"Production Architecture",weight:"Advanced",topics:["service boundaries","state","queues","retrieval","caching","failure isolation"],lab:"Draw a production AI architecture with API, model gateway, retrieval, tools, audit log and observability."},
+    {id:"agents",title:"Agentic Workflows",weight:"Advanced",topics:["planning","orchestration","delegation","human-in-loop","termination"],lab:"Design an agent workflow with explicit permissions, stop conditions and approval for risky actions."},
+    {id:"reliability",title:"Reliability & Evaluation",weight:"Advanced",topics:["offline evals","online monitoring","regression sets","fallbacks","quality gates"],lab:"Define an evaluation matrix for accuracy, groundedness, safety, latency and cost."},
+    {id:"security",title:"Security & Governance",weight:"Advanced",topics:["secrets","authorization","tenant isolation","PII","auditability"],lab:"Threat-model a multi-tenant AI assistant and list preventive, detective and recovery controls."},
+    {id:"economics",title:"Cost, Latency & Operations",weight:"Advanced",topics:["token budgets","caching","batching","routing","SLOs","observability"],lab:"Optimize a hypothetical workload while preserving quality and a defined latency SLO."}
+   ],
+   questions:[
+    {q:"What is an important control for high-impact tool actions?",o:["Human approval or policy enforcement","Allow every call automatically","Hide logs","Use the largest model only"],a:0,e:"Sensitive actions should be constrained by authorization and appropriate approval."},
+    {q:"Why use model routing?",o:["Match workload needs to cost/quality/latency","Make all models identical","Remove monitoring","Avoid authentication"],a:0,e:"Routing can send tasks to different models based on workload requirements."},
+    {q:"What does tenant isolation protect?",o:["One customer's data and permissions from another's","Only UI colors","CPU temperature","Prompt length"],a:0,e:"Multi-tenant systems need data and permission isolation."},
+    {q:"Which is an online reliability signal?",o:["Production latency and error rate","A static README","A favorite prompt","A deleted log"],a:0,e:"Operational telemetry helps detect production regressions."},
+    {q:"What prevents runaway agent execution?",o:["Explicit budgets and termination conditions","Unlimited calls","More agents without limits","No tracing"],a:0,e:"Budgets, maximum steps and termination rules bound execution."}
+   ]},
+  {id:"dbx-genai",name:"Databricks Generative AI Engineer",short:"Databricks GenAI",provider:"Databricks",examCode:"GenAI Engineer",status:"active",color:P.a4,priority:"P6",voucher:"Learning track",examDate:"",
+   guide:"https://www.databricks.com/learn/certification",resource:"https://www.databricks.com/learn/training",
+   summary:"Build production GenAI systems with retrieval, vector search, model serving, evaluation and governance.",
+   modules:[
+    {id:"rag",title:"RAG & Retrieval",weight:"Core",topics:["chunking","embeddings","retrieval","reranking","grounding"],lab:"Build a document RAG pipeline and evaluate retrieval separately from generation."},
+    {id:"vector",title:"Vector Search & Data",weight:"Core",topics:["vector indexes","metadata filters","sync","document pipelines","Delta"],lab:"Design a governed vector index with tenant/domain metadata filters."},
+    {id:"serve",title:"Model Serving & Application",weight:"Core",topics:["serving endpoints","authentication","rate limits","latency","streaming"],lab:"Define a serving architecture with authentication, rate limits, observability and rollback."},
+    {id:"eval",title:"Evaluation & Quality",weight:"Core",topics:["groundedness","relevance","golden sets","LLM judges","human review"],lab:"Create a 20-case evaluation set and score retrieval relevance and answer groundedness."},
+    {id:"govern",title:"Governance & Production",weight:"Core",topics:["Unity Catalog","permissions","lineage","PII","monitoring","cost"],lab:"Threat-model a RAG app and document data access, audit, monitoring and cost controls."}
+   ],
+   questions:[
+    {q:"What is the main role of embeddings in RAG?",o:["Represent content as vectors for semantic retrieval","Generate passwords","Replace the database","Encrypt traffic"],a:0,e:"Embeddings represent content numerically so semantically similar items can be retrieved."},
+    {q:"Why evaluate retrieval separately from generation?",o:["A bad retriever can provide bad context","It makes prompts shorter","It removes test data","It guarantees factuality"],a:0,e:"Separating stages identifies whether failures originate in retrieval or generation."},
+    {q:"Why add metadata filters to vector search?",o:["Restrict retrieval to authorized or relevant subsets","Increase randomness","Disable governance","Remove embeddings"],a:0,e:"Filters can enforce scope such as tenant, department or document type."},
+    {q:"What is a golden evaluation set?",o:["Curated representative cases for repeatable evaluation","A password","A billing export","Random prompts"],a:0,e:"Curated cases provide a stable baseline for comparing changes."},
+    {q:"What should a production GenAI service monitor?",o:["Quality, latency, errors, usage and cost","Only CPU temperature","Only model name","Nothing"],a:0,e:"Production monitoring needs operational and quality signals."}
+   ]},
+  {id:"github-copilot",name:"Microsoft GitHub Copilot Certification",short:"GitHub Copilot",provider:"Microsoft",examCode:"Completed",status:"completed",color:P.a2,priority:"Done",voucher:"Completed",examDate:"",
+   guide:"https://learn.microsoft.com/credentials/certifications/",resource:"https://docs.github.com/en/copilot",summary:"Completed. Keep the credential visible and use it as evidence of AI-assisted development knowledge.",modules:[]}
 ];
+
+// ─── Canonical PhD research memory ────────────────────────────────────────────
+// One source of truth shared by PhD Planner + SNU Research. Keep the thesis title
+// explicitly marked as a working direction until the supervisor/doctoral committee
+// formally freezes the wording.
+const phdResearchHub = {
+  workingTitle: "AI-Based Personalized Multimodal Distress Detection and Early Intervention Using Wearable Devices, Generative AI, and Edge AI for Healthcare",
+  snuScope: "Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children",
+  university: "Shiv Nadar University (SNU), Chennai",
+  supervisor: "Dr. K. B. Badri Narayanan",
+  started: "July 2026",
+  mode: "Part-time PhD in Computer Science & Engineering",
+  coreObjective: "Build a personalized, privacy-aware multimodal AI system that learns an individual's baseline, predicts distress early from multimodal signals, explains the reason for an alert, and supports caregiver intervention.",
+  researchLineage: [
+    "M.Tech AI Emotional Wellness Buddy → longitudinal emotion/risk monitoring, privacy, explainability and safety routing",
+    "PhD expansion → personalized multimodal distress prediction for people who may have limited communication",
+    "Current SNU scope → special-needs children, wearable sensing, computer vision, speech/audio and caregiver decision support",
+    "Long-term research extensions → Generative AI/LLM caregiver assistance, Edge AI and privacy-preserving/federated learning"
+  ],
+  targetPopulation: [
+    "Special-needs children: non-verbal children, autism/ASD, ADHD, cerebral palsy and developmental/neurological conditions",
+    "Potential transferable use cases: elderly people and stroke/communication-limited patients, subject to separate validation"
+  ],
+  modalities: [
+    "Wearables: HR/HRV, PPG/ECG where available, skin temperature, EDA/GSR, accelerometer and gyroscope",
+    "Computer vision: facial affect, body gesture, movement/action and gaze where appropriate",
+    "Speech/audio: speech emotion, cry/distress vocalisation, non-verbal sounds and environmental audio",
+    "Context: routine, time, environment and caregiver-logged behavioural observations"
+  ],
+  researchPillars: [
+    {id:"p1",title:"Personalized baseline learning",detail:"Model each person's normal physiological, behavioural and contextual pattern instead of relying only on population averages."},
+    {id:"p2",title:"Early distress prediction",detail:"Study precursor signals and temporal patterns so the system can provide an early warning rather than only detecting distress after onset."},
+    {id:"p3",title:"Dynamic multimodal fusion",detail:"Fuse available modalities while remaining useful when one or more sensors are missing or unreliable."},
+    {id:"p4",title:"Explainable caregiver support",detail:"Explain why an alert was raised and present an understandable intervention rationale using XAI and natural-language support."},
+    {id:"p5",title:"Privacy-preserving learning",detail:"Investigate local/edge processing and federated or privacy-aware learning for sensitive healthcare data."},
+    {id:"p6",title:"Generative AI assistance",detail:"Use LLM/RAG/agent patterns only where they add value, such as summarization, caregiver guidance and research-facing interfaces, with grounding and safety controls."}
+  ],
+  problemStatements: [
+    "PS-1: Personalized distress prediction for an individual rather than a population-average detector.",
+    "PS-2: Explainable caregiver decision support — why the model raised an alert and what evidence supports the recommendation.",
+    "PS-3: Robust multimodal fusion with graceful handling of missing modalities.",
+    "PS-4: Longitudinal modelling of changing behavioural and physiological baselines.",
+    "PS-5: Privacy-preserving/federated learning for multi-site or multi-caregiver deployment.",
+    "PS-6: Edge-aware inference for low-latency and privacy-sensitive environments.",
+    "PS-7: Safe, grounded Generative AI assistance for caregiver-facing summaries and interventions."
+  ],
+  datasets: [
+    "DREAMER — multimodal physiological/emotion research data; use only for the signals and task it actually supports.",
+    "AffectNet — facial expression/affect research data for the computer-vision component.",
+    "MAHNOB-HCI — multimodal affect data for cross-modal research/benchmarking.",
+    "IEMOCAP — speech/audio emotion data for the audio component.",
+    "Minimal custom caregiver/behaviour logs — collect only the variables needed for the final research question."
+  ],
+  methodology: [
+    "Literature review → precise research gap → measurable hypotheses/research questions",
+    "Data quality and modality-specific preprocessing → temporal feature extraction",
+    "Personalized baseline + multimodal representation/fusion → predictive modelling",
+    "XAI layer → caregiver-facing explanation and intervention support",
+    "Ablation, missing-modality, personalization and longitudinal experiments",
+    "Privacy/security evaluation and, where justified, edge/federated prototype",
+    "Clinical/caregiver validation and ethics review before any real-world sensitive-data study"
+  ],
+  supervisorInstructions: [
+    "Prepare 15–20 research keywords.",
+    "Maintain 7–10 candidate problem statements before narrowing.",
+    "Prefer a minimal, defensible dataset strategy rather than collecting everything.",
+    "Keep a four-year month-by-month research timeline with concrete deliverables.",
+    "Meet the supervisor regularly and refine the problem statement from evidence, experiments and feedback."
+  ]
+};
+
+const futureCertifications = [
+ {id:"aws-mla-c02",name:"AWS Certified Machine Learning Engineer – Associate",code:"MLA-C02",note:"Next cloud/ML option after the current DEA sprint. Verify the current exam guide and availability before scheduling.",url:"https://aws.amazon.com/certification/certified-machine-learning-engineer-associate/"},
+ {id:"aws-genai-pro",name:"AWS Certified Generative AI Developer – Professional",code:"AIP-C01",note:"Longer-term production GenAI certification covering RAG, agents, security, evaluation, monitoring and enterprise integration.",url:"https://aws.amazon.com/certification/certified-generative-ai-developer-professional/"},
+ {id:"dbx-de-pro",name:"Databricks Certified Data Engineer Professional",code:"Data Engineer Professional",note:"Progression after Associate once Spark, Lakeflow, Delta, governance and production troubleshooting are strong.",url:"https://www.databricks.com/learn/certification"},
+ {id:"snow-advanced",name:"SnowPro Advanced",code:"Advanced",note:"Consider after SnowPro Core and practical Snowflake project experience.",url:"https://learn.snowflake.com/en/certifications/"}
+];
+
+const offlineQuestionBank = {
+  ugc: [
+    {question:"Which normal form removes partial dependency on a composite candidate key?",options:{A:"1NF",B:"2NF",C:"3NF",D:"BCNF"},correct:"B",explanation:"2NF removes partial functional dependencies of non-prime attributes on a proper subset of a candidate key.",tip:"Remember: 2NF = no partial dependency."},
+    {question:"Which protocol is primarily used to translate domain names into IP addresses?",options:{A:"HTTP",B:"SMTP",C:"DNS",D:"FTP"},correct:"C",explanation:"DNS maps human-readable domain names to IP addresses and related records.",tip:"DNS = Domain Name System."},
+    {question:"In a preemptive CPU scheduling algorithm, which can interrupt a running process?",options:{A:"Only the process itself",B:"The scheduler",C:"A compiler",D:"The linker"},correct:"B",explanation:"A preemptive scheduler can interrupt a running process and assign the CPU to another ready process.",tip:"Preemptive means the OS can take the CPU back."},
+    {question:"Which traversal of a binary search tree visits keys in sorted order?",options:{A:"Preorder",B:"Postorder",C:"Inorder",D:"Level order"},correct:"C",explanation:"Inorder traversal of a BST visits left subtree, root, then right subtree, producing sorted keys.",tip:"BST + inorder = sorted order."},
+    {question:"Which ACID property ensures that a committed transaction survives a system failure?",options:{A:"Atomicity",B:"Consistency",C:"Isolation",D:"Durability"},correct:"D",explanation:"Durability means committed changes persist despite crashes or failures.",tip:"D in ACID = Durable after commit."}
+  ],
+  python: [
+    {question:"What does a Python list comprehension primarily provide?",options:{A:"A way to create lists concisely",B:"Database transactions",C:"Thread synchronization",D:"Memory allocation control"},correct:"A",explanation:"List comprehensions create lists from iterable expressions using compact syntax.",tip:"Practice filtering and transforming data with comprehensions."},
+    {question:"Which Python object is immutable?",options:{A:"list",B:"dict",C:"set",D:"tuple"},correct:"D",explanation:"Tuples are immutable sequences, unlike lists, dictionaries and sets.",tip:"Use tuples when the sequence should not change."}
+  ],
+  sql: [
+    {question:"Which SQL window function assigns a rank without gaps after ties?",options:{A:"RANK()",B:"DENSE_RANK()",C:"ROW_NUMBER()",D:"NTILE()"},correct:"B",explanation:"DENSE_RANK assigns equal values the same rank and does not leave gaps after ties.",tip:"RANK has gaps; DENSE_RANK does not."},
+    {question:"Which clause filters rows after GROUP BY aggregation?",options:{A:"WHERE",B:"HAVING",C:"ORDER BY",D:"FROM"},correct:"B",explanation:"HAVING filters grouped results after aggregation, whereas WHERE filters rows before grouping.",tip:"WHERE before GROUP BY; HAVING after GROUP BY."}
+  ],
+  genai: [
+    {question:"In a RAG system, what is the main purpose of retrieval?",options:{A:"Replace the language model",B:"Provide relevant external context to generation",C:"Compress every prompt",D:"Remove embeddings"},correct:"B",explanation:"Retrieval finds relevant documents or chunks that are supplied as context to the generation model.",tip:"RAG = retrieve relevant context, then generate."},
+    {question:"What does a vector database primarily store for semantic search?",options:{A:"Only SQL tables",B:"Embedding vectors and associated metadata",C:"Only images",D:"Operating-system processes"},correct:"B",explanation:"Vector databases index embedding vectors and commonly store metadata used for filtering and retrieval.",tip:"Think embeddings + metadata + nearest-neighbor search."}
+  ]
+};
 
 const weeklyTemplate = [
   { day:"Mon", type:"work", blocks:[{time:"9AM–6PM",task:"TCS Work + commute",color:P.a1},{time:"7–8PM",task:"Python – current chapter + 1 coding exercise",color:P.a3},{time:"8–9PM",task:"UGC NET – 20 MCQs (DBMS/OS/DSA)",color:P.a2}] },
@@ -438,9 +638,27 @@ const medicines = [
   { time:"Night 🌙", color:P.a4, meds:["Arkamin — as prescribed","Epitril Beta","Zonisamide 100mg (after first month)","Glycomet GP 2/500 — BEFORE dinner ⚠️","Vildagliptin 50mg — AFTER dinner","Lipvas 10mg","Healvit (multivitamin)"] },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const todayKey = () => new Date().toISOString().slice(0,10);
-const fmtDate  = k => { const d=new Date(k); return d.toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}); };
+// ─── India-time calendar helpers ───────────────────────────────────────────────
+// Calendar records are keyed by Asia/Kolkata dates; never derive them from UTC.
+const INDIA_TIME_ZONE = "Asia/Kolkata";
+const indiaParts = (date = new Date()) => Object.fromEntries(
+  new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year:"numeric", month:"2-digit", day:"2-digit" })
+    .formatToParts(date).filter(({ type }) => type !== "literal").map(({ type, value }) => [type, value])
+);
+const todayKey = (date = new Date()) => { const { year, month, day } = indiaParts(date); return `${year}-${month}-${day}`; };
+const dateFromKey = key => new Date(`${key}T12:00:00+05:30`);
+const fmtDate = (key, options = { weekday:"short", day:"numeric", month:"short" }) =>
+  dateFromKey(key).toLocaleDateString("en-IN", { timeZone: INDIA_TIME_ZONE, ...options });
+const daysBetween = (fromKey, toKey) => Math.round((Date.UTC(...toKey.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v)) - Date.UTC(...fromKey.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v))) / 86400000);
+const daysUntil = deadline => daysBetween(todayKey(), deadline);
+const dateKeyDaysAgo = days => { const date = new Date(); date.setDate(date.getDate() - days); return todayKey(date); };
+const deadlineStatus = deadline => {
+  const days = daysUntil(deadline);
+  if (days < 0) return { days, label:`Expired · ${fmtDate(deadline, { month:"short", day:"numeric", year:"numeric" })}`, expired:true };
+  if (days === 0) return { days, label:"Due today", expired:false };
+  return { days, label:`${days} days left`, expired:false };
+};
+const currentMonthLabel = () => new Intl.DateTimeFormat("en-IN", { timeZone: INDIA_TIME_ZONE, month:"long", year:"numeric" }).format(new Date());
 
 // ─── Storage: localStorage (persists across sessions on same device) ─────────
 function storeGet(key) {
@@ -452,23 +670,59 @@ function storeSet(key, val) {
 function storeJsonGet(key, fallback) {
   const raw = storeGet(key);
   if (!raw) return fallback;
-  try { return JSON.parse(raw); } catch(_) { return fallback; }
+  try {
+    const value = JSON.parse(raw);
+    if (Array.isArray(fallback)) return Array.isArray(value) ? value : fallback;
+    if (fallback && typeof fallback === "object") return value && typeof value === "object" && !Array.isArray(value) ? value : fallback;
+    return value;
+  } catch(_) { return fallback; }
 }
-function readClaudeText(data) {
+function bytesToB64(bytes) {
+  let s=""; const a=new Uint8Array(bytes);
+  for(let i=0;i<a.length;i+=0x8000) s+=String.fromCharCode(...a.subarray(i,i+0x8000));
+  return btoa(s);
+}
+function b64ToBytes(str) {
+  const s=atob(str); const a=new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i);
+  return a;
+}
+async function deriveSyncKey(passphrase, salt) {
+  const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(passphrase),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:210000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function encryptSyncSnapshot(snapshot, passphrase) {
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveSyncKey(passphrase,salt);
+  const plain=new TextEncoder().encode(JSON.stringify(snapshot));
+  const ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plain);
+  return {salt:bytesToB64(salt),iv:bytesToB64(iv),ciphertext:bytesToB64(ciphertext),updatedAt:Date.now()};
+}
+async function decryptSyncSnapshot(payload, passphrase) {
+  const salt=b64ToBytes(payload.salt), iv=b64ToBytes(payload.iv), ciphertext=b64ToBytes(payload.ciphertext);
+  const key=await deriveSyncKey(passphrase,salt);
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,ciphertext);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+function readAIText(data) {
   if (!data || typeof data !== "object") return "";
   if (Array.isArray(data.content)) {
     return data.content.map(block => block?.text || "").join("").trim();
   }
   return "";
 }
-async function callClaude(payload) {
-  const r = await fetch("/api/claude",{
+async function callAI(payload) {
+  const r = await fetch("/api/gemini",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify(payload)
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) {
+    if (r.status === 429) {
+      throw new Error("Gemini quota/rate limit reached. Study content and saved data remain available; try AI again later.");
+    }
     const msg = d?.message || d?.error || `Request failed (${r.status})`;
     throw new Error(msg);
   }
@@ -486,8 +740,9 @@ function escHtml(str="") {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab]       = useState("now");
-  const [monthIdx, setMonth]= useState(0);
+  const VALID_APP_TABS = new Set(["now","jobs","radar","monthly","career","skills","learn","ugc","phd","snu","office","health","journal","resume","certs","govt","buddy","coach"]);
+  const [tab, setTab]       = useState(() => { try { const q = new URLSearchParams(window.location.search).get("tab"); return VALID_APP_TABS.has(q) ? q : "now"; } catch(_) { return "now"; } });
+  const [monthIdx, setMonth]= useState(() => Math.max(0, monthPlan.findIndex(month => month.month === currentMonthLabel())));
   const [pillar, setPillar] = useState("job");
   const [careerIdx, setCareer] = useState(0);
   const [skillIdx, setSkill]   = useState(0);
@@ -495,6 +750,7 @@ export default function App() {
 
   // Journal
   const [entries, setEntries]   = useState({});
+  const [dailyPlans, setDailyPlans] = useState({});
   const [selDay, setSelDay]     = useState(todayKey());
   const [dNote, setDNote]       = useState("");
   const [dRem, setDRem]         = useState("");
@@ -601,6 +857,12 @@ export default function App() {
   const [certStudyA, setCertStudyA]       = useState("");
   const [certStudyLoad, setCertStudyLoad] = useState(false);
   const [certTab, setCertTab]             = useState("roadmap");
+  const [certView, setCertView]             = useState("command");
+  const [selectedCertId, setSelectedCertId] = useState("aws-dea");
+  const [certProgress, setCertProgress]     = useState({});
+  const [certWrong, setCertWrong]           = useState([]);
+  const [mockState, setMockState]           = useState(null);
+  const [mockScore, setMockScore]           = useState(null);
 
   // Resume & ATS
   const [resumeTab, setResumeTab] = useState("builder");
@@ -614,15 +876,26 @@ export default function App() {
 
 
 
+  const [memoryHydrated, setMemoryHydrated] = useState(false);
+  const [syncId, setSyncId] = useState(()=>{try{return new URLSearchParams(window.location.search).get("sync") || localStorage.getItem("life-sync-id") || "";}catch(_){return "";}});
+  const [syncPassphrase, setSyncPassphrase] = useState(()=>{try{return sessionStorage.getItem("life-sync-passphrase") || "";}catch(_){return "";}});
+  const [syncStatus, setSyncStatus] = useState("local");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncReady, setSyncReady] = useState(false);
+  const [syncLastAt, setSyncLastAt] = useState("");
+
   const [mob, setMob] = useState(typeof window!=="undefined"?window.innerWidth<768:false);
   useEffect(()=>{const h=()=>setMob(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
 
-  // Load persisted data
+  // Load persisted data. Existing per-tab keys remain the primary store; the
+  // unified memory snapshot is a durable backup/migration layer for every tab.
   useEffect(()=>{
-    const journalEntries = storeJsonGet("j-entries", {});
+    const mem = storeJsonGet("life-memory-v2", {});
+    const journalEntries = storeJsonGet("j-entries", mem.journal?.entries || {});
     setEntries(journalEntries);
+    setDailyPlans(storeJsonGet("daily-plans", mem.journal?.dailyPlans || {}));
 
-    const officeData = storeJsonGet("o-data", {});
+    const officeData = storeJsonGet("o-data", mem.office?.data || {});
     setOffData(officeData);
     const t = todayKey();
     if (officeData[t]) {
@@ -632,16 +905,125 @@ export default function App() {
       setOffNote(officeData[t].note || "");
     }
 
-    const healthData = storeJsonGet("h-log", {});
+    const healthData = storeJsonGet("h-log", mem.health?.log || {});
     setHLog(healthData);
     if (healthData[t]) setHForm(f=>({...f,...healthData[t]}));
 
-    setLearnProgress(storeJsonGet("learn-progress", {}));
-    setPhdMeetings(storeJsonGet("phd-meetings", []));
-    setPhdTasks(storeJsonGet("phd-tasks", []));
-    setAllPending(storeJsonGet("all-pending", []));
-    setAppStatus(storeJsonGet("app-status", {}));
+    setLearnProgress(storeJsonGet("learn-progress", mem.learning?.progress || {}));
+    setPhdMeetings(storeJsonGet("phd-meetings", mem.phd?.meetings || []));
+    setPhdTasks(storeJsonGet("phd-tasks", mem.phd?.tasks || []));
+    setAllPending(storeJsonGet("all-pending", mem.shared?.pending || []));
+    setAppStatus(storeJsonGet("app-status", mem.career?.appStatus || {}));
+    setCertProgress(storeJsonGet("cert-progress", mem.certs?.progress || {}));
+    setCertWrong(storeJsonGet("cert-wrong", mem.certs?.wrong || []));
+
+    if (mem.ui) {
+      if (mem.ui.phdTab) setPhdTab(mem.ui.phdTab);
+      if (mem.ui.snuTab) setSnuTab(mem.ui.snuTab);
+      if (mem.ui.resumeTab) setResumeTab(mem.ui.resumeTab);
+      if (mem.ui.learnTab) setLearnTab(mem.ui.learnTab);
+      if (mem.ui.ugcView) setUgcView(mem.ui.ugcView);
+    }
+    if (mem.ai) {
+      if (mem.ai.phd) { setPhdAiQ(mem.ai.phd.q || ""); setPhdAiA(mem.ai.phd.a || ""); }
+      if (mem.ai.snu) { setSnuAiQ(mem.ai.snu.q || ""); setSnuAiA(mem.ai.snu.a || ""); }
+      if (mem.ai.health) { setHAiQ(mem.ai.health.q || ""); setHAiA(mem.ai.health.a || ""); }
+      if (mem.ai.coach) { setCQ(mem.ai.coach.q || ""); setCA(mem.ai.coach.a || ""); }
+    }
+    setMemoryHydrated(true);
   },[]);
+
+  const buildMemorySnapshot = useCallback(() => ({
+    version: 3, updatedAt: Date.now(),
+    ui:{activeTab:tab,phdTab,snuTab,resumeTab,learnTab,ugcView},
+    journal: {entries, dailyPlans}, health: {log:healthLog}, office: {data:offData},
+    learning:{progress:learnProgress}, phd:{meetings:phdMeetings,tasks:phdTasks},
+    certs:{progress:certProgress,wrong:certWrong}, career:{appStatus},
+    shared:{pending:allPending},
+    ai:{phd:{q:phdAiQ,a:phdAiA},snu:{q:snuAiQ,a:snuAiA},health:{q:hAiQ,a:hAiA},coach:{q:cQ,a:cA}}
+  }),[tab,phdTab,snuTab,resumeTab,learnTab,ugcView,entries,dailyPlans,healthLog,offData,learnProgress,phdMeetings,phdTasks,certProgress,certWrong,appStatus,allPending,phdAiQ,phdAiA,snuAiQ,snuAiA,hAiQ,hAiA,cQ,cA]);
+
+  const applyMemorySnapshot = useCallback((mem) => {
+    if(!mem || typeof mem!=="object") return;
+    if(mem.journal){setEntries(mem.journal.entries||{});setDailyPlans(mem.journal.dailyPlans||{});}
+    if(mem.health){setHLog(mem.health.log||{}); const t=todayKey(); if(mem.health.log?.[t]) setHForm(f=>({...f,...mem.health.log[t]}));}
+    if(mem.office){setOffData(mem.office.data||{}); const t=todayKey(); const o=mem.office.data?.[t]||{}; setTickets(o.tickets||[]);setPending(o.pending||[]);setIdeas(o.ideas||[]);setOffNote(o.note||"");}
+    if(mem.learning) setLearnProgress(mem.learning.progress||{});
+    if(mem.phd){setPhdMeetings(mem.phd.meetings||[]);setPhdTasks(mem.phd.tasks||[]);}
+    if(mem.certs){setCertProgress(mem.certs.progress||{});setCertWrong(mem.certs.wrong||[]);}
+    if(mem.career) setAppStatus(mem.career.appStatus||{});
+    if(mem.shared) setAllPending(mem.shared.pending||[]);
+    if(mem.ui){if(mem.ui.phdTab)setPhdTab(mem.ui.phdTab);if(mem.ui.snuTab)setSnuTab(mem.ui.snuTab);if(mem.ui.resumeTab)setResumeTab(mem.ui.resumeTab);if(mem.ui.learnTab)setLearnTab(mem.ui.learnTab);if(mem.ui.ugcView)setUgcView(mem.ui.ugcView);}
+    if(mem.ai){if(mem.ai.phd){setPhdAiQ(mem.ai.phd.q||"");setPhdAiA(mem.ai.phd.a||"");}if(mem.ai.snu){setSnuAiQ(mem.ai.snu.q||"");setSnuAiA(mem.ai.snu.a||"");}if(mem.ai.health){setHAiQ(mem.ai.health.q||"");setHAiA(mem.ai.health.a||"");}if(mem.ai.coach){setCQ(mem.ai.coach.q||"");setCA(mem.ai.coach.a||"");}}
+  },[]);
+
+  const saveLocalMemory = useCallback((snapshot) => {
+    storeSet("life-memory-v3",JSON.stringify(snapshot));
+    storeSet("life-memory-v2",JSON.stringify(snapshot));
+  },[]);
+
+  const pushCloudMemory = useCallback(async (pass=syncPassphrase) => {
+    if(!syncId || !pass || pass.length<10) return false;
+    setSyncBusy(true); setSyncStatus("syncing");
+    try{
+      const encrypted=await encryptSyncSnapshot(buildMemorySnapshot(),pass);
+      const r=await fetch(`/api/sync?id=${encodeURIComponent(syncId)}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(encrypted)});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||`Cloud sync failed (${r.status})`);
+      setSyncStatus("synced"); setSyncLastAt(new Date().toLocaleString("en-IN")); return true;
+    }catch(err){setSyncStatus("error");setSyncLastAt(err.message||"Sync error");return false;}
+    finally{setSyncBusy(false);}
+  },[syncId,syncPassphrase,buildMemorySnapshot]);
+
+  const pullCloudMemory = useCallback(async (pass=syncPassphrase, replaceLocal=true) => {
+    if(!syncId || !pass || pass.length<10) return false;
+    setSyncBusy(true); setSyncStatus("syncing");
+    try{
+      const r=await fetch(`/api/sync?id=${encodeURIComponent(syncId)}`,{cache:"no-store"});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||`Cloud download failed (${r.status})`);
+      const mem=await decryptSyncSnapshot(d.data,pass);
+      if(replaceLocal) applyMemorySnapshot(mem);
+      saveLocalMemory(mem);
+      setSyncStatus("synced"); setSyncLastAt(new Date().toLocaleString("en-IN")); return true;
+    }catch(err){setSyncStatus("error");setSyncLastAt(err.message||"Wrong passphrase or sync error");return false;}
+    finally{setSyncBusy(false);}
+  },[syncId,syncPassphrase,applyMemorySnapshot,saveLocalMemory]);
+
+  const createOrConnectSync = async (mode) => {
+    const pass=syncPassphrase.trim();
+    if(pass.length<10){setSyncStatus("error");setSyncLastAt("Use a passphrase of at least 10 characters.");return;}
+    let id=syncId;
+    if(!id){id=crypto.randomUUID().replace(/-/g,"");setSyncId(id);storeSet("life-sync-id",id);}
+    try{sessionStorage.setItem("life-sync-passphrase",pass);}catch(_){}
+    if(window.location.search!==`?sync=${encodeURIComponent(id)}`) history.replaceState({}, "", `?sync=${encodeURIComponent(id)}`);
+    if(mode==="download") {
+      const ok=await pullCloudMemory(pass);
+      if(ok) setSyncReady(true);
+    } else {
+      const ok=await pushCloudMemory(pass);
+      if(ok) setSyncReady(true);
+    }
+  };
+
+  // Save locally first, then automatically mirror to cloud when connected.
+  useEffect(()=>{
+    if(!memoryHydrated) return;
+    const snapshot=buildMemorySnapshot();
+    saveLocalMemory(snapshot);
+    if(!syncId || syncPassphrase.length<10 || !syncReady) return;
+    const t=setTimeout(()=>pushCloudMemory(syncPassphrase),2500);
+    return ()=>clearTimeout(t);
+  },[memoryHydrated,buildMemorySnapshot,syncId,syncPassphrase,pushCloudMemory,saveLocalMemory]);
+
+  // If a sync link + passphrase already exist in this browser session, restore cloud state.
+  useEffect(()=>{
+    if(!memoryHydrated || !syncId || syncPassphrase.length<10) return;
+    const key="life-sync-pulled-"+syncId;
+    if(storeGet(key)==="1") return;
+    pullCloudMemory(syncPassphrase,true).then(ok=>{if(ok){storeSet(key,"1");setSyncReady(true);}});
+  },[memoryHydrated,syncId,syncPassphrase,pullCloudMemory]);
+
 
   useEffect(()=>{const e=entries[selDay]||{};setDNote(e.note||"");setDRem(e.reminder||"");setDMood(e.mood||"3");setJSaved(false);},[selDay,entries]);
 
@@ -704,6 +1086,47 @@ export default function App() {
     if(updated[trackKey]) { delete updated[trackKey][itemKey]; }
     saveLearnProgress(updated);
   };
+  const certState = id => certProgress[id] || {modules:{},scores:{knowledge:0,handsOn:0,recall:0,application:0,examTechnique:0},studyMinutes:0,examDate:""};
+  const saveCertProgress = updated => { setCertProgress(updated); storeSet("cert-progress", JSON.stringify(updated)); };
+  const toggleCertModule = (certId,moduleId) => {
+    const s=certState(certId), modules={...(s.modules||{}),[moduleId]:!(s.modules||{})[moduleId]};
+    saveCertProgress({...certProgress,[certId]:{...s,modules}});
+  };
+  const setCertScore = (certId,key,value) => {
+    const s=certState(certId), scores={...(s.scores||{}),[key]:Math.max(0,Math.min(100,Number(value)||0))};
+    saveCertProgress({...certProgress,[certId]:{...s,scores}});
+  };
+  const setCertExamDate = (certId,value) => {
+    const s=certState(certId);
+    saveCertProgress({...certProgress,[certId]:{...s,examDate:value}});
+  };
+  const readiness = cert => {
+    const s=certState(cert.id), scores=s.scores||{};
+    const manual=["knowledge","handsOn","recall","application","examTechnique"].reduce((n,k)=>n+(Number(scores[k])||0),0)/5;
+    const mods=cert.modules?.length ? cert.modules.filter(m=>s.modules?.[m.id]).length/cert.modules.length*100 : (cert.status==="completed"?100:0);
+    return Math.round(manual*0.7+mods*0.3);
+  };
+  const addWrongAnswer = item => {
+    const next=[{...item,id:Date.now().toString(),ts:Date.now()},...certWrong.filter(w=>!(w.certId===item.certId&&w.q===item.q))].slice(0,100);
+    setCertWrong(next); storeSet("cert-wrong",JSON.stringify(next));
+  };
+  const startMock = cert => {
+    const qs=(cert.questions||[]).slice(0,5).map(q=>({...q,certId:cert.id}));
+    setMockScore(null); setMockState({certId:cert.id,index:0,answers:[],questions:qs}); setCertView("mock");
+  };
+  const answerMock = option => {
+    if(!mockState) return;
+    const q=mockState.questions[mockState.index], correct=option===q.a;
+    const answers=[...mockState.answers,{q:q.q,option,correct}];
+    if(!correct) addWrongAnswer({certId:mockState.certId,q:q.q,selected:q.o?.[option]||"",correct:q.o?.[q.a]||"",explanation:q.e||""});
+    if(mockState.index+1>=mockState.questions.length){setMockScore(Math.round(answers.filter(a=>a.correct).length/mockState.questions.length*100));setMockState({...mockState,answers});}
+    else setMockState({...mockState,index:mockState.index+1,answers});
+  };
+  const activeCerts = certificationTracks.filter(c=>c.status==="active");
+  const missionCert = activeCerts.slice().sort((a,b)=>readiness(a)-readiness(b))[0] || activeCerts[0];
+  const missionState = missionCert ? certState(missionCert.id) : {};
+  const missionModule = missionCert?.modules?.find(m=>!missionState.modules?.[m.id]) || missionCert?.modules?.[0];
+
 
   // PhD helpers
   const savePhdMeetings = (u) => { setPhdMeetings(u); storeSet("phd-meetings", JSON.stringify(u)); };
@@ -728,8 +1151,8 @@ export default function App() {
     const meetings = phdMeetings.slice(-3).map(m=>`Meeting ${m.date}: ${m.instructions}`).join(". ");
     const tasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>`${t.title} (${t.status}, due ${t.due||"TBD"})`).join(", ");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]});
-      setPhdAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a PhD research advisor for Thamizamudhan K, PhD scholar at SSN College of Engineering under Dr. K.D. Badri Narayanan. Research: Human-Centered Multimodal AI for Healthcare. Part-time PhD while working at TCS. Started July 2026. Recent meeting instructions: ${meetings}. Current open tasks: ${tasks}. Be specific, practical, encouraging.`,messages:[{role:"user",content:phdAiQ}]});
+      setPhdAiA(readAIText(d) || "No response.");
     } catch(err){ setPhdAiA(err.message || "Connection error. Please try again."); }
     setPhdAiLoad(false);
   };
@@ -750,17 +1173,17 @@ export default function App() {
     const overduePending = allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today);
     const overduePhdTasks = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today);
     const pendingOpen = allPending.filter(p=>p.status!=="Done").length;
-    const daysToClaudeCert = Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
+    const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
     const recentHealth = Object.entries(healthLog).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,3);
     const missedMeds = recentHealth.filter(([,e])=>!e.meds?.morning||!e.meds?.night).length;
     const recentJournal = Object.entries(entries).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,1);
-    const lastJournalDays = recentJournal.length ? Math.floor((new Date()-new Date(recentJournal[0][0]))/(1000*60*60*24)) : 99;
+    const lastJournalDays = recentJournal.length ? Math.max(0, daysBetween(recentJournal[0][0], today)) : 99;
 
     addLog("🔍","Scanning all sections for issues and opportunities...","a3");
     await new Promise(r=>setTimeout(r,400));
 
     // Analysis
-    if(daysToClaudeCert<=42) addLog("🚨",`Claude cert (CCDV-F) deadline in ${daysToClaudeCert} days — August 31, 2026!`,"a5");
+    addLog("🏅",claudeCertStatus,"a3");
     if(overduePending.length) addLog("⚠️",`${overduePending.length} overdue follow-up items in Office need replanning`,"a5");
     if(overduePhdTasks.length) addLog("⚠️",`${overduePhdTasks.length} overdue PhD tasks — review timeline`,"a5");
     if(missedMeds>0) addLog("💊",`Missed medicine logging ${missedMeds} of last 3 days — health tracking incomplete`,"a3");
@@ -774,42 +1197,18 @@ export default function App() {
     // Call AI for smart suggestions
     try {
       const context = [
-        `Today: ${today}. Days to Claude cert CCDV-F deadline (Aug 31): ${daysToClaudeCert}.`,
+        `Today: ${today}. Claude Architect certification status: ${claudeCertStatus}.`,
         `Overdue office follow-ups: ${overduePending.length}. Open follow-ups: ${pendingOpen}.`,
         `Overdue PhD tasks: ${overduePhdTasks.length}. PhD meetings logged: ${phdMeetings.length}.`,
         `Missed medicine logs last 3 days: ${missedMeds}. Days since last journal: ${lastJournalDays}.`,
         `Blocked tickets: ${tickets.filter(t=>t.status==="Blocked").length}.`,
-        `Cert urgent: Claude CCDV-F (Aug 31), Databricks DEA (Sep-Oct 2026), GCP DE (Nov 2026).`,
+        `20-day sprint: AWS DEA, SnowPro Core, Databricks DEA, Claude Architect Foundations, Claude Architect Professional, Databricks GenAI.`,
       ].join(" ");
 
-      const d = await callClaude({
-        model:"claude-sonnet-4-6", max_tokens:700,
-        system:`You are a smart life planning agent for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. PhD student at SSN under Dr. K.D. Badri Narayanan (GenAI/Healthcare AI). UGC NET Dec 2026. URGENT: Claude CCDV-F cert deadline Aug 31 2026. Also: Databricks DEA, GCP DE, health management (Bipolar I, T2 Diabetes). Analyse the context and return EXACTLY 5 specific, actionable recommendations ranked by urgency. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,
-        messages:[{role:"user",content:`Analyse my situation and give 5 smart recommendations: ${context}`}]
-      });
-      const raw = readClaudeText(d) || "[]";
-      const si=raw.indexOf("["); const ei=raw.lastIndexOf("]");
-      const sugs = JSON.parse(si>=0&&ei>=0?raw.slice(si,ei+1):"[]");
-      setAgentSugs(sugs);
-      addLog("✅","Analysis complete — "+sugs.length+" recommendations ready","a2");
-    } catch(_) {
-      addLog("✅","Analysis complete — check recommendations below","a2");
-      setAgentSugs([
-        {priority:1,icon:"🚨",title:"Claude CCDV-F Cert",action:`${daysToClaudeCert} days left to Aug 31! Start studying today: claude.ai/docs and Anthropic prompt engineering guide. Dedicate 30 min/day.`,tab:"certs",urgency:"high"},
-        {priority:2,icon:"⚠️",title:"Replan Overdue Items",action:`${overduePending.length} office follow-ups are overdue. Go to Office → Follow-Up Board and set new target dates now.`,tab:"office",urgency:"high"},
-        {priority:3,icon:"🎓",title:"PhD Task Review",action:`${overduePhdTasks.length} PhD tasks need replanning. Open PhD tab → Tasks and replan with realistic new dates.`,tab:"phd",urgency:"medium"},
-        {priority:4,icon:"💊",title:"Health Logging",action:"Log your medicines and health data daily. Consistent tracking helps manage diabetes better.",tab:"health",urgency:"medium"},
-        {priority:5,icon:"📓",title:"Daily Reflection",action:`Last journal entry was ${lastJournalDays} days ago. Write today's entry — even 2 lines counts.`,tab:"journal",urgency:"low"},
-      ]);
-    }
-    setAgentRunning(false);
-  };
-
-  const askCertStudy = async () => {
-    if(!certStudyQ.trim()) return; setCertStudyLoad(true); setCertStudyA("");
-    try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:800,system:`You are an expert on Anthropic's Claude and the Claude Certified Developer Foundations (CCDV-F) certification. Help this candidate prepare. Cover: Claude API, prompt engineering, tool use, safety, multi-turn conversations, system prompts, vision capabilities, context windows, streaming, Claude models (Haiku/Sonnet/Opus). Be specific and practical. The exam deadline is August 31, 2026.`,messages:[{role:"user",content:certStudyQ}]});
-      setCertStudyA(readClaudeText(d) || "No response.");
+      const d = await callAI({
+        model:"gemini-3.8-flash", max_tokens:700,
+        system:`You are a smart life planning agent. Use only non-sensitive planning context supplied in the request. Do not infer or repeat private medical details. Current planning date is September 2026. Claude Architect Foundations + Professional are registered with exam dates not scheduled. Databricks Data Engineer Associate prerequisites are in progress; AWS Data Engineer Associate and SnowPro Core preparation are active. UGC NET CS is planned for December 2026. Do not invent deadlines; use official-source dates supplied by the app. Return EXACTLY 5 specific, actionable recommendations. Format: JSON array of {priority:1-5, icon:"emoji", title:"short title", action:"specific action to take today or this week", tab:"which app tab to go to", urgency:"high|medium|low"}. Return only the JSON array, no other text.`,messages:[{role:"user",content:certStudyQ}]});
+      setCertStudyA(readAIText(d) || "No response.");
     } catch(err){setCertStudyA(err.message || "Connection error. Please try again.");}
     setCertStudyLoad(false);
   };
@@ -819,29 +1218,23 @@ export default function App() {
     const meetings = phdMeetings.slice(-2).map(m=>`${m.date}: ${m.instructions?.substring(0,100)}`).join(". ");
     const openTasks = phdTasks.filter(t=>t.status!=="Done").slice(0,5).map(t=>t.title).join(", ");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a PhD research advisor and expert in Multimodal AI, Explainable AI, and Healthcare AI. Your student is Thamizamudhan K at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan.
 
-RESEARCH: Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children (Autism, ADHD, Cerebral Palsy, non-verbal children).
-
-MODALITIES: Wearables (HRV, accelerometer, temperature, gyroscope) + Computer Vision (facial emotion, body gesture) + Speech (cry detection, emotion) + Context (location, routine, environment).
-
-CORE PROBLEMS:
-PS-1: Personalized multimodal distress PREDICTION (not detection) per individual child using physiological precursor signals
-PS-2: Explainable AI (XAI) for caregiver decision support - WHY alert triggered + WHAT intervention recommended (SHAP, attention maps, natural language)
-PS-3: Dynamic multimodal fusion handling missing modalities gracefully
-PS-5: Privacy-preserving federated learning for multi-hospital deployment
-
-KEY NOVELTY: Individual behavioral baseline per child (not population average) + Predictive (5-15 min before distress onset) + Explainable recommendations + Privacy-preserving
-
-DATASETS: DREAMER (wearable EEG+ECG, 23 participants), AffectNet (450K facial images), MAHNOB-HCI (multimodal affect), IEMOCAP (speech emotion), custom caregiver logs (minimal)
-
-SUPERVISOR INSTRUCTIONS: Ideology of many, 15-20 keywords, 7-10 PS, minimal dataset approach, 4-year timeline with no backlog.
-
+OVERALL PHD RESEARCH: ${phdResearchHub.workingTitle}
+SNU FOCUSED SCOPE: ${phdResearchHub.snuScope}
+CORE OBJECTIVE: ${phdResearchHub.coreObjective}
+TARGET POPULATION: ${phdResearchHub.targetPopulation.join(" | ")}
+MODALITIES: ${phdResearchHub.modalities.join(" | ")}
+PROBLEM STATEMENTS: ${phdResearchHub.problemStatements.join(" ")}
+RESEARCH PILLARS: ${phdResearchHub.researchPillars.map(p=>p.title+" — "+p.detail).join(" | ")}
+DATASETS: ${phdResearchHub.datasets.join(" | ")}
+METHODOLOGY: ${phdResearchHub.methodology.join(" | ")}
+SUPERVISOR INSTRUCTIONS: ${phdResearchHub.supervisorInstructions.join(" ")}
 RECENT MEETINGS: ${meetings}
 OPEN TASKS: ${openTasks}
 
 Give expert, specific, actionable research advice. Reference actual papers, methods, and datasets where relevant.`,messages:[{role:"user",content:snuAiQ}]});
-      setSnuAiA(readClaudeText(d) || "No response.");
+      setSnuAiA(readAIText(d) || "No response.");
     } catch(err){setSnuAiA("Connection error: "+err.message);}
     setSnuAiLoad(false);
   };
@@ -850,33 +1243,10 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
     if(!adviceQ.trim()) return; setAdviceLoad(true); setAdviceA("");
     const open = allPending.filter(p=>p.status!=="Done").length;
     const odPhd = phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<todayKey()).length;
-    const daysCCDVF = Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
+    const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a warm, practical life coach and research advisor for Thamizamudhan K, 27, Chennai. You know everything about him:
-
-LIFE CONTEXT (August 2026):
-- Works full-time at TCS as Data Engineer (4.3 years): SQL/Teradata/DataStage/Unix/ServiceNow
-- Part-time PhD at Shiv Nadar University (SNU) under Dr. K.D. Badri Narayanan
-- Research: Human-Centered Multimodal Explainable AI with Wearables for Special Kids
-- Health: Bipolar I (stable), Type 2 Diabetes (FBS managed), Obesity (140kg) — energy varies
-- URGENT: Claude CCDV-F cert deadline August 31 (${daysCCDVF} days left)
-- Databricks DEA exam: September 2026
-- UGC NET CS: December 2026
-- ISRO application deadline: August 17 (TODAY/TOMORROW!)
-- ${open} open follow-up items in office tracker
-- ${odPhd} overdue PhD tasks
-
-RESEARCH DETAILS:
-- Theme: Human-Centered Multimodal Explainable AI with Wearable Sensors for Special Needs Children
-- Scope: Autism, ADHD, Cerebral Palsy, non-verbal children
-- Modalities: Wearables (HRV, accel, temp) + Computer Vision (facial emotion) + Speech (cry/emotion)
-- Key ideas: Personalized distress prediction, XAI for caregivers, federated learning, digital twin
-- Supervisor instructions: Ideology of many, 15-20 keywords, 7-10 PS, minimal dataset, 4-year timeline
-
-PERSONALITY: Tends to take on too much. Needs reminders to pace himself. Health must come first. Responds well to structured practical advice. Bipolar — never push on bad days. Tamil background.
-
-Give warm, honest, practical advice. Acknowledge the challenges of managing everything. Suggest specific actions. Be a friend who happens to be an expert.`,messages:[{role:"user",content:adviceQ}]});
-      setAdviceA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a warm, practical life coach and research advisor. Use the non-sensitive planning context supplied below. Do not infer, request, or repeat private medical details unless the user explicitly includes them in their question. Current context: TCS Data Engineering with 4+ years experience; part-time PhD at Shiv Nadar University; multimodal AI/XAI research; Claude Architect Foundations + Professional registered; Databricks Data Engineer Associate prerequisites in progress; AWS Data Engineer Associate and SnowPro Core preparation underway; UGC NET CS December 2026 target. Give structured, realistic, actionable advice and verify changing dates against official sources.`,messages:[{role:"user",content:adviceQ}]});
+      setAdviceA(readAIText(d) || "No response.");
     } catch(err){setAdviceA(err.message || "Connection error. Please try again.");}
     setAdviceLoad(false);
   };
@@ -888,8 +1258,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askRadarAI = async () => {
     if(!radarAiQ.trim()) return; setRadarAiLoad(true); setRadarAiA("");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]});
-      setRadarAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a government career advisor specialising in Indian central and state government technical recruitment (2026). Your client has: B.E ECE, M.Tech Data Science, PhD CS/GenAI (part-time at Shiv Nadar University, ongoing). 4.5 years TCS Data Engineering experience (SQL/Teradata/DataStage/Python/Unix). SC category (reservation + fee waiver + age relaxation). No valid GATE score currently. Looking for desk/technical/research/scientist roles. Prefers no physical efficiency test. Wants PhD-compatible posting. Be accurate, specific, and honest about eligibility. If GATE is required, say so clearly. Never assume eligibility — verify each criterion.`,messages:[{role:"user",content:radarAiQ}]});
+      setRadarAiA(readAIText(d) || "No response.");
     } catch(err){setRadarAiA(err.message || "Connection error.");}
     setRadarAiLoad(false);
   };
@@ -897,8 +1267,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askJobAI = async () => {
     if(!jobAiQ.trim()) return; setJobAiLoad(true); setJobAiA("");
     try {
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude CCDV-F (Aug 31 deadline), Databricks DEA (Sep 2026), GCP DE (Nov 2026). UGC NET Dec 2026. Today is August 14 2026. SC quota gives 5-year age relaxation. GATE score needed for ISRO/NIC. Give specific, actionable, honest advice about jobs matching this profile. Name specific organizations, portals, and deadlines.`,messages:[{role:"user",content:jobAiQ}]});
-      setJobAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:`You are a career advisor specialising in Indian government and private tech jobs in 2026. Your client: Thamizamudhan K, 27, Chennai. SC category. TCS Data Engineer 4.3 years. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. Education: B.E ECE, M.Tech DS, PhD CSE GenAI SSN (ongoing). Certs: Claude Architect Foundations + Professional (registered), Databricks Data Engineer Associate (prerequisites in progress), AWS Data Engineer Associate and SnowPro Core (preparation underway). UGC NET Dec 2026. Today is ${todayKey()} in Asia/Kolkata. Never assume eligibility or deadlines; ask the user to verify official notices. Give specific, actionable, honest advice about jobs matching this profile.`,messages:[{role:"user",content:jobAiQ}]});
+      setJobAiA(readAIText(d) || "No response.");
     } catch(err){setJobAiA(err.message || "Connection error. Please try again.");}
     setJobAiLoad(false);
   };
@@ -930,27 +1300,32 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
   const askH = async()=>{
     if(!hAiQ.trim())return; setHAiLoad(true); setHAiA("");
     try{
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are a compassionate non-judgmental health coach. Patient: Thamizamudhan K, 27, 184cm, 140kg, BMI 41.4. Conditions: Bipolar I (stable), Type 2 Diabetes (FBS 197, HbA1c ~7.6%), Dyslipidemia (TG 226, HDL 30), Obesity. CRITICAL: Glycomet GP contains glimepiride – must eat within 30min of taking it or hypoglycemia risk. Person is self-described lazy (valid). Eating is coping mechanism – never shame food. South Indian food preferences. Bipolar – never destabilise. Gradual sustainable changes only. Warm, patient, non-judgmental.`,messages:[{role:"user",content:hAiQ}]});
-      setHAiA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are a compassionate, non-judgmental general health information assistant. Answer only from information the user explicitly includes in the question. Do not infer a diagnosis, medication, lab result, weight, or mental-health condition from hidden app data. Do not change or prescribe medication. For medication questions, hypoglycemia, severe symptoms, or other high-risk situations, advise contacting a qualified clinician or urgent care as appropriate. Keep advice practical, gradual, and respectful.`,messages:[{role:"user",content:hAiQ}]});
+      setHAiA(readAIText(d) || "No response.");
     }catch(err){setHAiA(err.message || "Error connecting. Please try again.");}
     setHAiLoad(false);
   };
   const askC = async()=>{
     if(!cQ.trim())return; setCLoad(true); setCA("");
     try{
-      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:1000,system:`You are an expert career coach for Thamizamudhan K, Data Engineer at TCS 4.3yr, 27yrs, Chennai. Year: July 2026. PhD just started at SSN in GenAI/CS. Profile: B.E ECE, M.Tech DS, SC category. Skills: SQL advanced, IBM DataStage ETL, Teradata, Unix/Shell, ServiceNow. Currently learning: Python (beginner-intermediate), PySpark, LangChain, GCP. Goals: Senior DE / AI-DE career switch, UGC NET Dec 2026 CS, PhD progress, Databricks+GCP certs, DRDO/ISRO/NIC govt roles. Be specific, practical, 2026 Indian market aware. Use bullet points. Encourage realistically.`,messages:[{role:"user",content:cQ}]});
-      setCA(readClaudeText(d) || "No response.");
+      const d = await callAI({model:"gemini-3.8-flash",max_tokens:1000,system:`You are an expert career coach. Current date: September 2026. The user is a Data Engineer with 4+ years of experience in SQL/Teradata, IBM DataStage, Unix/Shell and related data engineering work; B.E. ECE, M.Tech Data Science, and an ongoing part-time PhD in CSE/GenAI. Current certification tracks include Claude Architect Foundations + Professional, Databricks Data Engineer Associate, AWS Data Engineer Associate and SnowPro Core. UGC NET CS is planned for December 2026. Give specific, practical advice without inventing current deadlines; verify changing job and exam dates from official sources.`,messages:[{role:"user",content:cQ}]});
+      setCA(readAIText(d) || "No response.");
     }catch(err){setCA(err.message || "Error connecting. Please try again.");}
     setCLoad(false);
   };
 
-  const last7=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+  const last7=Array.from({length:7},(_,i)=>dateKeyDaysAgo(6-i));
   const mE=["","😔","😐","🙂","😊","🔥"];
   const bsC=v=>{const n=parseFloat(v);if(!n)return P.muted;if(n<100)return P.a2;if(n<140)return P.a3;return P.a5;};
   const stC={"In Progress":P.a1,"Completed":P.a2,"Blocked":P.a5,"On Hold":P.a3,"Pending":P.a3,"Done":P.a2,"Idea":P.muted};
   const tyC={INC:P.a5,"Current Ticket":P.a1,"Dev Work":P.a4,Task:P.a3};
   const prC={P1:P.a5,P2:P.a3,P3:P.a1,P4:P.a2};
   const cur=monthPlan[monthIdx];
+  const today = todayKey();
+  const claudeCertStatus = "Claude Architect Foundations + Professional: registered; exam dates not scheduled.";
+  const savedTodayPlan = dailyPlans[today];
+  const savedTodaySlots = Array.isArray(savedTodayPlan) ? savedTodayPlan : Array.isArray(savedTodayPlan?.slots) ? savedTodayPlan.slots : [];
+  const currentPlan = monthPlan.find(month => month.month === currentMonthLabel());
 
   const S={
     app:{background:P.bg,minHeight:"100vh",fontFamily:"'Segoe UI',system-ui,sans-serif",color:P.text,paddingBottom:mob?72:0},
@@ -997,9 +1372,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           <div style={{position:"relative"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div>
-                <div style={S.badge}>✦ LIFE COMMAND CENTRE · JUL 2026 – DEC 2026</div>
+                <div style={S.badge}>✦ LIFE COMMAND CENTRE · SEP 2026 – DEC 2026</div>
                 <h1 style={S.h1}>Thamizh's Life Plan 🚀</h1>
-                <p style={S.sub}>PhD SSN · CCDV-F Aug 31 · UGC NET Dec 2026 · TCS · Career · Health</p>
+                <p style={S.sub}>PhD SSN · 20-Day Certification Sprint · UGC NET Dec 2026 · TCS · Career · Health</p>
               </div>
               <button onClick={()=>{setShowAgent(true);runLifeAgent();}}
                 style={{background:`linear-gradient(135deg,${P.a4},${P.a1})`,border:"none",borderRadius:12,padding:"10px 16px",color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",flexShrink:0,boxShadow:`0 4px 20px ${P.a4}44`,marginTop:4}}>
@@ -1008,79 +1383,52 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             </div>
           </div>
         </div>
+        <div style={{padding:"8px 20px",background:P.card,borderBottom:`1px solid ${P.border}`,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,fontWeight:800,color:syncStatus==="synced"?P.a2:syncStatus==="error"?P.a5:P.muted}}>☁️ {syncStatus==="synced"?"Cloud memory synced":syncStatus==="syncing"?"Syncing…":syncStatus==="error"?"Cloud sync needs attention":"Local memory"}</span>
+          <input value={syncPassphrase} onChange={e=>setSyncPassphrase(e.target.value)} type="password" placeholder="Cloud passphrase (10+ chars)" style={{background:P.card3,border:`1px solid ${P.border}`,borderRadius:7,padding:"6px 9px",color:P.text,fontSize:11,minWidth:190}}/>
+          <button onClick={()=>createOrConnectSync("upload")} disabled={syncBusy} style={{...S.btn(P.a2),padding:"6px 10px",fontSize:10}}>{syncBusy?"…":"☁️ Save / Sync"}</button>
+          <button onClick={()=>createOrConnectSync("download")} disabled={syncBusy||!syncId} style={{...S.btn(P.a1),padding:"6px 10px",fontSize:10}}>↥ Restore</button>
+          {syncId&&<button onClick={()=>{navigator.clipboard?.writeText(`${window.location.origin}/?sync=${syncId}`);setSyncLastAt("Link copied");}} style={{...S.btn(P.a4),padding:"6px 10px",fontSize:10}}>🔗 Copy Device Link</button>}
+          <span style={{fontSize:10,color:P.muted}}>{syncLastAt || (syncId?"Same encrypted cloud memory can be opened on any device.":"Create a cloud memory link with Save / Sync.")}</span>
+        </div>
         <div style={S.nav}>{navItems.map(([id,em,lb])=><button key={id} style={S.nB(tab===id)} onClick={()=>setTab(id)}>{em} {lb}</button>)}</div>
 
         <div style={S.sec}>
 
           {/* NOW */}
           {tab==="now"&&<div>
-            <div style={S.h2}>🔥 Today — {new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} IST</div>
+            <div style={S.h2}>🔥 Today — {fmtDate(today, {weekday:"long",day:"numeric",month:"long",year:"numeric"})} IST</div>
 
-            {/* Live countdown for CCDV-F */}
-            {(()=>{
-              const days=Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
-              return(
-                <div style={{...gl(P.a5),padding:14,marginBottom:14,borderRadius:12,border:`2px solid ${P.a5}66`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:800,color:P.a5}}>🚨 Claude CCDV-F Certification Deadline</div>
-                      <div style={{fontSize:12,color:P.muted}}>August 31, 2026 — Study 30 min today or miss the window</div>
-                    </div>
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:36,fontWeight:900,color:P.a5,lineHeight:1}}>{days}</div>
-                      <div style={{fontSize:10,color:P.muted}}>days left</div>
-                    </div>
-                  </div>
-                  <div style={{background:"rgba(255,255,255,0.06)",borderRadius:5,height:6,marginTop:10,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${Math.max(5,100-Math.round((days/42)*100))}%`,background:`linear-gradient(90deg,${P.a5},${P.a3})`,borderRadius:5}}/>
-                  </div>
+            {/* 20-DAY CERTIFICATION SPRINT */}
+            <div style={{...gl(P.a4),padding:14,marginBottom:14,borderRadius:12,border:`2px solid ${P.a4}66`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800,color:P.a4}}>🏆 20-Day Certification Sprint</div>
+                  <div style={{fontSize:12,color:P.muted}}>21 Sep → 11 Oct 2026 · AWS · Snowflake · Databricks · Claude</div>
                 </div>
-              );
-            })()}
+                <span style={S.chip(P.a4)}>7 certification tracks</span>
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+                {[["AWS DEA","🟡",P.a2],["SnowPro Core","🟡",P.a3],["Databricks DEA","🟡",P.a4],["Claude Foundations","🟡",P.a5],["Claude Professional","🟡",P.a5],["Databricks GenAI","🟡",P.a4],["GitHub Copilot","✅",P.a2]].map(([n,s,col])=><span key={n} style={S.chip(col)}>{s} {n}</span>)}
+              </div>
+            </div>
 
-            {/* Today's IST Time Schedule */}
+            {/* Only saved plans are presented as today's schedule. */}
             <div style={{...S.CA(P.a1),marginBottom:14}}>
-              <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:10}}>⏰ Today's Plan — Friday Aug 14, 2026 (IST)</div>
-              {[
-                {time:"6:30 AM",task:"Wake up · Morning medicines (Glycomet GP BEFORE breakfast ⚠️)",status:"morning",c:P.a3},
-                {time:"7:00 AM",task:"Breakfast (within 30 min of Glycomet GP) · All morning meds after eating",status:"morning",c:P.a3},
-                {time:"7:30–8:00 AM",task:"📚 Claude CCDV-F Study — Read Anthropic API docs: Tool Use & Multi-turn",status:"urgent",c:P.a5},
-                {time:"9:00 AM",task:"TCS Office — Check TCS emails, triage all INCidents, update ticket statuses",status:"work",c:P.a1},
-                {time:"10:00–12:00",task:"TCS Deep Work — DataStage pipeline tasks, SQL queries, project work",status:"work",c:P.a1},
-                {time:"12:30–1:00 PM",task:"Lunch break — Brown rice, sambar, curd · NO sugar in drinks",status:"health",c:P.a2},
-                {time:"2:00–4:00 PM",task:"TCS afternoon session — office work, any client/team calls",status:"work",c:P.a1},
-                {time:"4:30 PM",task:"Evening snack — peanuts/chana + green tea (no sugar) · Check any new govt job notifications",status:"health",c:P.a2},
-                {time:"5:30–6:30 PM",task:"TCS wrap-up — EOD note, handover, update all ticket statuses",status:"work",c:P.a1},
-                {time:"7:00–8:00 PM",task:"🐍 Python / 🗄️ SQL Practice — LeetCode 2 problems OR Databricks DEA course",status:"study",c:P.a3},
-                {time:"8:00–9:00 PM",task:"📋 UGC NET — 20 MCQs DBMS/OS/DSA on GeeksForGeeks",status:"ugc",c:P.a2},
-                {time:"9:00 PM",task:"Dinner (BEFORE night Glycomet GP ⚠️) · Night medicines after dinner",status:"health",c:P.a3},
-                {time:"9:30–10:00 PM",task:"📓 Journal entry + tomorrow's to-do list · Check follow-up board",status:"reflect",c:P.a4},
-                {time:"10:00 PM",task:"Wind down · No phone after this · Warm milk optional · Sleep by 10:30 PM",status:"rest",c:P.muted},
-              ].map((slot,i,arr)=>{
-                const colors={morning:P.a3,urgent:P.a5,work:P.a1,health:P.a2,study:P.a3,ugc:P.a2,reflect:P.a4,rest:P.muted};
-                const c=colors[slot.status]||P.muted;
-                return(
-                  <div key={i} style={{display:"flex",gap:10,padding:"7px 0",borderBottom:i===arr.length-1?"none":`1px solid ${P.border}20`,alignItems:"flex-start"}}>
-                    <div style={{minWidth:90,fontSize:11,color:P.muted,fontWeight:600,flexShrink:0,paddingTop:2}}>{slot.time}</div>
-                    <div style={{flex:1,fontSize:12,color:slot.status==="urgent"?P.a5:P.sub,lineHeight:1.4,fontWeight:slot.status==="urgent"?700:400}}>{slot.task}</div>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:c,flexShrink:0,marginTop:4}}/>
-                  </div>
-                );
-              })}
+              <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:10}}>⏰ Today's Plan — {fmtDate(today, {weekday:"short",day:"numeric",month:"short",year:"numeric"})} (IST)</div>
+              {savedTodaySlots.length ? savedTodaySlots.map((slot,i)=><div key={slot.id||i} style={{...S.li(i===savedTodaySlots.length-1),padding:"7px 0"}}><span style={{minWidth:90,fontSize:11,color:P.muted,fontWeight:600}}>{slot.time||"Any time"}</span><span style={{fontSize:12,color:P.sub}}>{slot.task||slot.title||String(slot)}</span></div>) : <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>No saved plan for today. Historical daily schedules are kept as planning history and are not shown as a current plan.</div>}
             </div>
 
             {/* This week's non-negotiables */}
             <div style={S.C()}>
-              <div style={S.L}>⚡ This Week's Non-Negotiables (Aug 11–17)</div>
-              {[
-                {icon:"🚨",label:"Claude CCDV-F — 30 min study DAILY. Topics: API, Prompt Eng, Tool Use, Safety",when:"Every day",color:P.a5},
-                {icon:"🚀",label:"ISRO Scientist SC — Apply BEFORE August 17! 92 vacancies, CS stream. isro.gov.in",when:"⚠️ Deadline Aug 17",color:P.a5},
-                {icon:"🗄️",label:"Databricks DEA course — 2 modules this weekend to stay on Sep exam track",when:"This weekend",color:P.a3},
-                {icon:"📋",label:"UGC NET Dec 2026 — DBMS topics today, registration opens Sep 2026",when:"Daily 8–9 PM",color:P.a2},
-                {icon:"🎓",label:"PhD — Log supervisor meeting details, add research tasks to PhD tab",when:"This week",color:P.a4},
-                {icon:"💼",label:"Job switch — Apply 3+ Senior DE / AI-DE roles on Naukri this week",when:"3 applications",color:P.a1},
-                {icon:"📓",label:"Write journal entry tonight — track mood, meds, study progress",when:"Tonight 9:30 PM",color:P.a4},
-              ].map((a,i)=>(
+              <div style={S.L}>⚡ Existing plan priorities {currentPlan ? `— ${currentPlan.month}` : ""}</div>
+              {(currentPlan ? [
+                {icon:"💼",label:currentPlan.items.job[0],when:"Career",color:P.a1},
+                {icon:"🎓",label:currentPlan.items.phd[0],when:"PhD",color:P.a4},
+                {icon:"📋",label:currentPlan.items.ugc[0],when:"UGC NET",color:P.a2},
+                {icon:"🏅",label:currentPlan.items.cert[0],when:"Certifications",color:P.a3},
+                {icon:"🏛️",label:currentPlan.items.govt[0],when:"Government jobs",color:P.a5},
+              ] : [{icon:"📅",label:"No monthly plan is saved for the current month.",when:"Plan",color:P.muted}]).map((a,i)=>(
                 <div key={i} style={{...S.ib(a.color),display:"flex",alignItems:"flex-start",gap:12,marginBottom:8}}>
                   <span style={{fontSize:20,flexShrink:0}}>{a.icon}</span>
                   <div style={{flex:1}}>
@@ -1104,14 +1452,73 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           </div>}
 
                     {tab==="radar"&&<div>
-            <div style={S.h2}>🎯 Government Career Radar</div>
-            <div style={{...S.ib(P.a5),marginBottom:10}}>
-              <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>⚠️ ISRO Scientist/Engineer SC — Deadline TODAY August 17, 2026 (Last few hours!)</div>
-              <div style={{fontSize:11,color:P.muted}}>92 vacancies. Computer Science stream available. GATE required. SC fee waived. Apply at isro.gov.in before midnight.</div>
+            <div style={S.h2}>🎯 Government Career Radar</div>            <div style={{...S.CA(P.a2),marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:800,color:P.a2,marginBottom:4}}>📰 Free Official Government Exam & Current-Affairs Sources</div>
+              <div style={{fontSize:11,color:P.muted,marginBottom:8}}>For latest notifications, dates and results, open the recruiting authority's official source. AI summaries are optional.</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {[
+                  ["UPSC","https://www.upsc.gov.in/"],["SSC","https://ssc.gov.in/"],["TNPSC","https://www.tnpsc.gov.in/"],
+                  ["NTA / UGC NET","https://ugcnet.nta.ac.in/"],["IBPS","https://www.ibps.in/"],["Employment News","https://employmentnews.gov.in/"],
+                  ["DRDO","https://www.drdo.gov.in/"],["ISRO","https://www.isro.gov.in/"],["NCS","https://www.ncs.gov.in/"],["PIB","https://www.pib.gov.in/"]
+                ].map(([name,url])=><a key={name} href={url} target="_blank" rel="noreferrer" style={{...S.chip(P.a2),textDecoration:"none"}}>{name} ↗</a>)}
+              </div>
+            </div>
+
+            <div style={{...S.ib(P.a1),marginBottom:10}}>
+              <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>ℹ️ Government vacancy data is date-sensitive</div>
+              <div style={{fontSize:11,color:P.muted}}>Closed recruitment cycles are kept as history only. For current applications, use the verified 21 Sep 2026 snapshot and the official source links shown below.</div>
             </div>
             <div style={{...S.ib(P.a3),marginBottom:14}}>
               <div style={{fontSize:11,color:P.a3,fontWeight:700,marginBottom:2}}>Profile: B.E ECE + M.Tech DS + PhD CS/GenAI (ongoing, SNU) + 4.5yr TCS DE experience + SC category</div>
               <div style={{fontSize:11,color:P.muted}}>Eligibility is calculated per actual notification. GATE required for many posts. Verify before applying.</div>
+            </div>
+
+            <div style={{...S.CA(P.a1),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:8}}>
+                <div style={{fontSize:13,fontWeight:800,color:P.a1}}>🟢 Latest verified government/exam snapshot</div>
+                <span style={S.chip(P.a1)}>Checked 21 Sep 2026</span>
+              </div>
+              {[
+                ["IBPS RRB XV","Officer Scale I/II/III + Office Assistant applications close 21 Sep 2026","https://www.ibps.in/index.php/rural-bank-xv/","TODAY"],
+                ["IBPS PFRDA Officer Grade A","Registration closes 24 Sep 2026","https://ibpsreg.ibps.in/pfrdajul26/index.php","24 SEP"],
+                ["IBPS BOI Officers","Registration closes 25 Sep 2026","https://ibpsreg.ibps.in/boiaug26/","25 SEP"],
+                ["IBPS UIICL AO","Registration closes 28 Sep 2026","https://ibpsreg.ibps.in/uiicljul26/index.php","28 SEP"],
+                ["IBPS BOB HR","Registration closes 1 Oct 2026","https://ibpsreg.ibps.in/bonwejul26/index.php","1 OCT"],
+                ["ISRO SAC","JRF / Research Associate / Project Scientist-I; applications close 30 Sep 2026","https://www.isro.gov.in/ViewAllOpportunities.html","30 SEP"],
+                ["DRDO","Current vacancies include JRF/RA opportunities with September/October closing dates","https://www.drdo.gov.in/drdo/offerings/vacancies","LIVE"],
+                ["C-DAC Chennai","Project Engineer, Senior Project Engineer and other project roles; registration closes 22 Sep 2026 at 17:00","https://www.cdac.in/index.aspx?id=print_page&print=ca_cdac_chennai_recruitment_2026","22 SEP"],
+                ["TNPSC Group IV","Notification planned 6 Oct 2026; exam planned 20 Dec 2026 (confirm from final notification)","https://www.tnpsc.gov.in/","6 OCT"],
+                ["SSC","2026-27 calendar includes CHSL, Stenographer, MTS/Havaldar, SI/CAPF and other exams","https://ssc.gov.in/","CALENDAR"],
+                ["UPSC","Active examinations page includes Civil Services Main 2026 and Engineering Services Preliminary 2027 among others","https://www.upsc.gov.in/examinations/active-exams","ACTIVE"]
+              ].map(([name,detail,url,badge])=>
+                <a key={name} href={url} target="_blank" rel="noreferrer" style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${P.border}20`,textDecoration:"none"}}>
+                  <span style={{minWidth:0}}><span style={{fontSize:12,fontWeight:700,color:P.text}}>{name}</span><span style={{display:"block",fontSize:10,color:P.muted,marginTop:2,lineHeight:1.4}}>{detail}</span></span>
+                  <span style={{...S.chip(badge==="TODAY"?P.a5:P.a2),fontSize:9,flexShrink:0}}>{badge}</span>
+                </a>
+              )}
+            </div>
+
+            {/* Master research portfolio — shared with SNU Research */}
+            <div style={{...S.CA(P.a1),marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:800,color:P.a1,marginBottom:8}}>🧬 Overall Research Portfolio</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.55,marginBottom:10}}>{phdResearchHub.coreObjective}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                <div>
+                  <div style={{fontSize:10,color:P.muted,fontWeight:800,marginBottom:5}}>RESEARCH PILLARS</div>
+                  {phdResearchHub.researchPillars.map(p=><div key={p.id} style={{fontSize:11,color:P.sub,lineHeight:1.45,marginBottom:5}}><b style={{color:P.text}}>{p.title}</b> — {p.detail}</div>)}
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:P.muted,fontWeight:800,marginBottom:5}}>CURRENT PROBLEM STATEMENTS</div>
+                  {phdResearchHub.problemStatements.map((p,i)=><div key={i} style={{fontSize:11,color:P.sub,lineHeight:1.45,marginBottom:5}}>{p}</div>)}
+                </div>
+              </div>
+              <div style={{fontSize:10,color:P.muted,fontWeight:800,marginBottom:5}}>DATA + METHOD</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.5,marginBottom:7}}><b style={{color:P.text}}>Datasets:</b> {phdResearchHub.datasets.join(" · ")}</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.5}}><b style={{color:P.text}}>Method:</b> {phdResearchHub.methodology.join(" → ")}</div>
+              <div style={{marginTop:10,paddingTop:9,borderTop:`1px solid ${P.border}`}}>
+                <div style={{fontSize:10,color:P.a2,fontWeight:800,marginBottom:4}}>🔗 SNU CONNECTION</div>
+                <div style={{fontSize:11,color:P.sub,lineHeight:1.5}}>SNU Research is the focused implementation layer for this portfolio: {phdResearchHub.snuScope}. Changes made after supervisor feedback should update the master PhD direction first, then the SNU execution details.</div>
+              </div>
             </div>
 
             {/* Sub tabs */}
@@ -1123,38 +1530,28 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* RADAR DASHBOARD */}
             {radarTab==="radar"&&<div>
-              {/* APPLY NOW */}
+              {/* CURRENT / UPCOMING VERIFIED */}
               <div style={{...S.CA(P.a5),marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:800,color:P.a5,marginBottom:10}}>🔥 APPLY NOW — Currently Open (August 2026)</div>
+                <div style={{fontSize:13,fontWeight:800,color:P.a5,marginBottom:8}}>🔎 CURRENT & UPCOMING — VERIFIED 21 SEP 2026</div>
                 {[
-                  {id:"isro-sc-2026",org:"ISRO",post:"Scientist/Engineer SC",deadline:"Aug 17, 2026 🚨",phy:"GREEN — Medical only",phd:"B — Verify posting",score:78,deg:"B.E ECE ✅ (EC stream) | B.E CS ✅ (CS stream)",gate:"GATE CS/EC 2024/2025/2026 required",sal:"₹56,100/month (Level 10)",note:"SC fee waived ₹250. 92 vacancies. GATE required — check if you have valid score.",link:"isro.gov.in"},
-                  {id:"tnpsc-cts-2026",org:"TNPSC",post:"Computer Programmer / Systems Manager (CTS Non-Interview)",deadline:"Aug 15, 2026 (Exam: Aug 16–Sep 9)",phy:"GREEN — No PET",phd:"A — Compatible",score:82,deg:"B.E CS/IT/ECE ✅ | MCA ✅ | M.Tech DS ✅",gate:"No GATE required",sal:"₹28,480–₹56,900 (State govt scale)",note:"Exam already started Aug 16. Check if you applied under Advt 04/2026. CTS interview posts (Advt 06/2026) notification expected Aug 31.",link:"tnpsc.gov.in"},
-                ].map(job=>(
-                  <div key={job.id} style={{background:P.card3,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${P.a5}33`,borderLeft:`3px solid ${P.a5}`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:6}}>
-                      <div style={{fontSize:13,fontWeight:700,color:P.text}}>{job.org} — {job.post}</div>
-                      <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{...S.chip(P.a5),fontSize:10}}>Score: {job.score}/100</span>
-                        <span style={{...S.chip(job.score>=75?P.a2:job.score>=60?P.a3:P.muted),fontSize:10}}>{job.score>=90?"🔥 MUST APPLY":job.score>=75?"🟢 HIGH PRIORITY":job.score>=60?"🟡 BACKUP":"⚪ LOW"}</span>
-                      </div>
+                  {id:"ibps-rrb-xv",org:"IBPS RRB XV",post:"Officers Scale I/II/III + Office Assistant",deadline:"21 Sep 2026",note:"Official registration window closes today. Verify the exact post/eligibility before submitting.",link:"ibps.in"},
+                  {id:"pfrda-a-2026",org:"PFRDA",post:"Officer Grade A (Assistant Manager)",deadline:"24 Sep 2026",note:"Official registration window closes 24 Sep 2026.",link:"ibpsreg.ibps.in/pfrdajul26/index.php"},
+                  {id:"boi-officers-2026",org:"Bank of India",post:"Officers in various streams up to Scale IV",deadline:"25 Sep 2026",note:"Official registration window closes 25 Sep 2026.",link:"ibpsreg.ibps.in/boiaug26/"},
+                  {id:"isro-sac-2026",org:"ISRO SAC",post:"JRF / Research Associate / Project Scientist-I",deadline:"30 Sep 2026",note:"Current ISRO opportunity listed on the official Current Opportunities page.",link:"isro.gov.in"},
+                  {id:"drdo-research-2026",org:"DRDO",post:"JRF / RA and research opportunities",deadline:"Sep–Oct 2026",note:"DRDO vacancy page currently lists multiple research openings; each post has its own eligibility and deadline.",link:"drdo.gov.in"},
+                  {id:"cdac-chennai-2026",org:"C-DAC Chennai",post:"Project Engineer / Senior Project Engineer / Project Manager / Project Associate",deadline:"Registration closes 22 Sep 2026 at 17:00",note:"Official Chennai recruitment page lists experienced and fresher project roles; interview timing is communicated to eligible candidates.",link:"cdac.in"},
+                  {id:"tnpsc-group4-2026",org:"TNPSC",post:"Group IV",deadline:"Notification planned 6 Oct · exam planned 20 Dec 2026",note:"Annual planner dates are tentative until the final notification. Confirm vacancies and eligibility when the notification is released.",link:"tnpsc.gov.in"},
+                  {id:"ssc-2026",org:"SSC",post:"CHSL / Stenographer / MTS-Havaldar / SI-CAPF and other 2026-27 exams",deadline:"See SSC calendar",note:"Use the official calendar and individual notices for the latest dates.",link:"ssc.gov.in"}
+                ].map(job=>
+                  <div key={job.id} style={{background:P.card3,borderRadius:10,padding:"11px 13px",marginBottom:8,border:`1px solid ${P.border}`,borderLeft:`3px solid ${P.a5}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
+                      <div style={{fontSize:12,fontWeight:700,color:P.text}}>{job.org} — {job.post}</div>
+                      <span style={S.chip(P.a5)}>{job.deadline}</span>
                     </div>
-                    <div style={{fontSize:11,color:P.a5,fontWeight:700,marginBottom:6}}>📅 Deadline: {job.deadline}</div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:6,fontSize:11}}>
-                      <div style={{color:P.muted}}>Degree: <span style={{color:P.sub}}>{job.deg}</span></div>
-                      <div style={{color:P.muted}}>GATE: <span style={{color:job.gate.includes("required")?P.a3:P.a2}}>{job.gate}</span></div>
-                      <div style={{color:P.muted}}>Physical: <span style={{color:P.a2}}>{job.phy}</span></div>
-                      <div style={{color:P.muted}}>PhD: <span style={{color:P.a2}}>{job.phd}</span></div>
-                      <div style={{color:P.muted}}>Salary: <span style={{color:P.sub}}>{job.sal}</span></div>
-                    </div>
-                    <div style={{fontSize:11,color:P.muted,marginBottom:8,lineHeight:1.5,background:`${P.bg}88`,padding:"6px 8px",borderRadius:6}}>{job.note}</div>
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                      <a href={`https://www.${job.link}`} target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none",cursor:"pointer"}}>🔗 {job.link}</a>
-                      <select value={appStatus[job.id]||"🔴 Not Researched"} onChange={e=>saveAppStatus(job.id,e.target.value)} style={{...S.sel,flex:1,padding:"4px 8px",fontSize:11}}>
-                        {["🔴 Not Researched","🔵 Upcoming","🟢 Applications Open","🟡 Applied","🟣 Exam Scheduled","🟠 Interview Scheduled","🔷 Result Pending","🟢 Selected","⚫ Not Selected","⚪ Closed"].map(s=><option key={s}>{s}</option>)}
-                      </select>
-                    </div>
+                    <div style={{fontSize:11,color:P.muted,margin:"5px 0 7px",lineHeight:1.45}}>{job.note}</div>
+                    <a href={job.link.startsWith("http")?job.link:`https://www.${job.link}`} target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none"}}>🔗 Official source</a>
                   </div>
-                ))}
+                )}
               </div>
 
               {/* UPCOMING 90 DAYS */}
@@ -1163,7 +1560,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 {[
                   {org:"DRDO",post:"Scientist B (CS/ECE/AI disciplines)",when:"Sep–Oct 2026 (EXPECTED)",type:"EXPECTED",note:"DRDO regularly recruits Scientist B via GATE score through RAC. Advt 156 via GATE was April 2026. Next Scientist B cycle expected Q3/Q4 2026. Watch rac.gov.in",gate:"GATE CS/EC required",score:85,match:"🎯 HIGH — CS/ECE + M.Tech + PhD research aligns perfectly with DRDO AI labs"},
                   {org:"NIC (Next cycle)",post:"Scientist B / Scientific Technical Assistant A",when:"Sep–Dec 2026 (EXPECTED)",type:"EXPECTED",note:"NIC Scientist B 2026 (243 posts, Advt NIC/SCB/2026/1) closed April 24. Shortlist was cancelled/revised — still in process. Next full cycle expected. Also: NIC STA-A recruitment (376 posts) expected. Watch nic.gov.in",gate:"GATE CS/EC/DA required",score:88,match:"🎯 HIGHEST FIT — Data Science & AI discipline (50 posts) matches M.Tech DS + PhD GenAI + TCS experience perfectly"},
-                  {org:"TNPSC CTS Interview Posts",post:"Technical Officer / Scientific Officer",when:"Notification Aug 31, 2026 (CONFIRMED from planner)",type:"CONFIRMED from planner",note:"TNPSC Annual Planner 2026 confirms interview posts notification on Aug 31, 2026. Exam Nov 14, 2026. CS/ECE/IT candidates eligible for several posts.",gate:"No GATE required",score:80,match:"✅ Good match — Tamil Nadu domicile + SC advantage + no GATE needed"},
+                  {org:"TNPSC CTS Interview Posts",post:"Technical Officer / Scientific Officer",when:"Notification exam date not scheduled (CONFIRMED from planner)",type:"CONFIRMED from planner",note:"TNPSC Annual Planner 2026 confirms interview posts notification on exam date not scheduled. Exam Nov 14, 2026. CS/ECE/IT candidates eligible for several posts.",gate:"No GATE required",score:80,match:"✅ Good match — Tamil Nadu domicile + SC advantage + no GATE needed"},
                   {org:"C-DAC",post:"Project Engineer / Senior Project Engineer (AI/ML, Data Science)",when:"Sep–Oct 2026 (EXPECTED — JIT cycle)",type:"EXPECTED",note:"C-DAC JIT June 2026 (951 posts, Advt CORP/JIT/02/2026) closed June 20. Next JIT cycle expected Sep–Oct 2026. Senior PE requires 4+ years experience — you qualify. C-DAC Chennai centre available.",gate:"No GATE required",score:83,match:"🎯 HIGH — 4.5yr experience qualifies for Senior PE. AI/ML + Data Science domains. C-DAC Chennai available."},
                   {org:"SSC CGL 2026",post:"Assistant Section Officer / Technical posts",when:"Sep–Oct 2026 exam (EXPECTED)",type:"EXPECTED",note:"SSC CGL notification expected Aug–Sep 2026. While primarily administrative, check technical posts including Statistical Investigator, Inspector (IT), and specialist technical posts under CGL.",gate:"No GATE",score:55,match:"⚪ Moderate — Administrative posts are backup option. Check specific technical vacancies."},
                   {org:"NIELIT",post:"Scientist B / Technical Assistant",when:"Late 2026 (EXPECTED)",type:"EXPECTED",note:"NIELIT (National Institute of Electronics & IT, MeitY) conducts separate scientist and TA recruitment. Previous cycle had 402 posts. New cycle expected late 2026. Written exam + interview format (unlike NIC which uses GATE only).",gate:"Written exam — No GATE",score:82,match:"✅ Good — No GATE needed. Computer Science, Electronics, IT disciplines eligible."},
@@ -1184,29 +1581,21 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 ))}
               </div>
 
-              {/* TOP 5 BEST FIT */}
               <div style={{...S.CA(P.a1),marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:800,color:P.a1,marginBottom:10}}>🏆 TOP MATCHES FOR YOUR PROFILE</div>
+                <div style={{fontSize:13,fontWeight:800,color:P.a1,marginBottom:8}}>📌 PROFILE-RELEVANT OPTIONS — VERIFY EACH NOTIFICATION</div>
                 {[
-                  {rank:1,org:"NIC Scientist B",role:"Data Science & AI discipline",score:88,why:"M.Tech DS + PhD GenAI + TCS experience = perfect match for 50 DS&AI posts",gate:"GATE DA/CS needed",action:"Watch nic.gov.in for revised shortlist / next cycle"},
-                  {rank:2,org:"C-DAC Senior Project Engineer",role:"AI/ML or Data Science",score:83,why:"4.5yr experience qualifies you directly. No GATE. C-DAC Chennai available. PhD-compatible contractual posting.",gate:"No GATE",action:"Watch careers.cdac.in for Sep-Oct JIT cycle"},
-                  {rank:3,org:"DRDO Scientist B/C",role:"Computer Science / AI labs",score:82,why:"PhD in GenAI + CS background + defence AI research = high alignment. Scientist C needs 3yr experience (you have 4.5yr).",gate:"GATE CS needed for Sci B; experience for Sci C",action:"Watch rac.gov.in — Sci B via GATE; Sci C lateral"},
-                  {rank:4,org:"TNPSC CTS — Computer Programmer",role:"Tamil Nadu Govt Technical",score:80,why:"No GATE. SC advantage. Tamil Nadu domicile. PhD-compatible desk role. B.E ECE/CS eligible.",gate:"No GATE",action:"CTS Interview posts notification Aug 31 — watch tnpsc.gov.in"},
-                  {rank:5,org:"NIELIT Scientist B",role:"CS/IT/Electronics",score:79,why:"No GATE required (written exam instead). MeitY organisation. Good salary. PhD-compatible.",gate:"Written exam only",action:"Watch nielit.gov.in for next recruitment cycle"},
-                ].map(job=>(
-                  <div key={job.rank} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:job.rank===5?"none":`1px solid ${P.border}20`,alignItems:"flex-start"}}>
-                    <div style={{background:P.a1,color:"#000",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,flexShrink:0,marginTop:2}}>{job.rank}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:P.text,marginBottom:2}}>{job.org} — {job.role}</div>
-                      <div style={{fontSize:11,color:P.muted,marginBottom:2}}>{job.why}</div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                        <span style={S.chip(P.a1)}>{job.score}/100</span>
-                        <span style={S.chip(job.gate.includes("No GATE")?P.a2:P.a3)}>{job.gate}</span>
-                      </div>
-                      <div style={{fontSize:11,color:P.a3,marginTop:4}}>→ {job.action}</div>
-                    </div>
+                  ["NIC","Scientist/technical recruitment can include CS/IT/DS/AI disciplines; current eligibility and dates must be checked in the notification.","https://www.nic.gov.in/"],
+                  ["C-DAC","Current Chennai project recruitment includes experienced Project Engineer and Senior Project Engineer roles.","https://www.cdac.in/"],
+                  ["DRDO","Current vacancy page lists research and technical opportunities; each advertisement has separate criteria.","https://www.drdo.gov.in/drdo/offerings/vacancies"],
+                  ["TNPSC","Use the annual planner and each notification for technical services and Group examinations.","https://www.tnpsc.gov.in/"],
+                  ["NIELIT","Monitor scientist/technical recruitment and examination notices.","https://www.nielit.gov.in/"]
+                ].map(([name,detail,url])=>
+                  <div key={name} style={{padding:"8px 0",borderBottom:`1px solid ${P.border}20`}}>
+                    <div style={{fontSize:12,fontWeight:700,color:P.text}}>{name}</div>
+                    <div style={{fontSize:11,color:P.muted,margin:"3px 0 5px"}}>{detail}</div>
+                    <a href={url} target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none"}}>Official source ↗</a>
                   </div>
-                ))}
+                )}
               </div>
             </div>}
 
@@ -1218,7 +1607,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               {[
                 {org:"DRDO RAC — Scientist C (Lateral)",advt:"Advt 157 (CLOSED June 19, 2026)",status:"⚪ Closed",score:82,elig:{deg:"B.E CS/ECE ✅ (First class, 60%+)",exp:"3yr post-qualification needed ✅ (you have 4.5yr)",age:"Up to 35 (SC: +5 = 40 ✅)",gate:"No GATE for lateral Sci C",phys:"GREEN",phd:"B — verify service rules for external PhD"},overall:"POTENTIALLY ELIGIBLE",note:"Advt 157 had 33 posts (Sci C/D/E). All posts were Unreserved — SC category quota does NOT apply to Scientist C and above at DRDO. This is important. GATE not required for lateral Sci C. 3yr experience required — you qualify with 4.5yr. Watch rac.gov.in for Advt 158.",track:"Defence/Research"},
                 {org:"DRDO RAC — Scientist B (via GATE)",advt:"Advt 156 (GATE-based, ongoing process)",status:"🔷 Result/Selection in progress",score:85,elig:{deg:"B.E CS/ECE ✅ (First class)",exp:"No experience required (fresh + experienced eligible)",age:"Up to 28 (SC: +5 = 33 ✅)",gate:"GATE CS or EC required — CRITICAL",phys:"GREEN",phd:"B — verify"},overall:"POTENTIALLY ELIGIBLE — GATE score is critical",note:"DRDO Sci B via GATE is the main entry route. Advt 156 process was underway. New Sci B recruitment expected. PRIMARY blocker: Do you have a valid GATE 2024/2025/2026 CS or EC score? If yes — HIGH PRIORITY. If no — prepare for GATE 2027.",track:"Defence/Research"},
-                {org:"ISRO Scientist/Engineer SC",advt:"ICRB 2026 — Deadline Aug 17, 2026",status:"🟢 CLOSING TODAY",score:78,elig:{deg:"B.E ECE ✅ (EC stream) | B.E CS ✅ (CS stream)",exp:"Fresher to experienced (GATE-based shortlisting)",age:"Up to 28 (SC: +5 = 33 ✅)",gate:"GATE EC/CS 2024/2025/2026 required",phys:"GREEN — Medical + interview",phd:"B — Verify ISRO rules on external PhD"},overall:"POTENTIALLY ELIGIBLE — GATE required",note:"92 vacancies. CS stream: GATE CS. EC stream: GATE EC. 50% GATE + 50% interview for merit. No separate written exam. SC fee waived. Multiple centres including VSSC (Thiruvananthapuram, near TN).",track:"Space/Research"},
+                {org:"ISRO Scientist/Engineer SC",advt:"ICRB 2026 — previous application window closed 16 Sep 2026",status:"⚪ CLOSED",score:78,elig:{deg:"B.E ECE ✅ (EC stream) | B.E CS ✅ (CS stream)",exp:"Fresher to experienced (GATE-based shortlisting)",age:"Up to 28 (SC: +5 = 33 ✅)",gate:"GATE EC/CS 2024/2025/2026 required",phys:"GREEN — Medical + interview",phd:"B — Verify ISRO rules on external PhD"},overall:"POTENTIALLY ELIGIBLE — GATE required",note:"The 2026 ICRB EMC application window closed 16 Sep 2026. The official ISRO opportunities page currently lists SAC research openings closing 30 Sep 2026; monitor it for the next Scientist/Engineer cycle.",track:"Space/Research"},
                 {org:"CSIR Laboratories — Project Scientist/RA",advt:"Various rolling notifications",status:"🔵 Monitor continuously",score:75,elig:{deg:"M.Tech DS ✅ | PhD CS (ongoing) ✅ (for Project Scientist)",exp:"Varies by position",age:"Varies — typically 35–45",gate:"No GATE — merit/interview based",phys:"GREEN",phd:"A — Project Scientist posts typically allow external PhD continuation"},overall:"POTENTIALLY ELIGIBLE",note:"CSIR labs (CEERI, CMC, CDRI, etc.) recruit Project Scientists and RAs for AI/Data/CS. Contractual initially. PhD ongoing is often acceptable. Good research experience for your CV. Watch csir.res.in and individual lab websites.",track:"Research"},
                 {org:"DST/DBT Funded Projects — JRF/SRF/RA",advt:"Rolling basis, various IITs/research labs",status:"🔵 Ongoing opportunities",score:70,elig:{deg:"M.Tech DS ✅ | PhD ongoing ✅",exp:"Research experience preferred",age:"Typically up to 28-35",gate:"NET/GATE preferred for JRF",phys:"GREEN",phd:"A — Explicitly designed for PhD scholars"},overall:"ELIGIBLE for SRF/RA positions",note:"Post-M.Tech with ongoing PhD: eligible for SRF or Research Associate positions at IITs/NITs working on AI/healthcare/data projects. Search on DST portals, IIT research labs, and academia job portals (academicjobs.in, naturalsciences.in).",track:"Research"},
               ].map((job,i)=>(
@@ -1300,7 +1689,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               </div>
               {[
                 {org:"TNPSC CTS — Computer Programmer",score:82,advt:"Advt 04/2026 (Non-interview) + Advt 06/2026 expected Aug 31",status:"🟣 Exam underway (Aug 16 – Sep 9)",note:"CTS Non-Interview 2026: Computer Programmer, Systems Manager included. Exam from Aug 16. If you missed this cycle, watch for CTS Interview posts (notification Aug 31, exam Nov 14, 2026). B.E CS/IT/ECE + MCA/M.Tech eligible.",gate:"No GATE",elig:"✅ B.E ECE + M.Tech DS eligible",phys:"GREEN",phd:"A — State govt typically allows external PhD with NOC"},
-                {org:"TNPSC CTS Interview Posts — Technical Officer",score:80,advt:"Advt 06/2026 — notification Aug 31, 2026 (CONFIRMED from planner)",status:"🔵 Notification expected Aug 31",note:"Technical officer, scientific officer posts under various TN departments. Interview posts have higher salary bands and seniority. Tamil Nadu domicile + SC gives significant advantage.",gate:"No GATE",elig:"✅ B.E ECE + M.Tech DS eligible",phys:"GREEN",phd:"A — Verify NOC requirement"},
+                {org:"TNPSC CTS Interview Posts — Technical Officer",score:80,advt:"Advt 06/2026 — notification exam date not scheduled (CONFIRMED from planner)",status:"🔵 Notification expected Aug 31",note:"Technical officer, scientific officer posts under various TN departments. Interview posts have higher salary bands and seniority. Tamil Nadu domicile + SC gives significant advantage.",gate:"No GATE",elig:"✅ B.E ECE + M.Tech DS eligible",phys:"GREEN",phd:"A — Verify NOC requirement"},
                 {org:"TNPSC Group 1 — Deputy Collector/ACS",score:45,advt:"Group 1 notification Jun 2026, exam Sep 2026",status:"🟣 Exam Sep 6, 2026",note:"HIGH COMPETITION. Administrative, not technical. Engineering graduates eligible but this is IAS-equivalent preparation. Consider only if genuinely interested in administration. LOW PRIORITY for technical profile.",gate:"No GATE",elig:"✅ Any degree eligible, but not technical role",phys:"GREEN",phd:"C — Full-time district administration incompatible with PhD"},
                 {org:"Tamil Nadu e-Governance Agency (TNeGA)",score:72,advt:"Project/contractual basis",status:"🔵 Monitor website",note:"TNeGA (State IT agency) recruits project-based IT and data professionals. Roles in digital governance, data analytics, e-services. Contract-based initially. Visit tnega.tn.gov.in.",gate:"No GATE",elig:"✅ CS/IT/Data background",phys:"GREEN",phd:"A — Project roles flexible"},
                 {org:"TANGEDCO / TNEB",score:55,advt:"Periodic AE/JE recruitment",status:"🔵 Watch tangedco.gov.in",note:"Tamil Nadu Generation and Distribution Corporation. Assistant Engineer (Electrical/Electronics) posts. B.E ECE eligible for Electronics AE. Not directly related to data/AI work — LOW PRIORITY for your career trajectory unless stability is primary concern.",gate:"No GATE typically",elig:"✅ B.E ECE eligible for Electronics AE",phys:"YELLOW — some field inspection",phd:"B — Verify"},
@@ -1372,7 +1761,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               ))}
               <div style={{...S.ib(P.a5)}}>
                 <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:5}}>⚠️ CRITICAL — UGC NET CS December 2026</div>
-                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","SC cutoff approximately 56% — aim 65%+ for safe margin","Registration opens September 2026 — set phone reminder NOW","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
+                {["UGC NET CS is the gateway to government academic positions in India","Qualifying NET = eligible for Asst Professor + JRF fellowship","Official cut-offs are category-, subject- and cycle-specific; check the final NTA result/cut-off notice.","No registration date is asserted here until NTA publishes the official December 2026 cycle notice","Your UGC NET prep (DBMS, OS, DSA, Networks, TOC) is already underway ✅","Passing NET + completing PhD = strongest possible academic profile in India"].map((p,i,arr)=>(
                   <div key={i} style={{...S.li(i===arr.length-1),fontSize:11}}><span style={{color:P.a5}}>›</span><span>{p}</span></div>
                 ))}
               </div>
@@ -1385,15 +1774,15 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:11,color:P.muted}}>Update status for each opportunity. Data saved automatically.</div>
               </div>
               {[
-                {id:"isro-sc-2026",org:"ISRO Scientist/Engineer SC",deadline:"Aug 17, 2026",priority:"🔥 MUST APPLY"},
-                {id:"tnpsc-cts-ni-2026",org:"TNPSC CTS Non-Interview (Computer Programmer)",deadline:"Exam Aug 16–Sep 9",priority:"🟢 HIGH"},
-                {id:"tnpsc-cts-int-2026",org:"TNPSC CTS Interview Posts",deadline:"Notif Aug 31, Exam Nov 14",priority:"🟢 HIGH"},
+                {id:"isro-sc-2026",org:"ISRO Scientist/Engineer SC",deadline:"Closed 16 Sep 2026 — historical tracker item",priority:"⚪ CLOSED"},
+                {id:"tnpsc-cts-ni-2026",org:"TNPSC CTS Non-Interview (Computer Programmer)",deadline:"Exam window completed — historical tracker item",priority:"⚪ CLOSED"},
+                {id:"tnpsc-cts-int-2026",org:"TNPSC CTS Interview Posts",deadline:"Use final TNPSC notification/planner; dates are notification-specific",priority:"🔵 VERIFY"},
                 {id:"nic-sci-b-2026",org:"NIC Scientist B (DS&AI discipline)",deadline:"Closed Apr 24, watch revised list",priority:"🟢 HIGH"},
-                {id:"cdac-jit-next",org:"C-DAC JIT Sep-Oct 2026 (Senior PE — AI/ML)",deadline:"Expected Sep-Oct 2026",priority:"🟢 HIGH"},
-                {id:"drdo-sci-b-next",org:"DRDO Scientist B via GATE (next cycle)",deadline:"Expected Sep-Oct 2026",priority:"🟢 HIGH"},
+                {id:"cdac-jit-next",org:"C-DAC Chennai current project recruitment",deadline:"Registration closes 22 Sep 2026 at 17:00",priority:"🔵 VERIFY"},
+                {id:"drdo-sci-b-next",org:"DRDO Scientist B via GATE",deadline:"No current application date asserted; monitor official DRDO/RAC notices",priority:"🔵 VERIFY"},
                 {id:"drdo-sci-c-next",org:"DRDO Scientist C Lateral (next advt)",deadline:"Watch rac.gov.in",priority:"🟡 GOOD"},
                 {id:"nielit-next",org:"NIELIT Scientist B (next cycle)",deadline:"Expected late 2026",priority:"🟡 GOOD"},
-                {id:"ugc-net-dec-2026",org:"UGC NET CS December 2026",deadline:"Dec 2026 (Reg: Sep 2026)",priority:"🟢 HIGH — Academic gateway"},
+                {id:"ugc-net-dec-2026",org:"UGC NET CS December 2026",deadline:"Dec 2026 — registration date to be confirmed by NTA",priority:"🟢 HIGH — Academic gateway"},
                 {id:"csir-project",org:"CSIR Project Scientist / RA (various labs)",deadline:"Rolling",priority:"🟡 GOOD"},
               ].map(job=>(
                 <div key={job.id} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:`1px solid ${P.border}20`,alignItems:"center",flexWrap:"wrap"}}>
@@ -1442,10 +1831,23 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
 
                     {tab==="jobs"&&<div>
-            <div style={S.h2}>💡 Job Opportunities — Live August 2026</div>
-            <div style={{...S.ib(P.a5),marginBottom:14}}>
-              <div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:3}}>🚨 ISRO Scientist SC — Apply by August 17, 2026 (3 days left!)</div>
-              <div style={{fontSize:12,color:P.muted}}>92 vacancies across CS, Electronics, and other disciplines. SC category — application fee WAIVED. Salary ₹56,100/month. isro.gov.in</div>
+            <div style={S.h2}>💡 Job Opportunities</div>
+            <div style={{...S.CA(P.a1),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:7}}>
+                <div style={{fontSize:13,color:P.a1,fontWeight:800}}>🟢 Latest Government & Technical Jobs</div>
+                <span style={S.chip(P.a1)}>Verified 21 Sep 2026</span>
+              </div>
+              <div style={{fontSize:11,color:P.muted,lineHeight:1.55}}>Current opportunities are linked to official recruiting authorities. Closed opportunities are not presented as open applications.</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                {[["C-DAC Chennai","27 Project Engineer + 10 Senior Project Engineer vacancies in the current walk-in/online interview cycle","https://www.cdac.in/index.aspx?id=print_page&print=ca_cdac_chennai_recruitment_2026"],
+                  ["ISRO SAC","JRF / RA / Project Scientist-I · last date 30 Sep 2026","https://www.isro.gov.in/ViewAllOpportunities.html"],
+                  ["DRDO","Current JRF/RA and research vacancies","https://www.drdo.gov.in/drdo/offerings/vacancies"],
+                  ["IBPS","RRB, PFRDA, BOI, UIICL and other current recruitments","https://www.ibps.in/"],
+                  ["UPSC","Active examinations and notifications","https://www.upsc.gov.in/examinations/active-exams"]].map(([n,d,u])=>
+                    <a key={n} href={u} target="_blank" rel="noreferrer" style={{...S.CA(P.a1),flex:"1 1 240px",textDecoration:"none",padding:9}}>
+                      <div style={{fontSize:12,fontWeight:800,color:P.text}}>{n}</div><div style={{fontSize:10,color:P.muted,marginTop:3}}>{d}</div>
+                    </a>)}
+              </div>
             </div>
 
             {/* Sub tabs */}
@@ -1464,20 +1866,18 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
               {[
                 {
-                  org:"🚀 ISRO Scientist/Engineer SC",
-                  status:"🚨 APPLY NOW — Deadline August 17, 2026",
+                  org:"🚀 ISRO SAC — JRF / Research Associate / Project Scientist-I",
+                  status:"🟠 OPEN — closes 30 Sep 2026",
                   statusColor:P.a5,
                   urgent:true,
                   details:[
-                    "92 vacancies — Computer Science stream available",
-                    "Qualification: B.E/B.Tech with 65%+ marks + Valid GATE score (GATE CS)",
-                    "Age: Max 28 years (SC relaxation +5 years = 33 years for you ✅)",
-                    "Salary: ₹56,100/month (Pay Level 10, 7th CPC) + DA + HRA + medical",
-                    "Selection: GATE score shortlisting (1:7 ratio) + Technical Interview",
-                    "SC candidates: Application fee WAIVED (₹250 fee exempt)",
-                    "Fee payment deadline: August 19, 2026 (even if main deadline is Aug 17)",
+                    "Advertisement SAC:02:2026 opened 10 Sep 2026.",
+                    "Posts: Junior Research Fellow, Research Associate and Project Scientist-I.",
+                    "Online applications close 30 Sep 2026 at 17:00.",
+                    "Location: Space Applications Centre (SAC), Ahmedabad.",
+                    "Qualification and discipline requirements are post-specific; verify the official advertisement.",
                   ],
-                  action:"Apply NOW at isro.gov.in → Careers → ICRB Scientist SC 2026",
+                  action:"Open the official ISRO SAC recruitment notice and apply only if the post-specific criteria are met.",
                   link:"isro.gov.in",
                   match:"⚠️ GATE CS score needed — check if your score qualifies. Strong match on education and SC quota.",
                   color:P.a5,
@@ -1501,53 +1901,53 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 },
                 {
                   org:"🖥️ C-DAC Project Engineer / Senior Project Engineer",
-                  status:"JIT June 2026 cycle closed — Next cycle expected Sep–Oct 2026",
+                  status:"🟠 OPEN — registration closes 22 Sep 2026",
                   statusColor:P.a3,
                   details:[
-                    "951 vacancies in JIT June 2026 cycle across 11 C-DAC centres",
+                    "C-DAC Chennai recruitment lists 27 Project Engineer and 10 Senior Project Engineer posts, plus other project roles",
                     "Roles: AI/ML, Full Stack, Cybersecurity, Software Development",
-                    "Senior Project Engineer (4+ yrs exp): ₹8.49–14 LPA CTC",
-                    "Your profile: 4.3yr TCS + ETL/SQL/Python = Senior Project Engineer eligible",
-                    "C-DAC Chennai centre available — stays in Chennai ✅",
-                    "No application fee for any category",
-                    "Contractual (3 years, project-based) — good for PhD compatibility",
+                    "Senior Project Engineer: minimum 4 years post-qualification relevant experience; ECE is a listed discipline",
+                    "The advertisement lists ECE among eligible disciplines; verify the exact desirable skill set for the selected post",
+                    "Location: Chennai for Project Engineer/Senior Project Engineer; posts are transferable",
+                    "Registration closes 22 Sep 2026 at 17:00; interview is tentatively in the fourth week of September",
+                    "Contract tenure is up to two years or co-terminus with the project, subject to the advertisement",
                   ],
-                  action:"Next JIT cycle expected Sep–Oct 2026. Set alert at careers.cdac.in",
+                  action:"Open the current C-DAC Chennai recruitment notice and complete registration before 22 Sep 2026 if eligible.",
                   link:"careers.cdac.in",
                   match:"🎯 Strong match: 4.3yr experience qualifies for Senior PE. AI/ML + Data Science domains match perfectly.",
                   color:P.a4,
                 },
                 {
                   org:"🛡️ DRDO CEPTAM",
-                  status:"CEPTAM 11 Tier 2 result expected — CEPTAM 12 watch for 2026-27",
+                  status:"🔵 Current DRDO vacancies — check official page",
                   statusColor:P.muted,
                   details:[
-                    "CEPTAM 11: 764 vacancies (STA-B + Technician A) — Tier 2 exam was June 15, 2026",
-                    "STA-B Computer Science: Diploma or B.Sc in CS/IT eligible",
-                    "CEPTAM 12 expected: 1,000–3,000+ vacancies typical",
-                    "Age: 18–28 years (SC relaxation +5 years = 33 years ✅)",
-                    "Salary: ₹35,400–₹1,12,400 (Pay Level 6, 7th CPC)",
-                    "Selection: Tier I CBT (general aptitude) + Tier II (subject specific)",
-                    "Syllabus overlaps with UGC NET CS — prep is shared ✅",
+                    "DRDO official vacancies currently list multiple laboratory/research opportunities and recruitment updates",
+                    "Examples include JRF/RA opportunities; each establishment/post has separate eligibility and deadlines",
+                    "CEPTAM-related notices should be checked on the current DRDO/CEPTAM official pages rather than inferred from older cycles",
+                    "Age, qualification and reservation rules vary by advertisement",
+                    "Pay and selection vary by the specific DRDO vacancy",
+                    "Selection method varies by the specific vacancy",
+                    "Use the exact vacancy notice as the source of truth for syllabus and selection",
                   ],
-                  action:"Monitor ceptam.drdo.gov.in for CEPTAM 12 notification. Expected late 2026 / early 2027.",
+                  action:"Open the official DRDO vacancies page and check current CS/IT/ECE/research openings.",
                   link:"drdo.gov.in",
                   match:"✅ Good match: B.E ECE + M.Tech DS. UGC NET prep directly useful for CEPTAM Tier II.",
                   color:P.a3,
                 },
                 {
                   org:"🏛️ TNPSC Group 1/2 Technical Posts",
-                  status:"Check tnpsc.gov.in for current notifications",
+                  status:"🔵 Check final notification / planner",
                   statusColor:P.a2,
                   details:[
-                    "Technical cadre posts: Assistant Engineer, Junior Scientific Officer, etc.",
+                    "Use the TNPSC planner and individual notifications for current Group/technical posts",
                     "Tamil Nadu state quota — SC reservation applies",
-                    "Combined Engineering Services Exam (CESE) for tech posts",
-                    "Age: generally up to 30-32 years for tech posts (check each notification)",
-                    "Salary: ₹36,400–₹1,15,700 state government pay scale",
-                    "Based in Tamil Nadu — no relocation needed ✅",
+                    "Eligibility, dates and selection are notification-specific; planner dates are tentative",
+                    "Age limits vary by notification",
+                    "Pay varies by post and notification",
+                    "Location and service conditions vary by post",
                   ],
-                  action:"Register at tnpscexams.in. Set up job alerts for Computer Science and IT technical posts.",
+                  action:"Monitor the official TNPSC site and verify the final notification before applying.",
                   link:"tnpsc.gov.in",
                   match:"✅ Tamil Nadu domicile advantage. SC state quota. Stays in Chennai/TN.",
                   color:P.a2,
@@ -1643,15 +2043,15 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={S.h2}>🤖 AI Job Advisor</div>
               <div style={{...S.ib(P.a4),marginBottom:14}}>
                 <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>Ask anything about jobs matching your profile</div>
-                <div style={{fontSize:12,color:P.muted}}>The AI knows your full TCS profile, SC category, PhD, certs, salary targets, and August 2026 context.</div>
+                <div style={{fontSize:12,color:P.muted}}>The AI uses the profile context configured in this app and the current September 2026 planning context.</div>
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
                 {[
-                  "ISRO Scientist SC deadline is Aug 17 — should I apply today? What do I need?",
+                  "What government technical/research openings are current today, and which official notice should I verify first?",
                   "How do I negotiate a 50% hike when switching from TCS?",
                   "Which is better right now — ISRO Scientist or NIC Scientist B for my profile?",
                   "What is the exact GATE CS score I need for ISRO shortlisting?",
-                  "Should I apply to private companies now or wait for Databricks cert in Sep?",
+                  "How should I sequence private job applications with my current certification preparation?",
                   "What walking professor salary can I expect with my profile at SSN/VIT?",
                   "How do I write a cold LinkedIn message to a Zoho DE recruiter?",
                   "C-DAC Chennai next JIT cycle — am I eligible for Senior Project Engineer?",
@@ -1668,7 +2068,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           </div>}
 
                     {tab==="monthly"&&<div>
-            <div style={S.h2}>📅 Jul–Dec 2026 Monthly Plan</div>
+            <div style={S.h2}>📅 Sep–Dec 2026 Monthly Plan</div>
             <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",paddingBottom:4}}>
               {monthPlan.map((m,i)=><button key={i} style={S.mB(monthIdx===i,m.color)} onClick={()=>setMonth(i)}>{m.month.slice(0,3)}</button>)}
             </div>
@@ -1748,9 +2148,20 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
           {tab==="ugc"&&<div>
             <div style={S.h2}>📋 UGC NET CS — December 2026</div>
             <div style={{...S.ib(P.a2),marginBottom:14}}>
-              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Exam: December 2026 · SC cutoff ~56% = ~84/150 · Your target: 100+/150</div>
-              <div style={{fontSize:12,color:P.muted}}>Registration: September–October 2026 window · Watch ugcnet.nta.ac.in · Set calendar reminder NOW</div>
+              <div style={{fontSize:13,color:P.a2,fontWeight:800,marginBottom:4}}>🎯 Target: 100+/150 (personal study target) · Verify the official NTA cycle notice for final schedule and cut-offs</div>
+              <div style={{fontSize:12,color:P.muted}}>Current status: monitor NTA for the December 2026 cycle; this dashboard does not assert a registration date until an official notice confirms it.</div>
             </div>
+            <div style={{...S.CA(P.a2),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:6}}>
+                <div style={{fontSize:13,fontWeight:800,color:P.a2}}>📰 Latest UGC NET / NTA study update</div>
+                <span style={S.chip(P.a2)}>21 Sep 2026</span>
+              </div>
+              <div style={{fontSize:11,color:P.muted,lineHeight:1.55,marginBottom:7}}>
+                NTA's current notice board lists UGC-NET June 2026 results for the English, Commerce and Sociology papers conducted on 9–10 September, category-wise cut-offs, final answer keys, and the NTA examination calendar through March 2027.
+              </div>
+              <a href="https://www.nta.ac.in/NoticeBoardArchive" target="_blank" rel="noreferrer" style={{...S.chip(P.a1),textDecoration:"none"}}>🔗 Open NTA latest notices</a>
+            </div>
+
             <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
               {[["schedule","📅 Schedule"],["p2","📚 Paper 2"],["p1","📝 Paper 1"],["res","🔗 Resources"]].map(([id,lb])=><button key={id} style={S.pill(ugcView===id,P.a2)} onClick={()=>setUgcView(id)}>{lb}</button>)}
             </div>
@@ -1760,15 +2171,15 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:12,color:P.muted,marginBottom:4}}>{s.daily}</div>
                 <div style={{fontSize:11,color:P.a2}}>📚 {s.resource}</div>
               </div>))}
-              <div style={{...S.ib(P.a4)}}><div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:4}}>⚡ The daily habit that wins UGC NET</div><div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>8:00–9:00 PM every night without exception. 20 MCQs = 20 minutes. Review wrong answers = 20 minutes. Note weak topic = 10 minutes. 6 months × 30 days × 20 MCQs = 3,600 problems solved. That is how SC candidates clear it.</div></div>
-              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>UGC NET Dec 2026 registration window typically opens September–October. Missing it means waiting until June 2027. Set a phone reminder for September 1st to check ugcnet.nta.ac.in daily.</div></div>
+              <div style={{...S.ib(P.a4)}}><div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:4}}>⚡ The daily habit that wins UGC NET</div><div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>Use a sustainable daily MCQ block: 15–20 questions, review every wrong answer, and keep a weak-topic list. The app's offline question bank works even when Gemini is unavailable.</div></div>
+              <div style={{...S.ib(P.a5),marginTop:10}}><div style={{fontSize:12,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Registration Alert</div><div style={{fontSize:12,color:P.muted}}>NTA has not been given a fixed registration date in this app. Check the official NTA notice board for the December 2026 cycle and do not rely on a typical-window estimate.</div></div>
             </div>}
             {ugcView==="p2"&&ugcPaper2.map((u,i)=>(<div key={i} style={{...S.CA(P.a2),marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:8}}><div style={{fontSize:14,fontWeight:700,color:P.text}}>{u.unit}</div><span style={S.chip(P.a2)}>{u.weight}</span></div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{u.topics.map((tp,j)=><span key={j} style={{background:`${P.bg}88`,border:`1px solid ${P.border}`,borderRadius:6,padding:"3px 9px",fontSize:12,color:P.sub}}>{tp}</span>)}</div>
             </div>))}
             {ugcView==="p1"&&<div>
-              <div style={{...S.ib(P.a3),marginBottom:14}}><div style={{fontSize:12,color:P.a3,fontWeight:700,marginBottom:3}}>Paper 1: 50 marks · 50 questions · General Teaching & Research Aptitude</div><div style={{fontSize:12,color:P.muted}}>Do not neglect Paper 1. Aim 35+/50. SC cutoff for Paper 1 alone can disqualify you.</div></div>
+              <div style={{...S.ib(P.a3),marginBottom:14}}><div style={{fontSize:12,color:P.a3,fontWeight:700,marginBottom:3}}>Paper 1: 50 marks · 50 questions · General Teaching & Research Aptitude</div><div style={{fontSize:12,color:P.muted}}>Do not neglect Paper 1. Aim 35+/50. Use 35+/50 as a personal practice target; official cut-offs are category-, subject- and cycle-specific.</div></div>
               {ugcPaper1.map((u,i)=>(<div key={i} style={{...S.C(),marginBottom:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6,marginBottom:6}}><div style={{fontSize:13,fontWeight:700,color:P.text}}>{u.unit}</div><span style={S.chip(P.a3)}>{u.weight}</span></div><div style={{fontSize:12,color:P.muted,lineHeight:1.5}}>{u.tips}</div></div>))}
             </div>}
             {ugcView==="res"&&[
@@ -1795,9 +2206,57 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             {/* DASHBOARD */}
             {learnTab==="dashboard"&&<div>
               <div style={{...S.ib(P.a2),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:3}}>Your Learning Dashboard — July to December 2026</div>
+                <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:3}}>Your Learning Dashboard — September to December 2026</div>
                 <div style={{fontSize:12,color:P.muted}}>Tap any chip to mark done/undone. Progress saves automatically.</div>
               </div>
+              <div style={{...S.CA(P.a4),marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
+                  <div style={{fontSize:13,fontWeight:800,color:P.a4}}>🏆 20-Day Certification Sprint</div>
+                  <span style={S.chip(P.a4)}>21 Sep → 11 Oct 2026</span>
+                </div>
+                <div style={{fontSize:11,color:P.muted,lineHeight:1.55,marginBottom:9}}>
+                  Official documentation remains the source of truth. Saved/free study content stays available even when Gemini quota is unavailable. Gemini is optional for explanations, quizzes and analysis.
+                </div>
+                {[
+                  ["AWS Data Engineer – Associate","🟡","Coupon received · prepare → schedule",P.a2],
+                  ["SnowPro Core","🟡","Coupon received · preparation → schedule",P.a3],
+                  ["Databricks Data Engineer Associate","🟡","Fundamentals + required tasks → voucher",P.a4],
+                  ["Claude Architect Foundations","🟡","Registered · prepare → schedule",P.a5],
+                  ["Claude Architect Professional","🟡","Registered · advanced preparation",P.a5],
+                  ["Databricks Generative AI Engineer","🟡","Active learning track",P.a4],
+                  ["Microsoft GitHub Copilot","✅","Completed",P.a2]
+                ].map(([name,status,next,color])=>
+                  <div key={name} style={{...S.li(name==="Microsoft GitHub Copilot"),display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{color,fontWeight:800}}>{status}</span>
+                    <span style={{flex:1,color:P.text,fontWeight:600}}>{name}</span>
+                    <span style={{fontSize:10,color:P.muted,textAlign:"right"}}>{next}</span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{...S.C(),marginBottom:12}}>
+                <div style={S.L}>🆓 Official Study & Exam Sources</div>
+                <div style={{fontSize:11,color:P.muted,marginBottom:9,lineHeight:1.5}}>Use these first for current syllabus, exam rules, documentation and notifications. AI is an optional tutor, not the source of truth.</div>
+                {[
+                  ["AWS DEA","AWS Skill Builder / DEA exam guide","https://aws.amazon.com/certification/certified-data-engineer-associate/"],
+                  ["SnowPro Core","Snowflake certification + documentation","https://www.snowflake.com/en/certifications/"],
+                  ["Databricks DEA","Databricks certification + Academy","https://www.databricks.com/learn/certification"],
+                  ["Claude Architect","Anthropic documentation","https://docs.anthropic.com/"],
+                  ["UGC NET","NTA official portal","https://ugcnet.nta.ac.in/"],
+                  ["UPSC","UPSC official examinations","https://www.upsc.gov.in/"],
+                  ["SSC","SSC official portal","https://ssc.gov.in/"],
+                  ["TNPSC","TNPSC official notifications","https://www.tnpsc.gov.in/"],
+                  ["IBPS","IBPS official portal","https://www.ibps.in/"],
+                  ["Employment News","Government recruitment listings","https://employmentnews.gov.in/"],
+                  ["PIB","Government current affairs","https://www.pib.gov.in/"]
+                ].map(([name,label,url])=>
+                  <a key={name} href={url} target="_blank" rel="noreferrer" style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${P.border}20`,textDecoration:"none"}}>
+                    <span style={{fontSize:12,color:P.text,fontWeight:700}}>{name}</span>
+                    <span style={{fontSize:10,color:P.a1,textAlign:"right"}}>{label} ↗</span>
+                  </a>
+                )}
+              </div>
+
               {[
                 {track:"ugc-dbms",label:"UGC NET — DBMS",color:P.a2,items:["ER model EER diagrams","Normalisation 1NF-BCNF","SQL JOINs subqueries triggers","Transactions ACID 2PL","Indexing B+ tree hashing","Concurrency control","Query optimisation","Relational algebra"]},
                 {track:"ugc-os",label:"UGC NET — OS",color:P.a2,items:["Process scheduling FCFS SJF RR","Deadlock Banker algorithm","Paging segmentation","Virtual memory TLB","File systems disk scheduling","Semaphores mutex","IPC mechanisms"]},
@@ -1840,7 +2299,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             {/* UNIFIED QUIZ ENGINE — UGC/Python/SQL/GenAI */}
             {(learnTab==="ugc"||learnTab==="python"||learnTab==="sql"||learnTab==="genai")&&(()=>{
               const configs={
-                ugc:{color:P.a2,label:"UGC NET CS Trainer — December 2026",desc:"AI-generated MCQs at UGC NET difficulty. Pick topic, think, reveal answer + explanation.",
+                ugc:{color:P.a2,label:"UGC NET CS Trainer — December 2026",desc:"Practice MCQs with an offline question bank. Gemini can add fresh questions when quota is available.",
                   topics:["DBMS","Operating Systems","DSA & Algorithms","Computer Networks","Theory of Computation","Programming C Java Python","Software Engineering","Paper 1 Teaching & Research"]},
                 python:{color:P.a1,label:"Python Trainer — Data Engineering focus",desc:"Practice questions from basics to PySpark. Tailored to your DE background.",
                   topics:["Week 1-2 Absolute Basics","Intermediate Python","Data Python Pandas NumPy","PySpark and DE Python","AI Python LangChain RAG"]},
@@ -1886,12 +2345,17 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                           '{"question":"<question text>","options":{"A":"<option>","B":"<option>","C":"<option>","D":"<option>"},"correct":"<A|B|C|D>","explanation":"<3-4 sentence explanation>","tip":"<1 practical tip>"}'
                         ].join("\n");
                         try{
-                          const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:prompt}]});
-                          const raw = readClaudeText(d) || "{}";
+                          const d = await callAI({model:"gemini-3.8-flash",max_tokens:700,messages:[{role:"user",content:prompt}]});
+                          const raw = readAIText(d) || "{}";
                           const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
                           if(si>=0&&ei>=0){setQuizQ(JSON.parse(raw.slice(si,ei+1)));}
                           else{setQuizQ({question:"Error parsing response. Please try again.",options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"",tip:""});}
-                        }catch(err){setQuizQ({question:"Connection error: "+err.message,options:{A:"—",B:"—",C:"—",D:"—"},correct:"A",explanation:"Check your internet connection.",tip:""});}
+                        }catch(err){
+                          const bankKey=learnTab;
+                          const bank=offlineQuestionBank[bankKey]||offlineQuestionBank.ugc;
+                          const fallback=bank[Math.floor(Math.random()*bank.length)];
+                          setQuizQ({...fallback,offline:true});
+                        }
                         setQuizLoad(false);
                       }}
                       disabled={quizLoad}>
@@ -1899,6 +2363,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     </button>
 
                     {quizQ&&quizQ.question&&<div style={{...S.CA(cfg.color)}}>
+                      {quizQ.offline&&<div style={{fontSize:10,color:P.a2,fontWeight:700,marginBottom:8}}>🆓 Offline question bank — no Gemini quota used</div>}
                       <pre style={{fontSize:13,fontWeight:600,color:P.text,marginBottom:16,lineHeight:1.65,whiteSpace:"pre-wrap",fontFamily:"inherit"}}>{quizQ.question}</pre>
                       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
                         {Object.entries(quizQ.options||{}).map(([k,v])=>{
@@ -1967,8 +2432,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       '{"front":"<term or short question>","back":"<full explanation with example>","category":"<subcategory>","difficulty":"<Easy|Medium|Hard>"}'
                     ].join("\n");
                     try{
-                      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:prompt}]});
-                      const raw = readClaudeText(d) || "{}";
+                      const d = await callAI({model:"gemini-3.8-flash",max_tokens:400,messages:[{role:"user",content:prompt}]});
+                      const raw = readAIText(d) || "{}";
                       const si=raw.indexOf("{");const ei=raw.lastIndexOf("}");
                       if(si>=0&&ei>=0){setFlashcard(JSON.parse(raw.slice(si,ei+1)));}
                       else setFlashcard({front:"Parse error",back:"Please try again.",category:"—",difficulty:"—"});
@@ -2003,13 +2468,13 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <div style={{fontSize:12,color:P.muted}}>Real advice for switching from TCS to Senior DE, AI-DE, or Analytics Engineer.</div>
               </div>
               {[
-                {title:"📍 Where you are now (August 2026)",color:P.a1,items:[
+                {title:"📍 Where you are now (September 2026)",color:P.a1,items:[
                   "4.3 years TCS Data Engineer — solid enterprise foundation, not a fresher",
                   "Expert in SQL (Teradata), IBM DataStage ETL, Unix/Shell, ServiceNow ITSM",
                   "PhD started at Shiv Nadar University in GenAI — extremely rare differentiator",
                   "Learning Python, PySpark, LangChain, GCP — right track",
                   "Databricks DEA exam target Sep-Oct 2026 — cert adds immediate resume credibility",
-                  "Claude CCDV-F deadline Aug 31 — 2 weeks away, study 30 min/day NOW",
+                  "Claude Architect Foundations + Professional are registered; use the 20-day sprint for preparation and scheduling.",
                 ]},
                 {title:"🎯 Fastest path to 40-60% salary hike",color:P.a2,items:[
                   "TODAY: Apply to 3+ Senior ETL/DE roles on Naukri — Cognizant, DXC, HCL, Capgemini. Zero reskilling.",
@@ -2064,10 +2529,10 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                   onClick={async()=>{
                     if(!switchGuideQ.trim())return;
                     setSwitchGuideLoad(true);setSwitchGuideA("");
-                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer 4.3yr. Expert: SQL Teradata, IBM DataStage, Unix Shell. Learning: Python, PySpark, LangChain, GCP. PhD CS GenAI at Shiv Nadar University (July 2026). Certs: Claude CCDV-F (Aug 31), Databricks DEA (Sep 2026), GCP DE (Nov 2026). Goal: Switch to Senior DE or AI-DE with 40-60% hike. UGC NET Dec 2026. SC category. Chennai based. Give specific, practical, actionable advice. Name actual companies and numbers.";
+                    const sys="You are an expert career counsellor for Thamizamudhan K, 27, Chennai. TCS Data Engineer with 4+ years of experience. Skills: SQL/Teradata, IBM DataStage, Unix Shell, Python/PySpark and GenAI learning. PhD CS/GenAI at Shiv Nadar University (ongoing). Current certification tracks: Claude Architect Foundations + Professional, Databricks Data Engineer Associate, AWS Data Engineer Associate and SnowPro Core. Goal: Senior DE/AI-DE transition. UGC NET CS December 2026. Chennai based. Give specific, practical, actionable advice without inventing current deadlines.";
                     try{
-                      const d = await callClaude({model:"claude-sonnet-4-6",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
-                      setSwitchGuideA(readClaudeText(d) || "No response.");
+                      const d = await callAI({model:"gemini-3.8-flash",max_tokens:900,system:sys,messages:[{role:"user",content:switchGuideQ}]});
+                      setSwitchGuideA(readAIText(d) || "No response.");
                     }catch(err){setSwitchGuideA("Connection error: "+err.message);}
                     setSwitchGuideLoad(false);
                   }}
@@ -2086,13 +2551,31 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
                     {tab==="phd"&&<div>
             <div style={S.h2}>🎓 PhD Research Planner</div>
+            <div style={{...gl(P.a4),padding:16,marginBottom:14,borderRadius:14,border:`1px solid ${P.a4}44`}}>
+              <div style={{fontSize:10,color:P.muted,fontWeight:800,letterSpacing:"0.7px",marginBottom:5}}>CANONICAL PHD RESEARCH MEMORY · ONE SOURCE OF TRUTH</div>
+              <div style={{fontSize:15,fontWeight:800,color:P.text,lineHeight:1.4,marginBottom:5}}>{phdResearchHub.workingTitle}</div>
+              <div style={{fontSize:11,color:P.a4,fontWeight:700,marginBottom:10}}>SNU execution scope: {phdResearchHub.snuScope}</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.55,marginBottom:10}}>{phdResearchHub.coreObjective}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {[
+                  ["🎯 Population",phdResearchHub.targetPopulation[0]],
+                  ["📡 Modalities","Wearables + vision + speech/audio + context"],
+                  ["🧠 Core pillars",phdResearchHub.researchPillars.length+" connected research pillars"],
+                  ["🔬 Data strategy","Minimal benchmark datasets + focused custom caregiver logs"],
+                ].map(([k,v])=>(
+                  <div key={k} style={{background:`${P.bg}88`,borderRadius:8,padding:"8px 10px"}}>
+                    <div style={{fontSize:10,color:P.muted}}>{k}</div><div style={{fontSize:11,color:P.sub,fontWeight:600,marginTop:2,lineHeight:1.4}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Info bar */}
             <div style={{...S.ib(P.a4),marginBottom:12}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                 <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>SUPERVISOR</div><div style={{fontSize:12,color:P.a4,fontWeight:700}}>Dr. K.D. Badri Narayanan</div></div>
                 <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>UNIVERSITY</div><div style={{fontSize:12,color:P.sub}}>Shiv Nadar University (SNU), Chennai</div></div>
-                <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>RESEARCH</div><div style={{fontSize:12,color:P.sub}}>Human-Centered Multimodal XAI + Wearables for Special Kids</div></div>
+                <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>RESEARCH DIRECTION</div><div style={{fontSize:12,color:P.sub,lineHeight:1.4}}>{phdResearchHub.workingTitle}</div></div>
                 <div><div style={{fontSize:10,color:P.muted,fontWeight:700}}>MODE</div><div style={{fontSize:12,color:P.sub}}>Part-time · Started July 2026 · 4-year plan</div></div>
               </div>
             </div>
@@ -2428,7 +2911,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               {[
                 {phase:"Phase 1: Foundation",period:"Jul–Dec 2026",color:P.a1,items:[
                   "Jul 2026 ✅: First supervisor meeting — ideology, keywords, PS (DONE)",
-                  "Aug 2026: CCDV-F cert (Aug 31) + PhD coursework Sem 1 begins + Read 15+ papers",
+                  "Sep–Oct 2026: 20-day certification sprint + PhD research tasks + UGC NET preparation",
                   "Sep 2026: Finalise 1-2 core problem statements with supervisor + 30+ papers reviewed",
                   "Oct 2026: Chapter 1 Introduction draft submitted + UGC NET registration + dataset identified",
                   "Nov 2026: Chapter 2 Literature Survey 50% complete + baseline experiments started",
@@ -2513,8 +2996,9 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             {/* Research identity card */}
             <div style={{...gl(P.a4),padding:16,marginBottom:14,borderRadius:14,border:`1px solid ${P.a4}44`}}>
               <div style={{fontSize:11,color:P.muted,fontWeight:700,letterSpacing:"0.5px",marginBottom:6}}>ACTIVE RESEARCH — SHIV NADAR UNIVERSITY (SNU)</div>
-              <div style={{fontSize:15,fontWeight:800,color:P.text,marginBottom:4,lineHeight:1.4}}>Human-Centered Multimodal Explainable AI Framework with Wearable Sensors for Special Needs Children</div>
-              <div style={{fontSize:12,color:P.a4,fontWeight:600,marginBottom:10}}>Supervisor: Dr. K.D. Badri Narayanan · Part-time PhD · Started July 2026</div>
+              <div style={{fontSize:15,fontWeight:800,color:P.text,marginBottom:4,lineHeight:1.4}}>{phdResearchHub.snuScope}</div>
+              <div style={{fontSize:12,color:P.a4,fontWeight:600,marginBottom:7}}>Supervisor: {phdResearchHub.supervisor} · Part-time PhD · Started {phdResearchHub.started}</div>
+              <div style={{fontSize:11,color:P.sub,lineHeight:1.55,background:`${P.bg}88`,borderRadius:8,padding:"8px 10px"}}><b style={{color:P.a2}}>Connected to overall PhD:</b> This SNU scope is the current focused implementation of the broader personalized multimodal distress-prediction and early-intervention research direction. The same problem statements, datasets, methodology and four-year plan are shared with the PhD Planner.</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11}}>
                 {[["Mode","Part-time (alongside TCS)"],["Duration","4 years (Jul 2026 – Dec 2029)"],["Type","Computer Science & Engineering"],["Focus","Multimodal AI + XAI + Healthcare"]].map(([k,v])=>(
                   <div key={k} style={{background:`${P.bg}88`,borderRadius:7,padding:"6px 9px"}}>
@@ -2534,6 +3018,15 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* RESEARCH OVERVIEW */}
             {snuTab==="overview"&&<div>
+              <div style={{...S.CA(P.a1),marginBottom:12}}>
+                <div style={{fontSize:13,fontWeight:700,color:P.a1,marginBottom:8}}>🔗 Overall PhD → SNU Research Map</div>
+                <div style={{fontSize:11,color:P.sub,lineHeight:1.6,marginBottom:8}}>The PhD Planner is the master research record. This SNU tab is not a separate project: it is the focused SNU execution layer for the same research program.</div>
+                {phdResearchHub.researchPillars.map(p=>(
+                  <div key={p.id} style={{display:"flex",gap:8,marginBottom:6,alignItems:"flex-start"}}>
+                    <span style={{color:P.a1,fontWeight:800,flexShrink:0}}>›</span><span style={{fontSize:11,color:P.sub}}><b style={{color:P.text}}>{p.title}:</b> {p.detail}</span>
+                  </div>
+                ))}
+              </div>
               <div style={{...S.CA(P.a4),marginBottom:12}}>
                 <div style={{fontSize:13,fontWeight:700,color:P.a4,marginBottom:10}}>🎯 Core Research Problem</div>
                 {[
@@ -2806,7 +3299,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               {[
                 {phase:"Phase 1: Foundation",period:"Jul–Dec 2026",color:P.a1,items:[
                   "Jul 2026 ✅: First supervisor meeting — ideology, 15-20 keywords, 10 PS (DONE)",
-                  "Aug 2026: CCDV-F cert (Aug 31) + start reading 15 survey papers + environment setup",
+                  "Sep–Oct 2026: certification sprint + research literature survey + environment setup",
                   "Sep 2026: Finalise 2 core PS with supervisor + 30 papers reviewed + Chapter 1 started",
                   "Oct 2026: Chapter 1 Introduction complete + UGC NET registration + minimal dataset identified",
                   "Nov 2026: Chapter 2 Literature Survey 50% + DREAMER dataset experiments started",
@@ -2916,7 +3409,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* ── DAILY TRACKER ── */}
             {offDay!=="followup"&&offDay!=="ideas"&&(()=>{
-              const d7=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);});
+              const d7=Array.from({length:7},(_,i)=>dateKeyDaysAgo(6-i));
               const selDay=d7.includes(offDay)?offDay:todayKey();
               return(<div>
                 {/* Day strip */}
@@ -3152,7 +3645,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
               {hTab==="today"&&<div>
                 <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto"}}>
-                  {Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return d.toISOString().slice(0,10);}).map(d=>{
+                  {Array.from({length:7},(_,i)=>dateKeyDaysAgo(6-i)).map(d=>{
                     const e=healthLog[d];const isSel=d===hDay;
                     return <div key={d} onClick={()=>switchH(d)} style={{minWidth:54,...gl(isSel?P.a2:null),borderRadius:10,padding:"7px 4px",textAlign:"center",cursor:"pointer",flexShrink:0,border:`1px solid ${isSel?P.a2:P.border}`}}>
                       <div style={{fontSize:10,color:isSel?P.a2:P.muted,fontWeight:700}}>{fmtDate(d).slice(0,3)}</div>
@@ -3236,7 +3729,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
               {hTab==="ask"&&<div>
                 <div style={S.h2}>🤖 Health Coach</div>
-                <div style={{...S.ib(P.a2),marginBottom:14}}><div style={{fontSize:12,color:P.a2,fontWeight:600,marginBottom:3}}>Judgment-free zone. Ask anything.</div><div style={{fontSize:12,color:P.muted}}>Your full medical profile is loaded. No question is too personal.</div></div>
+                <div style={{...S.ib(P.a2),marginBottom:14}}><div style={{fontSize:12,color:P.a2,fontWeight:600,marginBottom:3}}>Judgment-free zone. Ask anything.</div><div style={{fontSize:12,color:P.muted}}>Your saved Health log is not sent to the AI coach. Only the question you submit is sent.</div></div>
                 <div style={{marginBottom:14}}>
                   <div style={S.L}>Quick questions</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
@@ -3273,7 +3766,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 <input style={{...S.inp,marginBottom:16}} placeholder="e.g. Submit PhD assignment, apply to 3 roles, LeetCode 2 problems..." value={dRem} onChange={e=>setDRem(e.target.value)}/>
                 <button style={S.btn(jSaved?P.a2:P.a1)} onClick={saveJournal}>{jSaved?"✅ Saved!":"💾 Save Entry"}</button>
               </div>
-              {(()=>{const y=new Date();y.setDate(y.getDate()-1);const yk=y.toISOString().slice(0,10);const ye=entries[yk];if(!ye?.reminder)return null;return(
+              {(()=>{const yk=dateKeyDaysAgo(1);const ye=entries[yk];if(!ye?.reminder)return null;return(
                 <div style={{...S.ib(P.a3),marginTop:4}}><div style={{fontSize:11,color:P.a3,fontWeight:700,marginBottom:3}}>🔔 Yesterday's reminder for today</div><div style={{fontSize:13,color:P.sub}}>{ye.reminder}</div></div>
               );})()}
               {Object.keys(entries).length>0&&<div style={{...S.C(),marginTop:4}}>
@@ -3289,193 +3782,128 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             </div>
           </PinGate>}
 
-          {/* CERTS */}
+          {/* CERTIFICATION COMMAND CENTRE */}
           {tab==="certs"&&<div>
-            <div style={S.h2}>🏅 Certification Roadmap 2026</div>
-
-            {/* CLAUDE CERT URGENT BANNER */}
-            {(()=>{
-              const days=Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24)));
-              const pct=Math.round((1-(days/42))*100);
-              return(
-                <div style={{...gl(P.a5),padding:16,marginBottom:14,borderRadius:14,border:`2px solid ${P.a5}88`,...glow(P.a5)}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-                    <span style={{fontSize:28}}>🚨</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:800,color:P.a5}}>Claude Certified Developer Foundations (CCDV-F)</div>
-                      <div style={{fontSize:12,color:P.muted,marginTop:2}}>Anthropic Official Certification — Deadline August 31, 2026</div>
-                    </div>
-                    <div style={{textAlign:"center",minWidth:60}}>
-                      <div style={{fontSize:32,fontWeight:900,color:days<=14?P.a5:days<=30?P.a3:P.a2,lineHeight:1}}>{days}</div>
-                      <div style={{fontSize:10,color:P.muted}}>days left</div>
-                    </div>
-                  </div>
-                  <div style={{background:"rgba(255,255,255,0.06)",borderRadius:6,height:8,marginBottom:10,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:`linear-gradient(90deg,${P.a5},${P.a3})`,borderRadius:6,transition:"width 0.5s"}}/>
-                  </div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {[["📚 Study Now","claude.ai/docs"],["🔧 API Docs","docs.anthropic.com"],["🎯 Prompt Guide","anthropic.com/research"],["💡 Practice","console.anthropic.com"]].map(([lb,url])=>(
-                      <a key={lb} href={`https://${url}`} target="_blank" rel="noreferrer" style={{...S.btn(P.a5),padding:"6px 12px",fontSize:11,textDecoration:"none",display:"inline-block"}}>{lb}</a>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Cert sub-tabs */}
-            <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-              {[["roadmap","📅 Roadmap"],["claude","🤖 Claude CCDV-F"],["study","📚 Study Coach"]].map(([id,lb])=>(
-                <button key={id} style={S.pill(certTab===id,P.a3)} onClick={()=>setCertTab(id)}>{lb}</button>
-              ))}
+            <div style={S.h2}>🏅 Certification Command Centre</div>
+            <div style={{...S.ib(P.a3),marginBottom:14}}>
+              <div style={{fontSize:13,color:P.a3,fontWeight:800,marginBottom:4}}>Study system first · live updates second</div>
+              <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>Certification knowledge, progress, wrong answers, labs and mock results are stored locally. Official links are provided for exam-version changes. Gemini is optional for explanations; the app does not need an API call to know what to study next.</div>
             </div>
 
-            {/* ROADMAP TAB */}
-            {certTab==="roadmap"&&<div>
-              <div style={{...S.ib(P.a1),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>Your cert stack: CCDV-F → Databricks DEA → Gemini → GCP → AWS → dbt</div>
-                <div style={{fontSize:12,color:P.muted}}>Each cert adds ₹3–10 LPA to market value. CCDV-F is the most urgent — deadline Aug 31.</div>
-              </div>
-              {certList.map((c,i)=>{
-                const days = c.cert.includes("CCDV-F") ? Math.max(0,Math.ceil((new Date("2026-08-31")-new Date())/(1000*60*60*24))) : null;
-                return(
-                  <div key={i} style={{...S.CA(c.color),marginBottom:10,...(c.urgent?glow(c.color):{})}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:6,marginBottom:6}}>
-                      <div style={{flex:1}}>
-                        <span style={{fontWeight:700,fontSize:14,color:c.urgent?c.color:P.text}}>{c.urgent?"🚨 ":""}{c.cert}</span>
-                        {days!==null&&<span style={{marginLeft:8,...S.chip(days<=14?P.a5:days<=30?P.a3:P.a2),fontSize:10}}>{days}d left</span>}
-                      </div>
-                      <span style={S.chip(c.color)}>{c.when}</span>
-                    </div>
-                    <div style={{fontSize:12,color:c.color,marginBottom:6,fontWeight:600}}>{c.status}</div>
-                    <div style={{fontSize:12,color:P.muted,lineHeight:1.55}}>{c.tip}</div>
-                  </div>
-                );
-              })}
-            </div>}
-
-            {/* CLAUDE CCDV-F STUDY GUIDE */}
-            {certTab==="claude"&&<div>
-              <div style={{...S.ib(P.a5),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a5,fontWeight:800,marginBottom:4}}>🚨 Claude CCDV-F — Complete Study Guide</div>
-                <div style={{fontSize:12,color:P.muted}}>Deadline: August 31, 2026. Study 30 min/day. Topics below cover everything tested.</div>
-              </div>
-
-              {[
-                {topic:"1. Claude Models & Capabilities",color:P.a1,items:[
-                  "Claude 3 family: Haiku (fast/cheap), Sonnet (balanced), Opus (most capable)",
-                  "Context windows: Haiku 200K, Sonnet 200K, Opus 200K tokens",
-                  "Multimodal: Claude can process images, PDFs, documents alongside text",
-                  "Claude's constitution: helpful, harmless, honest — the three H's",
-                  "When to use which model: Haiku for simple tasks, Sonnet for most use cases, Opus for complex reasoning",
-                ]},
-                {topic:"2. Anthropic API Fundamentals",color:P.a2,items:[
-                  "API endpoint: POST /api/claude",
-                  "Required headers: x-api-key, anthropic-version, content-type",
-                  "Message structure: role (user/assistant), content (string or array)",
-                  "System prompts: set behaviour, persona, constraints before conversation",
-                  "Max tokens: controls response length (not input length)",
-                  "Temperature: 0=deterministic, 1=creative. Default 1.0",
-                  "Streaming: stream:true for real-time token-by-token output",
-                ]},
-                {topic:"3. Prompt Engineering",color:P.a3,items:[
-                  "Be specific and clear — Claude follows instructions literally",
-                  "System prompt vs user prompt — system sets context, user gives task",
-                  "Chain of thought: ask Claude to 'think step by step' for reasoning tasks",
-                  "Few-shot prompting: provide 2-3 examples before the actual request",
-                  "Role assignment: 'You are an expert in X' improves domain-specific output",
-                  "Output formatting: specify JSON, markdown, bullet points explicitly",
-                  "XML tags: use <instructions>, <context>, <output> for structure",
-                ]},
-                {topic:"4. Tool Use (Function Calling)",color:P.a4,items:[
-                  "Define tools as JSON schema with name, description, input_schema",
-                  "Claude decides when to call tools based on the conversation",
-                  "Tool result must be returned to Claude in next message",
-                  "Multiple tools can be defined — Claude picks the right one",
-                  "Use for: web search, calculators, databases, APIs, code execution",
-                  "Stop reason: 'tool_use' means Claude wants to call a function",
-                ]},
-                {topic:"5. Safety & Responsible AI",color:P.a5,items:[
-                  "Constitutional AI: Claude trained to be helpful, harmless, honest",
-                  "Refusal patterns: Claude may refuse harmful, illegal, or unethical requests",
-                  "Content policy: no CSAM, no weapons of mass destruction, no illegal activity",
-                  "Jailbreaking: attempting to bypass safety is against ToS and will be rejected",
-                  "Privacy: don't send PII unnecessarily; Claude doesn't store conversations",
-                  "Rate limits: understand token/request limits for production systems",
-                ]},
-                {topic:"6. Multi-turn Conversations",color:P.a2,items:[
-                  "Pass full message history in messages array for context continuity",
-                  "Alternating user/assistant turns — must start with user",
-                  "Claude has no memory between separate API calls — you manage history",
-                  "Summarisation strategy: compress old turns to save context window",
-                  "System prompt persists across all turns of a conversation",
-                  "Assistant prefill: pre-fill Claude's response to guide format",
-                ]},
-                {topic:"7. Vision & Document Processing",color:P.a1,items:[
-                  "Send images as base64 or URL in content array",
-                  "Image types: JPEG, PNG, GIF, WebP supported",
-                  "PDF support: send as base64 with media_type application/pdf",
-                  "Vision use cases: document parsing, chart analysis, UI feedback, OCR",
-                  "Max image size: 5MB per image",
-                  "Multiple images: supported in single request",
-                ]},
-                {topic:"8. Production Best Practices",color:P.a3,items:[
-                  "Error handling: handle rate limits (429), server errors (5xx), timeouts",
-                  "Retry logic with exponential backoff for reliability",
-                  "Prompt caching: use cache_control for frequently used system prompts",
-                  "Batch API: for large-scale async processing at 50% cost discount",
-                  "Cost optimisation: use Haiku for simple tasks, reserve Sonnet/Opus for complex",
-                  "Evaluation: test prompts on diverse inputs before production",
-                ]},
-              ].map((section,i)=>(
-                <div key={i} style={{...S.CA(section.color),marginBottom:10}}>
-                  <div style={{fontSize:13,fontWeight:700,color:section.color,marginBottom:10}}>{section.topic}</div>
-                  {section.items.map((item,j,arr)=>(
-                    <div key={j} style={{...S.li(j===arr.length-1),fontSize:12}}>
-                      <span style={{color:section.color,fontWeight:700,flexShrink:0}}>›</span>
-                      <span>{item}</span>
-                    </div>
-                  ))}
+            <div style={{...S.CA(P.a4),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:P.a4}}>🎯 Today's Study Mission</div>
+                  <div style={{fontSize:13,color:P.text,marginTop:5}}>{missionCert?.short||"Certification"} → {missionModule?.title||"Review your weakest readiness area"}</div>
+                  <div style={{fontSize:11,color:P.muted,marginTop:4}}>{missionModule?.topics?.slice(0,5).join(" · ")}</div>
                 </div>
-              ))}
+                <span style={S.chip(P.a4)}>Readiness {missionCert?readiness(missionCert):0}%</span>
+              </div>
+              <div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:10}}>
+                <button style={S.btn(P.a4)} onClick={()=>{setSelectedCertId(missionCert.id);setCertView("study");}}>Start mission →</button>
+                {missionModule?.lab&&<button style={S.pill(false,P.a2)} onClick={()=>{setSelectedCertId(missionCert.id);setCertView("labs");}}>Open lab</button>}
+              </div>
+            </div>
 
-              {/* Study schedule */}
-              <div style={{...S.ib(P.a2),marginTop:4}}>
-                <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:8}}>📅 30-day Study Plan (Start Today!)</div>
-                {[
-                  ["Week 1 (Days 1-7)","Read Anthropic docs: Models, API basics, Messages API. Build a simple chatbot using the API. Test streaming."],
-                  ["Week 2 (Days 8-14)","Study prompt engineering deeply. Practice few-shot, CoT, XML tags. Build a tool-use example. Study vision API."],
-                  ["Week 3 (Days 15-21)","Focus on safety, multi-turn conversations, production practices. Study batch API and caching. Practice exam questions."],
-                  ["Week 4 (Days 22-30)","Full revision of all 8 topics. Take practice tests. Use the Study Coach below for weak areas. Book exam slot."],
-                ].map(([w,t],i,arr)=>(
-                  <div key={i} style={{...S.li(i===arr.length-1),flexDirection:"column",gap:3}}>
-                    <span style={{color:P.a2,fontWeight:700,fontSize:12}}>{w}</span>
-                    <span style={{fontSize:12,color:P.muted}}>{t}</span>
+            <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",flexWrap:"wrap"}}>
+              {[["command","🏆 Command Centre"],["study","📚 Study Plan"],["topics","🧩 Topics"],["questions","📝 Questions"],["wrong","❌ Wrong Answers"],["labs","🧪 Labs"],["mock","🎯 Mock Exam"],["readiness","📈 Readiness"],["future","🚀 Future Certs"]].map(([id,lb])=>
+                <button key={id} style={S.pill(certView===id,P.a3)} onClick={()=>setCertView(id)}>{lb}</button>
+              )}
+            </div>
+
+            {(certView!=="future"&&certView!=="mock")&&<div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto"}}>
+              {activeCerts.map(c=><button key={c.id} style={S.pill(selectedCertId===c.id,c.color)} onClick={()=>setSelectedCertId(c.id)}>{c.short}</button>)}
+            </div>}
+
+            {certView==="command"&&<div>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:14}}>
+                {activeCerts.map(c=>{const s=certState(c.id),done=c.modules.filter(m=>s.modules?.[m.id]).length,r=readiness(c);return(
+                  <div key={c.id} style={{...S.CA(c.color),marginBottom:0}}>
+                    <div style={{fontSize:13,fontWeight:800,color:c.color}}>{c.short}</div>
+                    <div style={{fontSize:10,color:P.muted,marginTop:3}}>{c.provider} · {c.examCode}</div>
+                    <div style={{fontSize:28,fontWeight:900,color:c.color,marginTop:8}}>{r}%</div>
+                    <div style={{fontSize:10,color:P.muted}}>readiness · {done}/{c.modules.length} modules</div>
+                    <div style={{height:7,background:P.bg,borderRadius:6,overflow:"hidden",marginTop:8}}><div style={{width:r+"%",height:"100%",background:c.color}}/></div>
+                    <button style={{...S.pill(false,c.color),marginTop:10}} onClick={()=>{setSelectedCertId(c.id);setCertView("study");}}>Study →</button>
                   </div>
-                ))}
+                );})}
+              </div>
+              <div style={S.C()}>
+                <div style={S.L}>📌 Portfolio rule</div>
+                <div style={{fontSize:12,color:P.sub,lineHeight:1.6}}>Keep no more than 2–3 certifications in intensive preparation at once. The rest can remain in learning/maintenance mode. The centre tracks all active tracks without forcing every certificate into today's workload.</div>
               </div>
             </div>}
 
-            {/* AI STUDY COACH */}
-            {certTab==="study"&&<div>
-              <div style={S.h2}>📚 Claude CCDV-F Study Coach</div>
-              <div style={{...S.ib(P.a4),marginBottom:14}}>
-                <div style={{fontSize:12,color:P.a4,fontWeight:700,marginBottom:3}}>Ask anything about the Claude certification</div>
-                <div style={{fontSize:12,color:P.muted}}>Powered by Claude itself — the best way to learn Claude is to use Claude.</div>
+            {certView==="study"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);const s=certState(c.id);return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}>
+                <div style={{fontSize:15,fontWeight:800,color:c.color}}>{c.name}</div>
+                <div style={{fontSize:11,color:P.muted,marginTop:3}}>{c.provider} · {c.examCode} · {c.voucher}</div>
+                <div style={{fontSize:12,color:P.sub,lineHeight:1.6,marginTop:8}}>{c.summary}</div>
               </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                {["Explain tool use with a code example","What is the difference between system prompt and user prompt?","How does prompt caching work and when should I use it?","What are Claude's safety guidelines I need to know for the exam?","Explain multi-turn conversation structure with an example","What is constitutional AI and how does it affect Claude's behaviour?","How do I send an image to Claude in the API?","What are the token limits for each Claude model?"].map(q=>(
-                  <button key={q} onClick={()=>setCertStudyQ(q)} style={{background:P.card3,border:`1px solid ${P.border}`,borderRadius:7,padding:"6px 11px",color:P.sub,fontSize:11,cursor:"pointer",textAlign:"left"}}>{q}</button>
-                ))}
+              {c.modules.map((m,i)=><div key={m.id} style={{...S.C(),marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <div style={{fontSize:13,fontWeight:800,color:c.color}}>{i+1}. {m.title}</div>
+                  <button style={S.pill(!!s.modules?.[m.id],c.color)} onClick={()=>toggleCertModule(c.id,m.id)}>{s.modules?.[m.id]?"✓ Completed":"Mark complete"}</button>
+                </div>
+                <div style={{fontSize:10,color:P.muted,marginTop:4}}>{m.weight} · {m.topics.join(" · ")}</div>
+                <div style={{...S.ib(c.color),marginTop:8,marginBottom:0}}>
+                  <div style={{fontSize:11,fontWeight:700,color:c.color}}>🧪 Hands-on checkpoint</div>
+                  <div style={{fontSize:11,color:P.muted,lineHeight:1.5}}>{m.lab}</div>
+                </div>
+              </div>)}
+              <div style={{...S.CA(P.a2),marginTop:12}}>
+                <div style={{fontSize:12,fontWeight:800,color:P.a2,marginBottom:7}}>🗓 Exam planning</div>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:8}}>
+                  <div><div style={S.L}>Exam date (optional)</div><input type="date" style={S.inp} value={s.examDate||""} onChange={e=>setCertExamDate(c.id,e.target.value)}/></div>
+                  <div><div style={S.L}>Official guide</div><a href={c.guide} target="_blank" rel="noreferrer" style={{...S.pill(false,c.color),display:"inline-flex",textDecoration:"none"}}>Open official guide ↗</a></div>
+                </div>
               </div>
-              <textarea style={{...S.ta,minHeight:70,marginBottom:10}} placeholder="Ask any question about Claude, the API, prompt engineering, tool use, safety..." value={certStudyQ} onChange={e=>setCertStudyQ(e.target.value)}/>
-              <button style={{...S.btn(certStudyLoad?P.muted:P.a5),opacity:certStudyLoad?0.7:1,width:"100%",marginBottom:14,...(certStudyLoad?{}:glow(P.a5))}} onClick={askCertStudy} disabled={certStudyLoad}>
-                {certStudyLoad?"⏳ Thinking...":"🤖 Ask Claude (your study coach)"}
-              </button>
-              {certStudyA&&<div style={{...S.CA(P.a4)}}><div style={{fontSize:11,color:P.a4,fontWeight:700,marginBottom:10}}>Study Coach says:</div><div style={{fontSize:13,color:P.sub,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{certStudyA}</div></div>}
+            </div>})()}
+
+            {certView==="topics"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);const s=certState(c.id);return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}><div style={{fontSize:13,fontWeight:800,color:c.color}}>🧩 {c.name} — topic map</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Study the modules in order, then use Readiness to record mastery.</div></div>
+              {c.modules.map((m,i)=><div key={m.id} style={{...S.CA(s.modules?.[m.id]?P.a2:c.color),marginBottom:9}}>
+                <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12,fontWeight:800,color:P.text}}>{i+1}. {m.title}</span><span style={S.chip(s.modules?.[m.id]?P.a2:c.color)}>{s.modules?.[m.id]?"DONE":"NEXT"}</span></div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:8}}>{m.topics.map(t=><span key={t} style={S.chip(c.color)}>{t}</span>)}</div>
+              </div>)}
+            </div>})()}
+
+            {certView==="questions"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}><div style={{fontSize:13,fontWeight:800,color:c.color}}>📝 Offline Question Bank — {c.short}</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Practice is embedded in the app, so it works when Gemini/API quota is unavailable.</div></div>
+              {c.questions.map((q,i)=><div key={i} style={S.C()}>
+                <div style={{fontSize:13,fontWeight:700,color:P.text,lineHeight:1.5}}>{i+1}. {q.q}</div>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:6,marginTop:9}}>
+                  {q.o.map((opt,j)=><button key={j} onClick={()=>{if(j!==q.a)addWrongAnswer({certId:c.id,q:q.q,selected:opt,correct:q.o[q.a],explanation:q.e});}} style={{background:j===q.a?P.a2+"12":P.card3,border:"1px solid "+(j===q.a?P.a2:P.border),borderRadius:8,padding:"8px 10px",color:j===q.a?P.a2:P.sub,textAlign:"left",cursor:"pointer",fontSize:11}}>{String.fromCharCode(65+j)}. {opt}{j===q.a?" ✓":""}</button>)}
+                </div>
+                <div style={{fontSize:10,color:P.muted,marginTop:7}}>Answer: {q.o[q.a]} · {q.e}</div>
+              </div>)}
+            </div>})()}
+
+            {certView==="wrong"&&<div>
+              <div style={{...S.ib(P.a5),marginBottom:12}}><div style={{fontSize:12,fontWeight:800,color:P.a5}}>❌ Wrong Answer Bank</div><div style={{fontSize:11,color:P.muted}}>Incorrect answers are saved locally so revision targets actual weak points.</div></div>
+              {certWrong.length===0?<div style={S.C()}><div style={{fontSize:13,color:P.muted}}>No wrong answers yet. Start a question set or mock.</div></div>:certWrong.map((w,i)=><div key={w.id||i} style={{...S.CA(P.a5),marginBottom:8}}><div style={{fontSize:12,fontWeight:800,color:P.text}}>{w.q}</div><div style={{fontSize:11,color:P.a5,marginTop:5}}>Your answer: {w.selected}</div><div style={{fontSize:11,color:P.a2,marginTop:3}}>Correct: {w.correct}</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>{w.explanation}</div></div>)}
+            </div>}
+
+            {certView==="labs"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);return <div>
+              <div style={{...S.CA(P.a2),marginBottom:12}}><div style={{fontSize:13,fontWeight:800,color:P.a2}}>🧪 Hands-on Lab Plan — {c.short}</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Do the lab, record the result in your own notes, then mark the module complete. Hands-on readiness stays separate from knowledge.</div></div>
+              {c.modules.map((m,i)=><div key={m.id} style={S.C()}><div style={{fontSize:13,fontWeight:800,color:c.color}}>{i+1}. {m.title}</div><div style={{fontSize:11,color:P.sub,lineHeight:1.6,marginTop:6}}>{m.lab}</div><button style={{...S.pill(false,P.a2),marginTop:8}} onClick={()=>toggleCertModule(c.id,m.id)}>✓ Mark module complete after lab</button></div>)}
+            </div>})()}
+
+            {certView==="mock"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);if(!mockState)return <div style={S.C()}><div style={{fontSize:13,color:P.muted,marginBottom:10}}>Start a 5-question mock for {c?.short||"this certification"}.</div><button style={S.btn(c?.color||P.a3)} onClick={()=>startMock(c)}>Start mock exam</button></div>;if(mockScore!==null)return <div style={{...S.CA(mockScore>=80?P.a2:P.a5)}}><div style={{fontSize:28,fontWeight:900,color:mockScore>=80?P.a2:P.a5}}>{mockScore}%</div><div style={{fontSize:13,color:P.text,marginTop:4}}>Mock complete · {mockState.answers.filter(a=>a.correct).length}/{mockState.questions.length} correct</div><button style={{...S.pill(false,P.a3),marginTop:10}} onClick={()=>startMock(c)}>Retake mock</button></div>;const q=mockState.questions[mockState.index];return <div style={S.CA(c.color)}><div style={{fontSize:11,color:P.muted}}>Question {mockState.index+1} of {mockState.questions.length}</div><div style={{fontSize:14,fontWeight:800,color:P.text,lineHeight:1.5,margin:"8px 0 12px"}}>{q.q}</div>{q.o.map((opt,j)=><button key={j} onClick={()=>answerMock(j)} style={{display:"block",width:"100%",textAlign:"left",background:P.card3,border:"1px solid "+P.border,borderRadius:8,padding:"9px 11px",color:P.sub,marginBottom:6,cursor:"pointer"}}>{String.fromCharCode(65+j)}. {opt}</button>)}</div>})()}
+
+            {certView==="readiness"&&(()=>{const c=certificationTracks.find(x=>x.id===selectedCertId);const s=certState(c.id);const dims=[["knowledge","📖 Knowledge"],["handsOn","🧪 Hands-on"],["recall","🧠 Recall"],["application","🏗️ Application"],["examTechnique","🎯 Exam Technique"]];return <div>
+              <div style={{...S.CA(c.color),marginBottom:12}}><div style={{fontSize:14,fontWeight:800,color:c.color}}>📈 {c.name} — readiness engine</div><div style={{fontSize:11,color:P.muted,marginTop:4}}>Readiness combines five self-assessed dimensions with module completion.</div><div style={{fontSize:38,fontWeight:900,color:c.color,marginTop:8}}>{readiness(c)}%</div></div>
+              {dims.map(([k,label])=><div key={k} style={S.C()}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,fontWeight:700,color:P.text}}>{label}</span><span style={S.chip(c.color)}>{s.scores?.[k]||0}%</span></div><input type="range" min="0" max="100" step="5" value={s.scores?.[k]||0} onChange={e=>setCertScore(c.id,k,e.target.value)} style={{width:"100%",marginTop:8,accentColor:c.color}}/></div>)}
+              <div style={S.CA(P.a1)}><div style={{fontSize:12,fontWeight:800,color:P.a1}}>Next action</div><div style={{fontSize:12,color:P.sub,marginTop:5}}>{c.modules.find(m=>!s.modules?.[m.id])?.title||"All modules complete"} → then take a 5-question mock and record weak areas.</div></div>
+            </div>})()}
+
+            {certView==="future"&&<div>
+              <div style={{...S.ib(P.a4),marginBottom:12}}><div style={{fontSize:12,color:P.a4,fontWeight:800}}>🚀 Future certification queue</div><div style={{fontSize:11,color:P.muted}}>Future certificates stay separate from active preparation.</div></div>
+              {futureCertifications.map(c=><div key={c.id} style={{...S.CA(P.a4),marginBottom:10}}><div style={{fontSize:13,fontWeight:800,color:P.text}}>{c.name}</div><div style={{fontSize:10,color:P.a4,marginTop:3}}>{c.code}</div><div style={{fontSize:11,color:P.muted,lineHeight:1.55,marginTop:6}}>{c.note}</div><a href={c.url} target="_blank" rel="noreferrer" style={{...S.pill(false,P.a4),display:"inline-flex",textDecoration:"none",marginTop:8}}>Official page ↗</a></div>)}
             </div>}
           </div>}
 
-                    {tab==="govt"&&<div>
+          {tab==="govt"&&<div>
             <div style={S.h2}>🏛️ Government Tech Jobs 2026</div>
             <div style={{...S.ib(P.a2),marginBottom:14}}>
               <div style={{fontSize:12,color:P.a2,fontWeight:700,marginBottom:3}}>Your eligibility: B.E ECE + M.Tech DS + 4.3yr exp + PhD SSN ongoing = strong govt profile</div>
@@ -3500,23 +3928,22 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             <div style={S.h2}>🫂 Advice Buddy — Your Personal Life Coach</div>
             <div style={{...S.ib(P.a4),marginBottom:14}}>
               <div style={{fontSize:13,color:P.a4,fontWeight:800,marginBottom:4}}>Hi Thamizh 👋 I know everything about your life right now.</div>
-              <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>TCS work · PhD at SNU · CCDV-F cert (17 days!) · UGC NET Dec · Health · Job switch · ISRO deadline Aug 17. Ask me anything — I'll give you honest, warm, practical advice.</div>
+              <div style={{fontSize:12,color:P.muted,lineHeight:1.6}}>TCS work · PhD at SNU · UGC NET Dec · Health · Job switch. Deadline status is calculated from the current IST date. Ask me anything — I'll give you honest, warm, practical advice.</div>
             </div>
 
             {/* Situation summary */}
             {(()=>{
               const today_=todayKey();
-              const certDeadline="2026-08-31";
-              const days=Math.max(0,Math.ceil((new Date(certDeadline)-new Date(today_))/(1000*60*60*24)));
+              const certStatus={label:"Registered · exam date not scheduled",expired:false,days:999};
               const odPending=allPending.filter(p=>p.status!=="Done"&&p.due&&p.due<today_).length;
               const odPhd=phdTasks.filter(t=>t.status!=="Done"&&t.due&&t.due<today_).length;
               return(
                 <div style={{...S.CA(P.a1),marginBottom:14}}>
-                  <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:10}}>📊 Your Current Situation (August 14, 2026)</div>
+                  <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:10}}>📊 Your Current Situation ({fmtDate(today_, {day:"numeric",month:"long",year:"numeric"})})</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     {[
-                      {l:"CCDV-F Deadline",v:`${days} days`,c:days<=14?P.a5:P.a3},
-                      {l:"ISRO Deadline",v:"Aug 17 ⚠️",c:P.a5},
+                      {l:"Claude Architect status",v:certStatus.label,c:certStatus.expired?P.a5:certStatus.days<=14?P.a5:P.a3},
+                      {l:"ISRO Opportunity",v:"Historical · verify new notices",c:P.muted},
                       {l:"Overdue Follow-ups",v:odPending,c:odPending>0?P.a5:P.a2},
                       {l:"Overdue PhD Tasks",v:odPhd,c:odPhd>0?P.a5:P.a2},
                       {l:"PhD Meetings Logged",v:phdMeetings.length,c:phdMeetings.length>0?P.a2:P.a3},
@@ -3538,8 +3965,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
                 {[
                   "I'm overwhelmed with TCS + PhD + certs + UGC NET. Help me prioritise today.",
-                  "Should I apply to ISRO Scientist SC before Aug 17 or focus on CCDV-F cert?",
-                  "How do I study for CCDV-F cert in just 17 days while working full time at TCS?",
+                  "Should I apply to Current government technical jobs and upcoming exam deadlines or focus on Claude Architect cert?",
+                  "How should I prepare for my six active certifications in the 20-day sprint?",
                   "I had a bad day and don't feel like doing anything. What should I do?",
                   "How do I manage my health (Bipolar, Diabetes) while doing a PhD part-time?",
                   "I haven't logged my medicines for 2 days. I'm slipping. What should I do?",
@@ -3554,7 +3981,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 ))}
               </div>
               <textarea style={{...S.ta,minHeight:80,marginBottom:10}}
-                placeholder={"Tell me what's on your mind...\n\nI know you're managing TCS + SNU PhD + CCDV-F cert (17 days!) + Databricks + UGC NET + ISRO application + health + job switch. What do you need help thinking through right now?"}
+                placeholder={"Tell me what's on your mind...\n\nI know you're managing TCS + SNU PhD + Claude Architect cert (current sprint) + Databricks + UGC NET + ISRO application + health + job switch. What do you need help thinking through right now?"}
                 value={adviceQ} onChange={e=>setAdviceQ(e.target.value)}/>
               <button style={{...S.btn(adviceLoad?P.muted:P.a4),opacity:adviceLoad?0.7:1,width:"100%",...(adviceLoad?{}:{boxShadow:`0 4px 20px ${P.a4}44`})}}
                 onClick={askAdviceBuddy} disabled={adviceLoad}>
@@ -3575,7 +4002,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                 {title:"⚡ The 2-Hour Evening Block",desc:"7-9 PM is your power window. Mon/Wed/Fri = Python or UGC NET. Tue/Thu = Databricks or GenAI. Fri = PhD writing. Sat morning = deep work. This 2-hour commitment = 60 hrs/month of compounding progress."},
                 {title:"🎓 PhD — 1 task per day minimum",desc:"Even on TCS heavy days, do ONE PhD task: read 1 paper abstract, write 2 sentences in your chapter draft, or log a supervisor note. Consistency beats intensity for part-time PhD."},
                 {title:"📋 UGC NET — 20 MCQs every evening",desc:"20 MCQs takes 20 minutes. Do it before dinner every day. Sunday = 1 full mock test (2 hours). This rhythm over 4 months = Dec 2026 cleared. SC cutoff is just 56% — you can do this."},
-                {title:"🚨 CCDV-F RIGHT NOW",desc:"30 minutes every morning before TCS work. Start with API fundamentals today. 17 days × 30 min = 8.5 hours of study. That's enough to clear a developer foundations cert. Read: docs.anthropic.com every morning."},
+                {title:"🚨 20-DAY CERTIFICATION SPRINT",desc:"30 minutes every morning before TCS work. Start with API fundamentals today. 17 days × 30 min = 8.5 hours of study. That's enough to clear a developer foundations cert. Read: docs.anthropic.com every morning."},
                 {title:"❤️ Health = Priority 0",desc:"Bipolar I means some days you'll have low energy. Never feel guilty on those days. A bad day of doing nothing is better than burning out for a week. Log your mood and meds daily — data helps you see patterns."},
                 {title:"🔄 Weekly Reset (Sunday 3-5 PM)",desc:"Review everything: what got done, what slipped, what to replan. Update PhD tasks, office follow-ups, cert progress. 2 hours of planning saves 10 hours of confusion during the week."},
               ].map((item,i,arr)=>(
@@ -3588,12 +4015,12 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
 
             {/* Weekly schedule for everything */}
             <div style={S.C()}>
-              <div style={S.L}>📅 This Week's Balanced Schedule (Aug 14–17)</div>
+              <div style={S.L}>📅 Historical Balanced Schedule (Aug 14–17, 2026)</div>
               {[
-                {day:"Fri Aug 14 (Today)",tasks:["7:30 AM: 30 min CCDV-F — API fundamentals + tool use","9 AM: TCS work (check INCs, DataStage tasks)","7-8 PM: Databricks DEA course — 1 module","8-9 PM: UGC NET — 20 DBMS MCQs","9:30 PM: Log today in journal + tomorrow plan"]},
-                {day:"Sat Aug 15 (Weekend Deep Work)",tasks:["8 AM: 1 hour CCDV-F — Prompt engineering + safety topics","9 AM-12 PM: PhD — Read 2 papers on multimodal wearable AI + notes","2-4 PM: Databricks DEA — 2 modules (catch up)","4 PM: Check ISRO application status + submit if not done"]},
+                {day:"Fri Sep 18",tasks:["7:30 AM: 30 min Claude Architect — API fundamentals + tool use","9 AM: TCS work (check INCs, DataStage tasks)","7-8 PM: Databricks DEA course — 1 module","8-9 PM: UGC NET — 20 DBMS MCQs","9:30 PM: Log today in journal + tomorrow plan"]},
+                {day:"Sat Sep 19 (Weekend Deep Work)",tasks:["8 AM: 1 hour Claude Architect — Prompt engineering + safety topics","9 AM-12 PM: PhD — Read 2 papers on multimodal wearable AI + notes","2-4 PM: Databricks DEA — 2 modules (catch up)","4 PM: Check ISRO application status + submit if not done"]},
                 {day:"Sun Aug 16 (UGC NET + Review)",tasks:["9-11 AM: UGC NET full timed mock — Paper 1 + Paper 2","11-12 PM: Mock analysis — every wrong answer reviewed","3-4 PM: PhD — Log any research ideas, update task list","4-5 PM: Weekly review — update office follow-ups, PhD tasks, cert progress"]},
-                {day:"Mon Aug 17 (ISRO DEADLINE)",tasks:["ISRO Scientist SC final deadline — submit before midnight if applying","7:30 AM: 30 min CCDV-F — Multi-turn conversations + vision API","Evening: UGC NET — 20 OS MCQs (scheduling algorithms)"]},
+                {day:"Mon Sep 21 (current government review)",tasks:["Review current ISRO opportunities and apply only to an open official notification.","7:30 AM: 30 min Claude Architect — Multi-turn conversations + vision API","Evening: UGC NET — 20 OS MCQs (scheduling algorithms)"]},
               ].map((d,i)=>(
                 <div key={i} style={{marginBottom:12}}>
                   <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:6}}>{d.day}</div>
@@ -3691,7 +4118,7 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       "CERTIFICATIONS IN PROGRESS (2026):",
                       "• Databricks Certified Data Engineer Associate (exam target: Sep–Oct 2026)",
                       "• Google Gemini Enterprise Developer — TCS Talent Pool (2026)",
-                      "• GCP Professional Data Engineer (target: Nov 2026)",
+                      "• Databricks Generative AI Engineer — active learning track",
                       "",
                       "ACADEMIC/RESEARCH:",
                       "• PhD research area: Generative AI, Large Language Models, Retrieval-Augmented Generation (RAG)",
@@ -3711,8 +4138,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                       "10. Generate the complete premium resume now:"
                     ].filter(Boolean).join("\n");
                     try {
-                      const data = await callClaude({model:"claude-sonnet-4-6",max_tokens:2500,messages:[{role:"user",content:prompt}]});
-                      setRResult(readClaudeText(data) || "Error generating. Please try again.");
+                      const data = await callAI({model:"gemini-3.8-flash",max_tokens:2500,messages:[{role:"user",content:prompt}]});
+                      setRResult(readAIText(data) || "Error generating. Please try again.");
                     } catch(err){ setRResult(err.message || "Connection error. Please try again."); }
                     setRLoad(false);
                   }}
@@ -3787,8 +4214,8 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
                     ];
                     const prompt = lines.join("\n");
                     try {
-                      const data = await callClaude({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt}]});
-                      const raw = readClaudeText(data) || "{}";
+                      const data = await callAI({model:"gemini-3.8-flash",max_tokens:1500,messages:[{role:"user",content:prompt}]});
+                      const raw = readAIText(data) || "{}";
                       const s = raw.indexOf("{"); const e2 = raw.lastIndexOf("}");
                       const clean = s>=0&&e2>=0 ? raw.slice(s,e2+1) : "{}";
                       try{ setAtsResult(JSON.parse(clean)); }
@@ -3895,12 +4322,12 @@ Give warm, honest, practical advice. Acknowledge the challenges of managing ever
             {resumeTab==="memory"&&<div>
               <div style={S.h2}>☁️ Data Storage & Cross-Device Guide</div>
               <div style={{...S.ib(P.a5),marginBottom:14}}>
-                <div style={{fontSize:13,color:P.a5,fontWeight:700,marginBottom:4}}>⚠️ Data does NOT sync across devices automatically</div>
-                <div style={{fontSize:12,color:P.muted}}>Journal, health log, and office tracker are stored locally on this device only. A different phone or laptop will show empty data.</div>
+                <div style={{fontSize:13,color:P.a2,fontWeight:700,marginBottom:4}}>🧠 Long-term app memory is now enabled</div>
+                <div style={{fontSize:12,color:P.muted}}>All important tab data is stored locally in its original store and mirrored into a unified <b style={{color:P.sub}}>life-memory-v2</b> snapshot. It survives tab navigation, reloads, and closing/reopening the app on the same browser/device.</div>
               </div>
               {[
-                {title:"📱 What is stored where",color:P.a1,items:["Journal entries → localStorage (persists across browser sessions on same device)","Health daily log → localStorage (same device only)","Office tracker → localStorage (same device only)","PIN for Health & Journal → sessionStorage (clears when tab closes — by design for security)","Resume & ATS results → in-memory only (generate fresh each time, not persisted)"]},
-                {title:"🔄 How to use on multiple devices",color:P.a2,items:["Option 1 (Recommended): Pick ONE primary device for daily logging (phone). Use any device for career/skills/resume tabs.","Option 2: Deploy to Vercel (free) + add Supabase database (free 500MB) for full cross-device sync. Ask Claude to build this.","Option 3: Export data periodically — copy Journal text to Google Keep or WhatsApp Saved Messages as backup.","Option 4: Use this app in Claude.ai on each device — storage persists per device in the artifact context."]},
+                {title:"📱 What is stored where",color:P.a1,items:["Journal entries → localStorage (persists across browser sessions on same device)","Health daily log → localStorage (same device only)","Office tracker → localStorage (same device only)","Health & Journal content → localStorage + unified life-memory-v2 backup (content survives closing/reopening the app)","Health & Journal PIN → sessionStorage only, so the PIN is re-entered after a browser-tab session for security","Resume & ATS generated results → still session-only unless explicitly saved; core user data is persisted"]},
+                {title:"🧠 What all-tab memory now covers",color:P.a2,items:["Journal: entries + daily plans","Health: daily log history","Office: tickets, follow-ups, ideas and notes","PhD: supervisor meetings + research tasks","Certifications: module progress + wrong-answer bank","Learning/Career: progress + application status + shared pending work","AI research conversations: PhD/SNU/Health/Coach questions and answers are mirrored locally","UI context: important research/learning sub-tabs are restored after reopening"]},
                 {title:"🚀 Deploy as standalone app (step by step)",color:P.a3,items:["Step 1: Download life-command-centre.jsx from this chat","Step 2: npm create vite@latest mylife -- --template react","Step 3: Replace src/App.jsx with the downloaded file","Step 4: npm install && npm run dev — test locally","Step 5: Push to GitHub, connect to Vercel.com (free), auto-deploys","Step 6: Your Vercel URL works on any device, same app everywhere","Step 7 (sync): supabase.com free tier, create tables, ask Claude to add Supabase API calls"]},
                 {title:"🔁 How updates from Claude work",color:P.a4,items:["Describe changes to Claude here, get updated .jsx file","Replace App.jsx on Vercel, auto-redeploys in 30 seconds","Your stored data (journal/health/office) is untouched — lives in storage, not the code","All chat history here is preserved — full context for every future update","PIN resets each browser session: correct security behaviour — your data is always safe"]},
               ].map((s,i)=>(

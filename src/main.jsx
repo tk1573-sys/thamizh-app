@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.jsx'
 import './career-coach.js'
-import './career-hub.js'
 
 // Register the PWA service worker so the installed mobile app can cache the
 // application shell and receive updated deployments automatically.

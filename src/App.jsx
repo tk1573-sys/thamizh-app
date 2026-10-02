@@ -936,7 +936,7 @@ export default function App() {
   const buildMemorySnapshot = useCallback(() => ({
     version: 3, updatedAt: Date.now(),
     ui:{activeTab:tab,phdTab,snuTab,resumeTab,learnTab,ugcView},
-    journal: {entries, dailyPlans}, health: {log:healthLog}, office: {data:offData},
+    journal:{entries,dailyPlans}, health:{log:healthLog}, office:{data:offData},
     learning:{progress:learnProgress}, phd:{meetings:phdMeetings,tasks:phdTasks},
     certs:{progress:certProgress,wrong:certWrong}, career:{appStatus},
     shared:{pending:allPending},

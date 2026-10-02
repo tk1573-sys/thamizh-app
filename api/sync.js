@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const found = await get(pathname, {
-        access:"private",
+        access: "private",
         useCache: false,
         storeId,
       });
@@ -44,8 +44,8 @@ export default async function handler(req, res) {
       });
 
       await put(pathname, payload, {
-        access:"private",
-        allowOverwrite:true,
+        access: "private",
+        allowOverwrite: true,
         contentType: "application/json",
         storeId,
       });

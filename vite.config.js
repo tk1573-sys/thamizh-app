@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: "Thamizh's Life Command Centre",
         short_name: 'LifeCMD',
-        description: 'PhD · TCS · CCDV-F · UGC NET · Govt Jobs · Health · Career Command Centre',
+        description: 'PhD · TCS · Certifications · UGC NET · Govt Jobs · Health · Career Command Centre',
 
         theme_color: '#0D1117',
         background_color: '#0D1117',
@@ -72,20 +72,8 @@ export default defineConfig({
         globPatterns: [
           '**/*.{js,css,html,ico,png,svg}'
         ],
-
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\.anthropic\.com\/.*/i,
-            handler: 'NetworkOnly',
-            options: {
-              backgroundSync: {
-                name: 'anthropic-api-queue',
-                options: {
-                  maxRetentionTime: 24 * 60
-                }
-              }
-            }
-          }
+        navigateFallbackDenylist: [
+          /^\/api(?:\/|$)/
         ]
       }
     })

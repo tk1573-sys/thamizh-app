@@ -2,10 +2,10 @@ import fs from "node:fs";
 import process from "node:process";
 
 const app = fs.readFileSync("src/App.jsx", "utf8");
+const coach = fs.readFileSync("src/career-coach.js", "utf8");
 const sync = fs.readFileSync("api/sync.js", "utf8");
 const vite = fs.readFileSync("vite.config.js", "utf8");
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const careerHub = fs.readFileSync("src/career-hub.js", "utf8");
 const index = fs.readFileSync("index.html", "utf8");
 const main = fs.readFileSync("src/main.jsx", "utf8");
 
@@ -32,6 +32,28 @@ const aiSystems = [...app.matchAll(/system:`([\\s\\S]*?)`,messages:/g)].map(m =>
 const privateHealthLeakTerms = ["Bipolar I", "Type 2 Diabetes", "140kg", "FBS 197", "HbA1c", "Dyslipidemia", "Glycomet GP contains"];
 const aiPrivateHealthHits = privateHealthLeakTerms.filter(term => aiSystems.some(s => s.includes(term)));
 
+const hasAll = (source, terms) => terms.every(term => source.includes(term));
+const memoryMirror = hasAll(app, [
+  "life-memory-v2",
+  "memoryHydrated",
+  "buildMemorySnapshot",
+  "journal:{entries,dailyPlans}",
+  "health:{log:healthLog}",
+  "office:{data:offData}"
+]) || hasAll(app, [
+  "life-memory-v2",
+  "memoryHydrated",
+  "buildMemorySnapshot",
+  "journal:{entries, dailyPlans}",
+  "health:{log:healthLog}",
+  "office:{data:offData}"
+]);
+
+const syncApiOk = /from\s+["']@vercel\/blob["']/.test(sync)
+  && /access\s*:\s*["']private["']/.test(sync)
+  && /allowOverwrite\s*:\s*true/.test(sync)
+  && /storeId/.test(sync);
+
 const checks = [
   ["V — all 18 app tabs render", missingTabs.length === 0, missingTabs],
   ["V — all 18 nav buttons map to rendered tabs", missingNav.length === 0, missingNav],
@@ -46,8 +68,8 @@ const checks = [
   ["R — production build script runs smoke tests then Vite", typeof pkg.scripts?.build === "string" && pkg.scripts.build.includes("vite build") && pkg.scripts.build.includes("npm run test"), pkg.scripts?.build],
   ["R — mobile viewport hardened", index.includes("viewport-fit=cover") && index.includes("overflow-x:hidden"), "mobile viewport settings missing"],
   ["R — PWA service worker registered", main.includes("virtual:pwa-register") && main.includes("registerSW"), "PWA registration missing"],
-  ["R — mobile career hub included", main.includes("career-hub.js") && fs.existsSync("src/career-hub.js"), "career hub not loaded"],
-  ["R — certification/job links are present", careerHub.includes("AWS Certified Data Engineer") && careerHub.includes("SnowPro Core") && careerHub.includes("tnpsc.gov.in") && careerHub.includes("upsc.gov.in"), "career hub data missing"],
+  ["R — mobile career coach included", main.includes("./career-coach.js") && fs.existsSync("src/career-coach.js"), "career coach not loaded"],
+  ["R — certification/job links are present", hasAll(coach, ["AWS Certified Data Engineer", "SnowPro Core", "tnpsc.gov.in", "upsc.gov.in"]), "career coach data missing"],
   ["R — current UGC guidance does not invent a registration date", !app.includes("registration window typically opens"), "stale UGC window claim"],
   ["S — obvious stale live-job prompts removed", staleHits.length === 0, staleHits],
   ["S — private medical details are not embedded in AI system prompts", aiPrivateHealthHits.length === 0, aiPrivateHealthHits],
@@ -57,11 +79,11 @@ const checks = [
   ["C — certification progress and wrong-answer persistence wired", app.includes('"cert-progress"') && app.includes('"cert-wrong"') && app.includes("saveCertProgress"), "missing certification persistence"],
   ["C — certification system works without Gemini", app.includes("Offline Question Bank") && app.includes("Today's Study Mission"), "missing offline study path"],
   ["C — unified long-term memory exists", app.includes('"life-memory-v2"') && app.includes("memoryHydrated"), "missing unified memory store"],
-  ["C — Office/Health/Journal mirror into unified memory", app.includes('office: {data:offData}') && app.includes('health: {log:healthLog}') && app.includes('journal: {entries, dailyPlans}'), "missing durable tab mirrors"],
+  ["C — Office/Health/Journal mirror into unified memory", memoryMirror, "missing durable tab mirrors"],
   ["C — PhD research hub is canonical and shared with SNU", app.includes("const phdResearchHub = {") && app.includes("phdResearchHub.snuScope") && app.includes("Overall PhD → SNU Research Map"), "missing PhD/SNU research linkage"],
   ["C — SNU advisor uses canonical PhD research context", app.includes("OVERALL PHD RESEARCH: ${phdResearchHub.workingTitle}") && app.includes("PROBLEM STATEMENTS: ${phdResearchHub.problemStatements.join"), "SNU AI context is disconnected from canonical research hub"],
   ["C — encrypted cross-device sync client exists", app.includes("encryptSyncSnapshot") && app.includes("decryptSyncSnapshot") && app.includes("/api/sync?id="), "missing encrypted cloud sync client"],
-  ["C — encrypted sync API exists", sync.includes("from \"@vercel/blob\"") && sync.includes('access:"private"') && sync.includes("allowOverwrite:true") && sync.includes("storeId"), "missing private Vercel Blob sync API"]
+  ["C — encrypted sync API exists", syncApiOk, "missing private Vercel Blob sync API"]
 ];
 
 let failed = 0;

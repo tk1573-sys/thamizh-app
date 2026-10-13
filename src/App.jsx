@@ -2103,6 +2103,45 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
               <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>Your profile: 4.3yr TCS DE · SQL/DataStage/Teradata expert · M.Tech DS · PhD SSN GenAI started · SC category</div>
               <div style={{fontSize:12,color:P.muted}}>6 viable career paths. AI-DE has highest ROI. Senior ETL available immediately.</div>
             </div>
+
+            {/* 60-DAY JOB SEARCH SPRINT */}
+            <div style={{...S.CA(P.a2),marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap",marginBottom:8}}>
+                <div>
+                  <div style={{fontSize:16,fontWeight:800,color:P.a2}}>🎯 60-Day Job Search Sprint</div>
+                  <div style={{fontSize:12,color:P.sub,marginTop:4}}>Target: offer above ₹7.5 LPA · Chennai first, India-wide remote/hybrid roles also considered</div>
+                </div>
+                <span style={S.chip(P.a3)}>Notice period</span>
+              </div>
+              <div style={{...S.ib(P.a3),marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:P.a3}}>Current benchmark: CIT Assistant Professor offer — ₹60,000/month (₹7.2 LPA annualised)</div>
+                <div style={{fontSize:11,color:P.muted,marginTop:4}}>A new offer must exceed ₹7.5 LPA fixed/clearly defined annual compensation. Compare workload, probation, benefits, commute and PhD compatibility before deciding.</div>
+              </div>
+              <div style={{fontSize:13,fontWeight:700,color:P.text,marginBottom:8}}>Priority job channels — verify each vacancy and closing date</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,marginBottom:12}}>
+                {[
+                  {title:"💻 IT / Data Engineering",detail:"Data Engineer, Senior ETL, SQL/Teradata, Analytics Engineer, AI Data Engineer",url:"https://www.linkedin.com/jobs/"},
+                  {title:"🎓 Lecturer / Assistant Professor",detail:"CSE, IT, Data Science, AI/ML; prioritise published pay above ₹7.5 LPA",url:"https://www.naukri.com/assistant-professor-jobs-in-chennai"},
+                  {title:"🏛️ Tamil Nadu Government",detail:"Check eligibility, official notification, age/reservation rules and deadlines",url:"https://www.tnpsc.gov.in/"},
+                  {title:"🇮🇳 Central Government / Research",detail:"Scientist/Engineer, technical, research and eligible academic posts",url:"https://www.drdo.gov.in/drdo/offerings/vacancies/"},
+                  {title:"🚀 ISRO Careers",detail:"Review current openings and exact discipline/degree criteria",url:"https://www.isro.gov.in/Careers.html"},
+                  {title:"📋 TNPSC Apply Portal",detail:"Current notifications and application status; do not assume every post meets the salary target",url:"https://apply.tnpscexams.in/notification"}
+                ].map((j,i)=><a key={i} href={j.url} target="_blank" rel="noreferrer" style={{display:"block",textDecoration:"none",background:P.card2,border:`1px solid ${P.border}`,borderRadius:10,padding:12}}>
+                  <div style={{fontSize:12,fontWeight:800,color:P.a1,marginBottom:5}}>{j.title} ↗</div>
+                  <div style={{fontSize:11,lineHeight:1.5,color:P.sub}}>{j.detail}</div>
+                </a>)}
+              </div>
+              <div style={{fontSize:13,fontWeight:700,color:P.text,marginBottom:8}}>Weekly execution targets</div>
+              {[
+                "Week 1: Prepare two ATS resumes — Data Engineering/ETL and Assistant Professor/Teaching; update LinkedIn and Naukri.",
+                "Every week: Submit 10–15 tailored applications, contact 5 recruiters/college HR teams, and follow up on previous applications.",
+                "Every week: Complete 2 SQL/data-engineering mock interviews and 1 teaching demo or subject interview practice.",
+                "Government roles: Apply only when qualification, age, category rules, location and closing date are confirmed from the official notification.",
+                "Track each application: employer, role, link, date applied, salary range, stage, next follow-up and outcome. Do not count an application as submitted until confirmed.",
+                "Before accepting: compare fixed pay (not only CTC), joining date, notice-period constraints, PhD attendance, teaching load and written offer terms."
+              ].map((item,i)=><div key={i} style={S.li(i===5)}><span style={{color:P.a2,fontWeight:800,flexShrink:0}}>{i+1}.</span><span style={{fontSize:12,lineHeight:1.55}}>{item}</span></div>)}
+              <div style={{fontSize:11,color:P.muted,marginTop:10}}>Fresh vacancies change frequently. These are official/role-search starting points, not a claim that every linked page currently has a suitable open vacancy. Record applications and interview updates in your existing Career/Office tracker.</div>
+            </div>
             <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",flexWrap:"wrap"}}>
               {careerRoles.map((r,i)=><button key={i} style={S.pill(careerIdx===i,r.color)} onClick={()=>setCareer(i)}>{i+1}. {r.role.split(" ").slice(0,3).join(" ")}</button>)}
             </div>

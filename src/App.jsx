@@ -2131,6 +2131,32 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
                   <div style={{fontSize:11,lineHeight:1.5,color:P.sub}}>{j.detail}</div>
                 </a>)}
               </div>
+              <div style={{fontSize:13,fontWeight:800,color:P.text,marginBottom:8}}>Freshly verified opportunities · checked 13 Oct 2026</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:8,marginBottom:12}}>
+                {[
+                  {employer:"EY GDS",role:"Senior Data Engineer — Snowflake, dbt, Airflow",location:"Chennai · posted 12 Oct 2026",salary:"Competitive; exact amount not published",fit:"Stretch: asks 5–8 years, Snowflake/dbt/Airflow and insurance-domain familiarity. SQL/ETL aligns; verify hands-on gaps.",deadline:"No closing date published · apply today",url:"https://careers.ey.com/ey/job/Chennai-EY-GDS-Consulting-AI-and-DATA-Snowflake-DBT-Senior-TN-600032/1446325433/",priority:"HIGH"},
+                  {employer:"Cognizant",role:"GCP Data Engineer",location:"Chennai · hybrid · posted 7 Oct 2026",salary:"Not disclosed",fit:"Stretch: requires BigQuery, Cloud SQL, Dataflow and Cloud Composer/Airflow. SQL/ETL is relevant; confirm practical GCP experience.",deadline:"No closing date published · apply if cloud requirements are credible",url:"https://careers.cognizant.com/uki-en/jobs/00070769101/gcp-data-engineer/",priority:"HIGH"},
+                  {employer:"Capgemini Engineering",role:"Data Engineer — AI-ready data platforms",location:"Gurgaon · posted 5 Oct 2026",salary:"Not disclosed",fit:"Stretch/relocation: Python and SQL plus Spark, Kafka, AWS Glue/S3, GraphRAG/vector databases and MLOps are listed.",deadline:"No closing date published · verify role is still accepting applications",url:"https://careers.capgemini.com/job/Gurgaon-Data-Engineer/1444377933/",priority:"MEDIUM"},
+                  {employer:"C-DAC · Government of India",role:"Current technical/non-technical contractual openings",location:"Multiple India centres · official portal lists current openings",salary:"Role-specific; not verified in this check",fit:"Potential technical/R&D route. Open the live portal and select a role matching CSE/data/software experience; do not assume the pay clears ₹7.5 LPA.",deadline:"Check the individual advertisement today; portal details were not fully retrievable",url:"https://cdac.in/index.aspx?id=current_jobs",priority:"VERIFY"},
+                  {employer:"TNPSC · Tamil Nadu Government",role:"Combined Civil Services Examination-IV (Group IV), Notification 11/2026",location:"Tamil Nadu · 6,574 reported vacancies",salary:"Varies by post; ₹7.5 LPA not confirmed",fit:"Parallel government backup only, not a data/teaching match. Check post-wise qualifications and pay before applying.",deadline:"5 Nov 2026 · exam scheduled 10 Jan 2027",url:"https://apply.tnpscexams.in/notification",priority:"BACKUP"}
+                ].map((j,i)=><div key={i} style={{background:P.card2,border:"1px solid "+P.border,borderRadius:10,padding:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",marginBottom:6}}>
+                    <span style={{fontSize:11,fontWeight:800,color:P.a2}}>{j.priority}</span>
+                    <span style={{fontSize:10,color:P.muted}}>{j.location}</span>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:800,color:P.text,marginBottom:4}}>{j.employer}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:P.a1,marginBottom:6}}>{j.role}</div>
+                  <div style={{fontSize:11,lineHeight:1.5,color:P.sub,marginBottom:5}}><b>Pay:</b> {j.salary}</div>
+                  <div style={{fontSize:11,lineHeight:1.5,color:P.sub,marginBottom:5}}><b>Fit:</b> {j.fit}</div>
+                  <div style={{fontSize:11,lineHeight:1.5,color:P.sub,marginBottom:8}}><b>Deadline:</b> {j.deadline}</div>
+                  <a href={j.url} target="_blank" rel="noreferrer" style={{fontSize:11,fontWeight:800,color:P.a1,textDecoration:"none"}}>Official vacancy / apply page ↗</a>
+                </div>)}
+              </div>
+              <div style={{...S.ib(P.a3),marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:800,color:P.a3,marginBottom:4}}>Lecturer / Assistant Professor check</div>
+                <div style={{fontSize:11,lineHeight:1.55,color:P.sub}}>No newly posted CSE/IT/Data Science/AI faculty vacancy with a verified pay above ₹7.5 LPA and clearly met eligibility was confirmed in this check. SNU Chennai’s CSE faculty listing is still visible, but the listed CSE faculty entries are dated 2024 and the published faculty criteria require a completed PhD plus publications. Treat it as unverified for this 60-day target, not as a confirmed eligible opening.</div>
+                <a href="https://www.snuchennai.edu.in/careers/" target="_blank" rel="noreferrer" style={{fontSize:11,fontWeight:800,color:P.a1,textDecoration:"none"}}>SNU Chennai official careers page ↗</a>
+              </div>
               <div style={{fontSize:13,fontWeight:700,color:P.text,marginBottom:8}}>Weekly execution targets</div>
               {[
                 "Week 1: Prepare two ATS resumes — Data Engineering/ETL and Assistant Professor/Teaching; update LinkedIn and Naukri.",

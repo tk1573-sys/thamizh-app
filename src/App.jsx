@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
+import CareerCommandCentre from "./CareerCommandCentre.jsx";
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 const P = {
@@ -2099,6 +2100,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
           {/* CAREER */}
           {tab==="career"&&<div>
             <div style={S.h2}>💼 Career Roles – 2026 Deep Analysis</div>
+            <CareerCommandCentre />
             <div style={{...S.ib(P.a1),marginBottom:14}}>
               <div style={{fontSize:12,color:P.a1,fontWeight:700,marginBottom:3}}>Your profile: 4.3yr TCS DE · SQL/DataStage/Teradata expert · M.Tech DS · PhD SSN GenAI started · SC category</div>
               <div style={{fontSize:12,color:P.muted}}>6 viable career paths. AI-DE has highest ROI. Senior ETL available immediately.</div>

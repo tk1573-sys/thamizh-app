@@ -57,7 +57,7 @@ export default function CareerCommandCentre(){
  return <section style={styles.panel} aria-label="Career Command Centre">
   <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
    <div><div style={{fontSize:17,fontWeight:800,color:"#34D399"}}>🧭 Career Command Centre</div><div style={{fontSize:12,color:"#CBD5E1",marginTop:4}}>60-day target: secure a suitable offer above ₹7.5 LPA; IT/data roles first, teaching and research in parallel.</div></div>
-   <button type="button" style={{...styles.button,opacity:loading?.65:1}} disabled={loading} onClick={refresh}>{loading?"Refreshing official sources…":"↻ Refresh Jobs Now"}</button>
+   <button type="button" style={{...styles.button,opacity:loading ? 0.65 : 1}} disabled={loading} onClick={refresh}>{loading?"Refreshing official sources…":"↻ Refresh Jobs Now"}</button>
   </div>
   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(125px,1fr))",gap:8,marginTop:12}}>
    {[["CIT benchmark","₹60,000/month · ₹7.2 LPA"],["Target","Above ₹7.5 LPA"],["Tracked applications",String(counts.tracked)],["In application stages",String(counts.applied)],["Shortlisted",String(counts.shortlisted)],["Sources with errors",String(counts.highRisk)]].map(([label,value])=><div key={label} style={{background:"#080C12",border:"1px solid #1E2D45",borderRadius:9,padding:10}}><div style={{fontSize:10,color:"#94A3B8"}}>{label}</div><div style={{fontSize:12,fontWeight:800,marginTop:5}}>{value}</div></div>)}

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const required = [
+  'src/CareerCommandCentre.jsx', 'src/career-refresh-core.mjs', 'api/career-refresh.js', 'scripts/career-refresh.mjs', '.github/workflows/daily-career-refresh.yml',
   'index.html', 'src/main.jsx', 'src/App.jsx', 'src/career-coach.js',
   'api/health.js', 'api/sync.js', 'vite.config.js'
 ];
@@ -31,4 +32,13 @@ assert.match(coach, /ssc\.gov\.in/);
 assert.match(coach, /ncs\.gov\.in/);
 assert.match(coach, /ugcnet\.nta\.ac\.in/);
 
-console.log('Smoke tests passed: mobile/PWA, Blob sync wiring, certification hub and official opportunity links.');
+const careerUi = fs.readFileSync('src/CareerCommandCentre.jsx', 'utf8');
+const careerCore = fs.readFileSync('src/career-refresh-core.mjs', 'utf8');
+const careerApi = fs.readFileSync('api/career-refresh.js', 'utf8');
+const careerWorkflow = fs.readFileSync('.github/workflows/daily-career-refresh.yml', 'utf8');
+assert.match(careerUi, /Refresh Jobs Now/);
+assert.match(careerUi, /thamiz-career-applications-v1/);
+assert.match(careerCore, /Requires manual verification/);
+assert.match(careerApi, /discoverCareerJobs/);
+assert.match(careerWorkflow, /30 2 \* \* \*/);
+console.log('Smoke tests passed: PWA, sync, career source discovery, daily workflow and application tracking.');

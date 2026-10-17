@@ -987,3 +987,15 @@ The current architecture prioritises:
 GitHub: https://github.com/tk1573-sys/thamizh-app
 
 Production: https://thamizh-app.vercel.app
+
+
+## Career Command Centre: public-source discovery
+
+The Career tab includes a Career Command Centre with manual refresh, a source-health view, local application-stage tracking, and a 60-day salary target based on the CIT offer entered by the user.
+
+- `GET/POST /api/career-refresh` checks configured public employer, university and government recruitment pages on demand.
+- `scripts/career-refresh.mjs` creates/merges `public/career-jobs.json`; the daily GitHub Actions workflow runs at 08:00 Asia/Kolkata and commits feed changes.
+- The source parser is deliberately conservative: links are labelled **Requires manual verification**. It does not infer salary, deadlines, age relaxation, eligibility, or whether a role is still accepting applications.
+- The tracker stores user application stages in browser local storage. Use the existing encrypted cloud-sync feature for cross-device transfer; this module does not introduce a new server database.
+- Scheduled refresh depends on GitHub Actions being enabled and permitted to push to `main`. Verify the workflow run in Actions after merging; do not treat the schedule as operational until a successful run is visible.
+- The manual refresh endpoint performs a live check but does not write to the deployed filesystem. Its results are retained in the current browser; the scheduled workflow is what updates the public JSON feed.

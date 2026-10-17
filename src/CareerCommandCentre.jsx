@@ -28,14 +28,19 @@ export default function CareerCommandCentre(){
  const [newCategory,setNewCategory]=useState("Private IT / Data");
  const [newSalary,setNewSalary]=useState("");
  useEffect(()=>{
-  if(jobs.length) return;
   fetch("/career-jobs.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(data=>{
    if(!data)return;
-   if(Array.isArray(data.jobs)&&data.jobs.length)setJobs(data.jobs);
+   if(Array.isArray(data.jobs)&&data.jobs.length)setJobs(prev=>{
+    const localByUrl=new Map(prev.filter(j=>j.official_url).map(j=>[j.official_url,j]));
+    const merged=data.jobs.map(job=>({...job,...(localByUrl.get(job.official_url)||{}),...job,
+     user_stage:localByUrl.get(job.official_url)?.user_stage||job.user_stage||"Discovered",
+     notes:localByUrl.get(job.official_url)?.notes||job.notes||""}));
+    const feedUrls=new Set(merged.map(j=>j.official_url));
+    return [...merged,...prev.filter(j=>j.official_url&&!feedUrls.has(j.official_url))];
+   });
    if(data.generated_at||data.sources?.length)setMeta({generated_at:data.generated_at,sources:data.sources||[],jobs_found:(data.jobs||[]).length});
   }).catch(()=>{});
- // Initial local cache wins; the scheduled feed seeds an empty browser cache.
- // eslint-disable-next-line react-hooks/exhaustive-deps
+ // Merge the scheduled feed into local records while retaining user-edited stages.
  },[]);
  useEffect(()=>{save(JOBS_KEY,jobs);},[jobs]);
  useEffect(()=>{save(TRACKER_KEY,applications);},[applications]);

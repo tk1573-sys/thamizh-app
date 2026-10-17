@@ -2133,7 +2133,7 @@ Give expert, specific, actionable research advice. Reference actual papers, meth
                   <div style={{fontSize:11,lineHeight:1.5,color:P.sub}}>{j.detail}</div>
                 </a>)}
               </div>
-              <div style={{fontSize:13,fontWeight:800,color:P.text,marginBottom:8}}>Freshly verified opportunities · checked 13 Oct 2026</div>
+              <div style={{fontSize:13,fontWeight:800,color:P.text,marginBottom:8}}>Previously researched opportunity snapshot · 13 Oct 2026 (not reverified today)</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:8,marginBottom:12}}>
                 {[
                   {employer:"EY GDS",role:"Senior Data Engineer — Snowflake, dbt, Airflow",location:"Chennai · posted 12 Oct 2026",salary:"Competitive; exact amount not published",fit:"Stretch: asks 5–8 years, Snowflake/dbt/Airflow and insurance-domain familiarity. SQL/ETL aligns; verify hands-on gaps.",deadline:"No closing date published · apply today",url:"https://careers.ey.com/ey/job/Chennai-EY-GDS-Consulting-AI-and-DATA-Snowflake-DBT-Senior-TN-600032/1446325433/",priority:"HIGH"},

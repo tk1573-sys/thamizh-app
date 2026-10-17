@@ -27,6 +27,16 @@ export default function CareerCommandCentre(){
  const [newUrl,setNewUrl]=useState("");
  const [newCategory,setNewCategory]=useState("Private IT / Data");
  const [newSalary,setNewSalary]=useState("");
+ useEffect(()=>{
+  if(jobs.length) return;
+  fetch("/career-jobs.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(data=>{
+   if(!data)return;
+   if(Array.isArray(data.jobs)&&data.jobs.length)setJobs(data.jobs);
+   if(data.generated_at||data.sources?.length)setMeta({generated_at:data.generated_at,sources:data.sources||[],jobs_found:(data.jobs||[]).length});
+  }).catch(()=>{});
+ // Initial local cache wins; the scheduled feed seeds an empty browser cache.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
  useEffect(()=>{save(JOBS_KEY,jobs);},[jobs]);
  useEffect(()=>{save(TRACKER_KEY,applications);},[applications]);
  useEffect(()=>{save(SOURCES_KEY,meta);},[meta]);
@@ -53,7 +63,7 @@ export default function CareerCommandCentre(){
   setNewTitle("");setNewEmployer("");setNewUrl("");setNewSalary("");
  };
  const allJobs=jobs.length?jobs:seedJobs;
- const counts={tracked:applications.length,applied:jobs.filter(j=>["Applied","Assessment","Interview","Offer","Negotiation","Accepted"].includes(j.user_stage)).length,shortlisted:jobs.filter(j=>["Shortlisted","Eligibility Checked","Ready to Apply"].includes(j.user_stage)).length,highRisk:(meta?.sources||[]).filter(s=>s.status!=="ok").length};
+ const counts={tracked:jobs.filter(j=>j.user_stage&&j.user_stage!=="Discovered").length,applied:jobs.filter(j=>["Applied","Assessment","Interview","Offer","Negotiation","Accepted"].includes(j.user_stage)).length,shortlisted:jobs.filter(j=>["Shortlisted","Eligibility Checked","Ready to Apply"].includes(j.user_stage)).length,highRisk:(meta?.sources||[]).filter(s=>s.status!=="ok").length};
  return <section style={styles.panel} aria-label="Career Command Centre">
   <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
    <div><div style={{fontSize:17,fontWeight:800,color:"#34D399"}}>🧭 Career Command Centre</div><div style={{fontSize:12,color:"#CBD5E1",marginTop:4}}>60-day target: secure a suitable offer above ₹7.5 LPA; IT/data roles first, teaching and research in parallel.</div></div>

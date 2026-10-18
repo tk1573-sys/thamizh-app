@@ -81,7 +81,7 @@ function load(){
   $("traits").value=p.personal_traits||"";
   $("preferences").value=p.coaching_preferences||"";
   $("constraints").value=p.constraints||"";
-  $("goals").value=(Array.isArray(p.goals)?p.goals.map(g=>g.title||"").filter(Boolean).join("\\n"):"");
+  $("goals").value=(Array.isArray(p.goals)?p.goals.map(g=>g.title||"").filter(Boolean).join("\n"):"");
   $("shareHealth").checked=p.share_health_context===true;
   $("health").value=p.health_context||"";
   const shares=Object.assign({coaching_profile:true,goals:true,daily_coach:true,phd_research:true,certifications:true,applications:true,followups:true},p.share_sections||{});
@@ -106,7 +106,7 @@ function save(){
     personal_traits:val("traits"),
     coaching_preferences:val("preferences"),
     constraints:val("constraints"),
-    goals:val("goals").split(/\\r?\\n/).map((title,i)=>({id:"user-goal-"+i,area:"Personal Goal",title:title.trim(),details:"User-authored goal",status:"Active",priority:"High",source:"Life Coach sharing setup"})).filter(g=>g.title),
+    goals:val("goals").split(/\r?\n/).map((title,i)=>({id:"user-goal-"+i,area:"Personal Goal",title:title.trim(),details:"User-authored goal",status:"Active",priority:"High",source:"Life Coach sharing setup"})).filter(g=>g.title),
     share_health_context:shareHealth,
     health_context:shareHealth?val("health"):"",
     share_sections:{

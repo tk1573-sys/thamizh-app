@@ -142,8 +142,9 @@ async function publishNow() {
   const token = clean(localStorage.getItem(TOKEN_KEY), 500);
   if (!token) return;
   const pack = buildApprovedPack();
+  const signature = JSON.stringify(Object.assign({}, pack, { updated_at: "" }));
   const body = JSON.stringify(pack);
-  if (body === localStorage.getItem(lastBodyKey)) return;
+  if (signature === localStorage.getItem(lastBodyKey)) return;
   const response = await fetch(endpoint, {
     method: "PUT",
     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token, "Cache-Control": "no-store" },
@@ -154,7 +155,7 @@ async function publishNow() {
     try { localStorage.setItem("life-coach-sync-last-error-v1", response.status + ": " + (await response.text()).slice(0, 500)); } catch (_) {}
     return;
   }
-  localStorage.setItem(lastBodyKey, body);
+  localStorage.setItem(lastBodyKey, signature);
   localStorage.setItem("life-coach-sync-last-published-v1", new Date().toISOString());
   localStorage.removeItem("life-coach-sync-last-error-v1");
 }

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const required = [
-  'index.html', 'src/main.jsx', 'src/App.jsx', 'src/career-coach.js',
+  'index.html', 'src/main.jsx', 'src/App.jsx', 'src/career-coach.js', 'src/coach-sync-publisher.js', 'public/coach-sync-setup.html',
   'api/health.js', 'api/sync.js', 'vite.config.js'
 ];
 for (const file of required) assert.ok(fs.existsSync(file), `Missing ${file}`);
@@ -16,9 +16,20 @@ const sync = fs.readFileSync('api/sync.js', 'utf8');
 assert.match(index, /viewport[^>]+viewport-fit=cover/);
 assert.match(main, /virtual:pwa-register/);
 assert.match(main, /career-coach\.js/);
+assert.match(main, /coach-sync-publisher\.js/);
 assert.match(vite, /VitePWA/);
 assert.match(vite, /registerType:\s*['"]autoUpdate['"]/);
 assert.match(sync, /storeId/);
+const coachSync = fs.readFileSync('api/coach-sync.js', 'utf8');
+const publisher = fs.readFileSync('src/coach-sync-publisher.js', 'utf8');
+const setup = fs.readFileSync('public/coach-sync-setup.html', 'utf8');
+assert.match(coachSync, /LIFE_COACH_SYNC_TOKEN/);
+assert.match(coachSync, /action === "chat"/);
+assert.match(publisher, /life-coach-sync-enabled-v1/);
+assert.match(publisher, /life-memory-v2/);
+assert.ok(!publisher.includes('memory.health.log'));
+assert.ok(!publisher.includes('memory.journal.entries'));
+assert.match(setup, /Enable publishing this selected plan/);
 assert.match(coach, /AWS Certified Data Engineer/);
 assert.match(coach, /SnowPro Core/);
 assert.match(coach, /Databricks Certified Data Engineer/);

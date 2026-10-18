@@ -43,7 +43,18 @@ a{color:#8bbfff}
 <label for="health">Optional high-level health/wellbeing context</label><textarea id="health" maxlength="2000" placeholder="Only include what you specifically want your personal coach to consider. This is not a place for medical records or daily measurements."></textarea>
 </section>
 <section>
-<h2>3. Save and test</h2>
+<h2>3. Select the plan categories to share</h2>
+<p class="note">These are independent switches. You can disable any category while keeping the connection active. Raw Health and Journal logs are never sent.</p>
+<div class="check"><input id="shareProfile" type="checkbox" checked><label for="shareProfile">My name, personal traits, coaching preferences, and schedule constraints</label></div>
+<div class="check"><input id="shareGoals" type="checkbox" checked><label for="shareGoals">Goals I add in this setup page</label></div>
+<div class="check"><input id="shareDaily" type="checkbox" checked><label for="shareDaily">Career Coach daily task templates</label></div>
+<div class="check"><input id="sharePhd" type="checkbox" checked><label for="sharePhd">PhD coursework, research task summaries, and supervisor follow-up dates</label></div>
+<div class="check"><input id="shareCerts" type="checkbox" checked><label for="shareCerts">Certification roadmap and completion counts</label></div>
+<div class="check"><input id="shareApps" type="checkbox" checked><label for="shareApps">Career application status summaries</label></div>
+<div class="check"><input id="shareFollowups" type="checkbox" checked><label for="shareFollowups">Structured shared follow-ups and target dates</label></div>
+</section>
+<section>
+<h2>4. Save and test</h2>
 <div>
 <button id="save">Save selected sharing settings</button>
 <button id="publishNow" class="secondary">Publish plan now</button>
@@ -70,6 +81,14 @@ function load(){
   $("constraints").value=p.constraints||"";
   $("shareHealth").checked=p.share_health_context===true;
   $("health").value=p.health_context||"";
+  const shares=Object.assign({coaching_profile:true,goals:true,daily_coach:true,phd_research:true,certifications:true,applications:true,followups:true},p.share_sections||{});
+  $("shareProfile").checked=shares.coaching_profile;
+  $("shareGoals").checked=shares.goals;
+  $("shareDaily").checked=shares.daily_coach;
+  $("sharePhd").checked=shares.phd_research;
+  $("shareCerts").checked=shares.certifications;
+  $("shareApps").checked=shares.applications;
+  $("shareFollowups").checked=shares.followups;
   const last=localStorage.getItem(K.last); const err=localStorage.getItem(K.error);
   status("Sharing: "+(localStorage.getItem(K.enabled)==="true"?"ENABLED":"disabled")+"\nLast publish: "+(last||"not yet")+(err?"\nLast error: "+err:""));
 }
@@ -85,7 +104,17 @@ function save(){
     coaching_preferences:val("preferences"),
     constraints:val("constraints"),
     share_health_context:shareHealth,
-    health_context:shareHealth?val("health"):""
+    health_context:shareHealth?val("health"):"",
+    share_sections:{
+      coaching_profile:$("shareProfile").checked,
+      goals:$("shareGoals").checked,
+      daily_coach:$("shareDaily").checked,
+      phd_research:$("sharePhd").checked,
+      certifications:$("shareCerts").checked,
+      applications:$("shareApps").checked,
+      followups:$("shareFollowups").checked,
+      health_context:shareHealth
+    }
   };
   localStorage.setItem(K.profile,JSON.stringify(profile));
   if(token)localStorage.setItem(K.token,token);else localStorage.removeItem(K.token);

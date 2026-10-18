@@ -39,6 +39,8 @@ a{color:#8bbfff}
 <label for="traits">Personal traits you want the coach to respect</label><textarea id="traits" maxlength="3000" placeholder="For example: I prefer practical advice, step-by-step plans, and respectful accountability."></textarea>
 <label for="preferences">Coaching preferences and priorities</label><textarea id="preferences" maxlength="3000" placeholder="Career goals, PhD/research, learning, routines, preferred balance."></textarea>
 <label for="constraints">Constraints / schedule to consider</label><textarea id="constraints" maxlength="3000" placeholder="Work hours, study availability, travel, commitments, things not to overload."></textarea>
+<label for="goals">Specific long-term goals (one goal per line)</label><textarea id="goals" maxlength="6000" placeholder="Move into modern Data Engineering / AI Data Engineering\nMake steady PhD research progress\nPrepare for UGC NET Computer Science"></textarea>
+<p class="note">These goal statements are shared only when “Goals I add in this setup page” is checked below.</p>
 <div class="check"><input id="shareHealth" type="checkbox"><label for="shareHealth">Also share the high-level health context I write below. This is optional and should not contain raw daily health logs.</label></div>
 <label for="health">Optional high-level health/wellbeing context</label><textarea id="health" maxlength="2000" placeholder="Only include what you specifically want your personal coach to consider. This is not a place for medical records or daily measurements."></textarea>
 </section>
@@ -79,6 +81,7 @@ function load(){
   $("traits").value=p.personal_traits||"";
   $("preferences").value=p.coaching_preferences||"";
   $("constraints").value=p.constraints||"";
+  $("goals").value=(Array.isArray(p.goals)?p.goals.map(g=>g.title||"").filter(Boolean).join("\\n"):"");
   $("shareHealth").checked=p.share_health_context===true;
   $("health").value=p.health_context||"";
   const shares=Object.assign({coaching_profile:true,goals:true,daily_coach:true,phd_research:true,certifications:true,applications:true,followups:true},p.share_sections||{});
@@ -103,6 +106,7 @@ function save(){
     personal_traits:val("traits"),
     coaching_preferences:val("preferences"),
     constraints:val("constraints"),
+    goals:val("goals").split(/\\r?\\n/).map((title,i)=>({id:"user-goal-"+i,area:"Personal Goal",title:title.trim(),details:"User-authored goal",status:"Active",priority:"High",source:"Life Coach sharing setup"})).filter(g=>g.title),
     share_health_context:shareHealth,
     health_context:shareHealth?val("health"):"",
     share_sections:{

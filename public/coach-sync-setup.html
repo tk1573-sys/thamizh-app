@@ -132,10 +132,23 @@ $("publishNow").addEventListener("click",()=>{
   if(!$("enabled").checked){alert("Enable sharing first, then save the settings.");return;}
   if(save()) setTimeout(()=>{status("Publish requested.\n"+(localStorage.getItem(K.last)||"Waiting for response…")+(localStorage.getItem(K.error)?"\nError: "+localStorage.getItem(K.error):""));},1200);
 });
-$("disable").addEventListener("click",()=>{
-  localStorage.setItem(K.enabled,"false");localStorage.removeItem(K.token);localStorage.removeItem(K.last);localStorage.removeItem(K.error);
-  $("enabled").checked=false;$("token").value="";
-  status("Sharing disabled and local sync token removed. Your Windows coach keeps the last imported plan unless you delete it there.");
+$("disable").addEventListener("click",async()=>{
+  const token=val("token")||localStorage.getItem(K.token)||"";
+  localStorage.setItem(K.enabled,"false");
+  $("enabled").checked=false;
+  if(token.length>=32){
+    try{
+      const response=await fetch("/api/coach-sync",{method:"DELETE",headers:{"Authorization":"Bearer "+token,"Cache-Control":"no-store"}});
+      if(!response.ok) throw new Error("Remote delete returned HTTP "+response.status);
+      status("Sharing disabled. The remote private plan snapshot was deleted.");
+    }catch(error){
+      status("Sharing disabled locally, but the remote copy could not be confirmed deleted. Error: "+String(error)+"\nThe snapshot may remain in private Blob storage until you retry.");
+    }
+  }else{
+    status("Sharing disabled locally. No valid token was available to delete a previously published remote snapshot.");
+  }
+  localStorage.removeItem(K.token);localStorage.removeItem(K.last);localStorage.removeItem(K.error);
+  $("token").value="";
 });
 load();
 })();

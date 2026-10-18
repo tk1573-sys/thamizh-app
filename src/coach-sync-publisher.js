@@ -171,7 +171,7 @@ function schedulePublish() {
 }
 if (typeof window !== "undefined") {
   window.addEventListener("storage", event => {
-    if (event.key === PROFILE_KEY || event.key === TOKEN_KEY || event.key === ENABLED_KEY) schedulePublish();
+    if (event.key === PROFILE_KEY || event.key === TOKEN_KEY || event.key === ENABLED_KEY || event.key === "life-coach-sync-publish-request-v1") schedulePublish();
   });
   window.addEventListener("life-coach-sync-publish-now", () => publishNow().catch(error => {
     try { localStorage.setItem("life-coach-sync-last-error-v1", String(error).slice(0, 500)); } catch (_) {}

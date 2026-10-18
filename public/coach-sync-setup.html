@@ -28,7 +28,7 @@ a{color:#8bbfff}
 <section>
 <h2>1. Secure connection</h2>
 <p>Use the same long random token in your Vercel environment variable <code>LIFE_COACH_SYNC_TOKEN</code> and in the Windows Life Coach's <b>Life Plan Sync</b> settings. Don't paste this token into chats or commit it to GitHub.</p>
-<label for="token">Dedicated Life Coach sync token</label><input id="token" type="password" autocomplete="off" placeholder="Paste a long random token">
+<label for="token">Dedicated Life Coach sync token</label><input id="token" type="password" autocomplete="off" placeholder="Generate or paste a long random token"><button type="button" id="generateToken" class="secondary">Generate secure random token</button>
 <div class="check"><input id="enabled" type="checkbox"><label for="enabled">Enable publishing this selected plan to my private Windows Life Coach.</label></div>
 <p class="note">The token is saved only in this browser's localStorage. Access is limited to the matching authenticated endpoint. If this is a shared/public computer, do not save it here.</p>
 </section>
@@ -127,6 +127,11 @@ function save(){
   status("Settings saved.\nSharing: "+($("enabled").checked?"ENABLED":"disabled")+"\nThe publisher will send only the selected plan fields when sharing is enabled.");
   return true;
 }
+$("generateToken").addEventListener("click",()=>{
+  const bytes=crypto.getRandomValues(new Uint8Array(32));
+  $("token").value=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+  status("A new 256-bit sync token was generated in this browser. Copy it into Vercel's LIFE_COACH_SYNC_TOKEN environment variable before enabling sync.");
+});
 $("save").addEventListener("click",save);
 $("publishNow").addEventListener("click",()=>{
   if(!$("enabled").checked){alert("Enable sharing first, then save the settings.");return;}

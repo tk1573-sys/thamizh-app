@@ -47,30 +47,34 @@ function uniqueRecords(values) {
 function buildApprovedPack() {
   const profile = parse(PROFILE_KEY, {});
   const memory = parse("life-memory-v2", {});
+  const share = Object.assign({
+    coaching_profile: true, goals: true, daily_coach: true, phd_research: true,
+    certifications: true, applications: true, followups: true, health_context: false
+  }, profile.share_sections || {});
   const goals = [];
   const tasks = [];
   const projects = [];
   const deadlines = [];
 
   // Optional user-authored goals, entered in the setup utility.
-  (Array.isArray(profile.goals) ? profile.goals : []).forEach((item, i) => {
+  (share.goals && Array.isArray(profile.goals) ? profile.goals : []).forEach((item, i) => {
     const r = record(item.id || ("goal-" + i), item.area || "Personal Goal", item.title, item.details, item.status, item.priority, item.target_date, "Coach sharing setup");
     if (r) goals.push(r);
   });
 
   // Reuse the Career Coach source-of-truth lists instead of duplicating a second roadmap.
-  coachTasks.forEach((item, i) => {
+  (share.daily_coach ? coachTasks : []).forEach((item, i) => {
     const r = record("coach-task-" + i, item[0], item[0], item[1], "Planned", "Normal", "", "Career Coach");
     if (r) tasks.push(r);
   });
-  phdCourses.forEach((course, i) => {
+  (share.phd_research ? phdCourses : []).forEach((course, i) => {
     const r = record("phd-course-" + i, "PhD / Coursework", course[0] + " — " + course[1],
       "Current first study topic: " + ((course[2] || [])[0] || "Review course overview") + ". Use the PhD Planner for the full module list.",
       "Planned", "High", "", "PhD Coursework");
     if (r) tasks.push(r);
   });
   const certProgress = memory.certs && memory.certs.progress && typeof memory.certs.progress === "object" ? memory.certs.progress : {};
-  certificationPlans.filter(c => !/completed/i.test(c.status || "")).forEach((cert, i) => {
+  (share.certifications ? certificationPlans : []).filter(c => !/completed/i.test(c.status || "")).forEach((cert, i) => {
     const saved = certProgress[cert.id] || {};
     const modules = saved.modules && typeof saved.modules === "object" ? saved.modules : {};
     const completed = Object.values(modules).filter(Boolean).length;
@@ -82,21 +86,21 @@ function buildApprovedPack() {
   });
 
   // Actual PhD task records shared from the existing tracker; no meeting transcript or private notes.
-  const phdTasks = Array.isArray(memory.phd?.tasks) ? memory.phd.tasks : [];
+  const phdTasks = share.phd_research && Array.isArray(memory.phd?.tasks) ? memory.phd.tasks : [];
   phdTasks.filter(x => x && String(x.status || "").toLowerCase() !== "done").forEach((x, i) => {
     const r = record(x.id || ("phd-task-" + i), "PhD / Research", x.title || x.desc, x.notes || x.details || "", x.status, x.priority, x.due, "PhD Planner");
     if (r) tasks.push(r);
   });
 
   // Application tracker: share status and a short description only; no resume/JD text.
-  const appStatus = memory.career?.appStatus && typeof memory.career.appStatus === "object" ? memory.career.appStatus : {};
+  const appStatus = share.applications && memory.career?.appStatus && typeof memory.career.appStatus === "object" ? memory.career.appStatus : {};
   Object.entries(appStatus).slice(0, 100).forEach(([id, status]) => {
     const r = record(id, "Career / Applications", "Application " + id, "", typeof status === "string" ? status : "Tracked", "Normal", "", "Career Radar");
     if (r) tasks.push(r);
   });
 
   // Shared pending work is a structured follow-up list; do not publish notes/history.
-  const pending = Array.isArray(memory.shared?.pending) ? memory.shared.pending : [];
+  const pending = share.followups && Array.isArray(memory.shared?.pending) ? memory.shared.pending : [];
   pending.filter(x => x && String(x.status || "").toLowerCase() !== "done").forEach((x, i) => {
     const r = record(x.id || ("pending-" + i), x.category || "Follow-up", x.desc || x.title, "", x.status, x.priority, x.due, "Shared Pending");
     if (r) tasks.push(r);
@@ -105,24 +109,24 @@ function buildApprovedPack() {
 
   // PhD meetings share only a date and action summary the user has stored as action items.
   // Meeting transcripts/instructions are deliberately excluded.
-  const meetings = Array.isArray(memory.phd?.meetings) ? memory.phd.meetings : [];
+  const meetings = share.phd_research && Array.isArray(memory.phd?.meetings) ? memory.phd.meetings : [];
   meetings.filter(x => x && x.nextDate).forEach((x, i) => {
     const r = record(x.id || ("meeting-" + i), "PhD / Supervisor", "Supervisor follow-up", clean(x.actions, 500), "Planned", "High", x.nextDate, "PhD Planner");
     if (r) deadlines.push(r);
   });
 
-  const shareHealth = profile.share_health_context === true;
+  const shareHealth = share.health_context === true && profile.share_health_context === true;
   return {
     schema_version: 1,
     source: "Thamizh Life Command Centre",
     updated_at: new Date().toISOString(),
     profile: {
-      display_name: clean(profile.display_name || "Thamizh", 100),
-      coaching_style: clean(profile.coaching_style || "Friendly mentor", 100),
-      language: clean(profile.language || "English", 40),
-      personal_traits: clean(profile.personal_traits, 3000),
-      coaching_preferences: clean(profile.coaching_preferences, 3000),
-      constraints: clean(profile.constraints, 3000),
+      display_name: share.coaching_profile ? clean(profile.display_name || "Thamizh", 100) : "",
+      coaching_style: share.coaching_profile ? clean(profile.coaching_style || "Friendly mentor", 100) : "",
+      language: share.coaching_profile ? clean(profile.language || "English", 40) : "",
+      personal_traits: share.coaching_profile ? clean(profile.personal_traits, 3000) : "",
+      coaching_preferences: share.coaching_profile ? clean(profile.coaching_preferences, 3000) : "",
+      constraints: share.coaching_profile ? clean(profile.constraints, 3000) : "",
       share_health_context: shareHealth,
       health_context: shareHealth ? clean(profile.health_context, 2000) : ""
     },

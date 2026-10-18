@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { get, put } from "@vercel/blob";
+import { del, get, put } from "@vercel/blob";
 
 const MAX_BODY_BYTES = 2_000_000;
 const STORE_ID = process.env.thamizh_app_memory_06_STORE_ID || process.env.BLOB_STORE_ID;
@@ -123,7 +123,13 @@ export default async function handler(req, res) {
       const found = await get(pathname, { access: "private", useCache: false, storeId: STORE_ID });
       if (!found || !found.stream) return json(res, 404, { error: "No plan published from the Life Command Centre browser yet." });
       const raw = await new Response(found.stream).text();
-      return json(res, 200, normalizePack(JSON.parse(raw)));
+      const pack = normalizePack(JSON.parse(raw));
+      if (raw && JSON.parse(raw).updated_at) pack.updated_at = String(JSON.parse(raw).updated_at);
+      return json(res, 200, pack);
+    }
+    if (req.method === "DELETE") {
+      await del(pathname, { storeId: STORE_ID });
+      return json(res, 200, { ok: true, deleted: true });
     }
     if (req.method === "POST" || req.method === "PUT") {
       const body = await readBody(req);
@@ -135,7 +141,7 @@ export default async function handler(req, res) {
       await put(pathname, JSON.stringify(pack), { access: "private", allowOverwrite: true, contentType: "application/json", storeId: STORE_ID });
       return json(res, 200, { ok: true, updated_at: pack.updated_at, counts: { goals: pack.goals.length, tasks: pack.tasks.length, projects: pack.projects.length, deadlines: pack.deadlines.length } });
     }
-    res.setHeader("Allow", "GET, POST, PUT");
+    res.setHeader("Allow", "GET, POST, PUT, DELETE");
     return json(res, 405, { error: "Method not allowed." });
   } catch (err) {
     const message = (err && err.message) || "Sync bridge failed.";

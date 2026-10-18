@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life Coach Sync Setup</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#080c12;color:#e2e8f0}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0,#1c2144 0,transparent 40%),#080c12}
+main{max-width:820px;margin:24px auto;padding:18px}
+header,section{background:linear-gradient(135deg,rgba(14,20,32,.97),rgba(20,26,38,.93));border:1px solid #253650;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 8px 28px #0005}
+h1{font-size:24px;margin:0 0 6px}h2{font-size:16px;color:#a99cff;margin:0 0 10px}p,li{font-size:13px;line-height:1.6;color:#cbd5e1}.note{font-size:11px;color:#95a4c3}label{display:block;font-size:12px;color:#bcc9e5;margin:12px 0 5px}
+input[type=text],input[type=password],textarea,select{width:100%;background:#080e1a;border:1px solid #34425f;border-radius:8px;padding:10px;color:#f1f5ff;font:inherit}textarea{min-height:68px;resize:vertical}
+.check{display:flex;gap:10px;align-items:flex-start;margin:12px 0}.check input{margin-top:4px}.check label{margin:0;font-size:13px;color:#d5def2}
+button{border:1px solid #6255da;background:#6557e8;color:white;font-weight:750;border-radius:9px;padding:10px 14px;cursor:pointer;margin:5px 5px 5px 0}
+button.secondary{background:#162239;border-color:#344663;color:#dbe6ff}
+button.danger{background:#48202c;border-color:#9e4355}
+.status{white-space:pre-wrap;font-size:12px;border:1px solid #2c3b54;padding:10px;border-radius:8px;background:#0a111e;margin-top:8px}
+a{color:#8bbfff}
+</style>
+</head>
+<body><main>
+<header>
+<h1>Life Command Centre → Thamizh Life Coach</h1>
+<p>Configure the connection between your two separate apps. Nothing is shared until you enable publishing and save your choices.</p>
+<div class="note">This setup page does not add a companion panel to the Life Command Centre. It only manages an explicit data-sharing permission.</div>
+</header>
+<section>
+<h2>1. Secure connection</h2>
+<p>Use the same long random token in your Vercel environment variable <code>LIFE_COACH_SYNC_TOKEN</code> and in the Windows Life Coach's <b>Life Plan Sync</b> settings. Don't paste this token into chats or commit it to GitHub.</p>
+<label for="token">Dedicated Life Coach sync token</label><input id="token" type="password" autocomplete="off" placeholder="Paste a long random token">
+<div class="check"><input id="enabled" type="checkbox"><label for="enabled">Enable publishing this selected plan to my private Windows Life Coach.</label></div>
+<p class="note">The token is saved only in this browser's localStorage. Access is limited to the matching authenticated endpoint. If this is a shared/public computer, do not save it here.</p>
+</section>
+<section>
+<h2>2. What the coach is allowed to know</h2>
+<label for="display">Name</label><input id="display" type="text" maxlength="100" value="Thamizh">
+<label for="personality">Coaching style</label><select id="personality"><option>Friendly mentor</option><option>Balanced personal coach</option><option>Energetic motivator</option><option>Strict accountability coach</option></select>
+<label for="traits">Personal traits you want the coach to respect</label><textarea id="traits" maxlength="3000" placeholder="For example: I prefer practical advice, step-by-step plans, and respectful accountability."></textarea>
+<label for="preferences">Coaching preferences and priorities</label><textarea id="preferences" maxlength="3000" placeholder="Career goals, PhD/research, learning, routines, preferred balance."></textarea>
+<label for="constraints">Constraints / schedule to consider</label><textarea id="constraints" maxlength="3000" placeholder="Work hours, study availability, travel, commitments, things not to overload."></textarea>
+<div class="check"><input id="shareHealth" type="checkbox"><label for="shareHealth">Also share the high-level health context I write below. This is optional and should not contain raw daily health logs.</label></div>
+<label for="health">Optional high-level health/wellbeing context</label><textarea id="health" maxlength="2000" placeholder="Only include what you specifically want your personal coach to consider. This is not a place for medical records or daily measurements."></textarea>
+</section>
+<section>
+<h2>3. Save and test</h2>
+<div>
+<button id="save">Save selected sharing settings</button>
+<button id="publishNow" class="secondary">Publish plan now</button>
+<button id="disable" class="danger">Disable sharing and clear sync token</button>
+</div>
+<div id="status" class="status">No sharing configuration saved yet.</div>
+<p class="note">The plan includes curated Career Coach tasks, structured PhD tasks and dates, application status summaries, and explicitly authored goals. It does not include raw Journal entries, daily Health logs, resume/JD contents, AI chat history, or API keys.</p>
+</section>
+</main>
+<script>
+(function(){
+const K={enabled:"life-coach-sync-enabled-v1",token:"life-coach-sync-token-v1",profile:"life-coach-sync-profile-v1",last:"life-coach-sync-last-published-v1",error:"life-coach-sync-last-error-v1"};
+const $=id=>document.getElementById(id);
+const status=text=>{$("status").textContent=text;};
+const val=id=>String($(id).value||"").trim();
+function load(){
+  $("enabled").checked=localStorage.getItem(K.enabled)==="true";
+  $("token").value=localStorage.getItem(K.token)||"";
+  const p=(()=>{try{return JSON.parse(localStorage.getItem(K.profile)||"{}")}catch(_){return {}}})();
+  $("display").value=p.display_name||"Thamizh";
+  $("personality").value=p.coaching_style||"Friendly mentor";
+  $("traits").value=p.personal_traits||"";
+  $("preferences").value=p.coaching_preferences||"";
+  $("constraints").value=p.constraints||"";
+  $("shareHealth").checked=p.share_health_context===true;
+  $("health").value=p.health_context||"";
+  const last=localStorage.getItem(K.last); const err=localStorage.getItem(K.error);
+  status("Sharing: "+(localStorage.getItem(K.enabled)==="true"?"ENABLED":"disabled")+"\nLast publish: "+(last||"not yet")+(err?"\nLast error: "+err:""));
+}
+function save(){
+  const token=val("token");
+  if($("enabled").checked && token.length<32){alert("Use a dedicated random token of at least 32 characters before enabling sync.");return false;}
+  const shareHealth=$("shareHealth").checked;
+  const profile={
+    display_name:val("display")||"Thamizh",
+    coaching_style:val("personality")||"Friendly mentor",
+    language:"English",
+    personal_traits:val("traits"),
+    coaching_preferences:val("preferences"),
+    constraints:val("constraints"),
+    share_health_context:shareHealth,
+    health_context:shareHealth?val("health"):""
+  };
+  localStorage.setItem(K.profile,JSON.stringify(profile));
+  if(token)localStorage.setItem(K.token,token);else localStorage.removeItem(K.token);
+  localStorage.setItem(K.enabled,$("enabled").checked?"true":"false");
+  window.dispatchEvent(new Event("life-coach-sync-publish-now"));
+  status("Settings saved.\nSharing: "+($("enabled").checked?"ENABLED":"disabled")+"\nThe publisher will send only the selected plan fields when sharing is enabled.");
+  return true;
+}
+$("save").addEventListener("click",save);
+$("publishNow").addEventListener("click",()=>{
+  if(!$("enabled").checked){alert("Enable sharing first, then save the settings.");return;}
+  if(save()) setTimeout(()=>{status("Publish requested.\n"+(localStorage.getItem(K.last)||"Waiting for response…")+(localStorage.getItem(K.error)?"\nError: "+localStorage.getItem(K.error):""));},1200);
+});
+$("disable").addEventListener("click",()=>{
+  localStorage.setItem(K.enabled,"false");localStorage.removeItem(K.token);localStorage.removeItem(K.last);localStorage.removeItem(K.error);
+  $("enabled").checked=false;$("token").value="";
+  status("Sharing disabled and local sync token removed. Your Windows coach keeps the last imported plan unless you delete it there.");
+});
+load();
+})();
+</script>
+</body></html>

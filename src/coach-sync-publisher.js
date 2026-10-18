@@ -1,3 +1,5 @@
+import { tasks as coachTasks, courses as phdCourses, certs as certificationPlans } from './career-coach.js';
+
 /*
  * Optional, user-authorized Life Coach publisher.
  * This is not a companion UI. Configure at /coach-sync-setup.html.
@@ -56,18 +58,26 @@ function buildApprovedPack() {
     if (r) goals.push(r);
   });
 
-  // Career Coach daily tasks are already part of the product's curated plan.
-  const daily = [
-    ["Daily Core", "45 min SQL/Python: one problem + one production-style ETL improvement", "Learning"],
-    ["Certification", "60 min on the current priority certification; rotate SnowPro, Databricks, AWS and Claude", "Certification"],
-    ["PhD Coursework", "60 min on one CS8015/CS8044/CS8051/UM8001 module + 5-line notes", "PhD / Coursework"],
-    ["Research", "30 min: one paper, Mendeley record, dataset/experiment note or supervisor action", "PhD / Research"],
-    ["Career", "20 min: one application, resume bullet, GitHub improvement or interview question", "Career"],
-    ["UGC NET", "30 min: one Computer Science topic + 15 MCQs; log weak areas", "Academic"],
-    ["Journal", "10 min: record completed work, blocker and tomorrow Top 3", "Personal routine"]
-  ];
-  daily.forEach((x, i) => {
-    const r = record("daily-" + i, x[2], x[0], x[1], "Planned", "Normal", "", "Career Coach template");
+  // Reuse the Career Coach source-of-truth lists instead of duplicating a second roadmap.
+  coachTasks.forEach((item, i) => {
+    const r = record("coach-task-" + i, item[0], item[0], item[1], "Planned", "Normal", "", "Career Coach");
+    if (r) tasks.push(r);
+  });
+  phdCourses.forEach((course, i) => {
+    const r = record("phd-course-" + i, "PhD / Coursework", course[0] + " — " + course[1],
+      "Current first study topic: " + ((course[2] || [])[0] || "Review course overview") + ". Use the PhD Planner for the full module list.",
+      "Planned", "High", "", "PhD Coursework");
+    if (r) tasks.push(r);
+  });
+  const certProgress = memory.certs && memory.certs.progress && typeof memory.certs.progress === "object" ? memory.certs.progress : {};
+  certificationPlans.filter(c => !/completed/i.test(c.status || "")).forEach((cert, i) => {
+    const saved = certProgress[cert.id] || {};
+    const modules = saved.modules && typeof saved.modules === "object" ? saved.modules : {};
+    const completed = Object.values(modules).filter(Boolean).length;
+    const r = record("cert-plan-" + (cert.id || i), "Certification", cert.name,
+      "Current source status: " + (cert.status || "In progress") + ". Completed module flags: " + completed +
+      ". Suggested focus: " + String(cert.skills || "").split(",").slice(0, 4).join(", ") + ".",
+      completed ? "In Progress" : "Planned", "High", saved.examDate || "", "Certification Planner");
     if (r) tasks.push(r);
   });
 

@@ -123,14 +123,17 @@ function save(){
   localStorage.setItem(K.profile,JSON.stringify(profile));
   if(token)localStorage.setItem(K.token,token);else localStorage.removeItem(K.token);
   localStorage.setItem(K.enabled,$("enabled").checked?"true":"false");
-  window.dispatchEvent(new Event("life-coach-sync-publish-now"));
+  localStorage.setItem("life-coach-sync-publish-request-v1", String(Date.now()));
   status("Settings saved.\nSharing: "+($("enabled").checked?"ENABLED":"disabled")+"\nThe publisher will send only the selected plan fields when sharing is enabled.");
   return true;
 }
 $("save").addEventListener("click",save);
 $("publishNow").addEventListener("click",()=>{
   if(!$("enabled").checked){alert("Enable sharing first, then save the settings.");return;}
-  if(save()) setTimeout(()=>{status("Publish requested.\n"+(localStorage.getItem(K.last)||"Waiting for response…")+(localStorage.getItem(K.error)?"\nError: "+localStorage.getItem(K.error):""));},1200);
+  if(save()) {
+    localStorage.setItem("life-coach-sync-publish-request-v1", String(Date.now()));
+    setTimeout(()=>{status("Publish requested.\n"+(localStorage.getItem(K.last)||"Waiting for response…")+(localStorage.getItem(K.error)?"\nError: "+localStorage.getItem(K.error):""));},1200);
+  }
 });
 $("disable").addEventListener("click",async()=>{
   const token=val("token")||localStorage.getItem(K.token)||"";
